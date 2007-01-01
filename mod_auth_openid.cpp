@@ -31,11 +31,72 @@
 
 #include "moid.h"
 
+extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
+
+typedef struct {
+  char *listen_location;
+  char *db_location;
+  bool enabled;
+} modauthopenid_config;
+
+typedef const char *(*CMD_HAND_TYPE) ();
+
+static void *create_modauthopenid_config(apr_pool_t *p, server_rec *s) {
+  modauthopenid_config *newcfg;
+  newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
+  newcfg->listen_location = "/openid";
+  newcfg->db_location = "/tmp/mod_auth_openid.db";
+  newcfg->enabled = false;
+  return (void *) newcfg;
+}
+
+static const char *set_modauthopenid_listen_location(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg;
+  s_cfg = (modauthopenid_config *) ap_get_module_config(parms->server->module_config, &authopenid_module);
+  s_cfg->listen_location = (char *) arg;
+  return NULL;
+}
+
+static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg;
+  s_cfg = (modauthopenid_config *) ap_get_module_config(parms->server->module_config, &authopenid_module);
+  s_cfg->db_location = (char *) arg;
+  return NULL;
+}
+
+static const char *set_modauthopenid_enabled(cmd_parms *parms, void *mconfig, int flag) {
+  modauthopenid_config *s_cfg;
+  s_cfg = (modauthopenid_config *) ap_get_module_config(parms->server->module_config, &authopenid_module);
+  s_cfg->enabled = (bool) flag;
+  return NULL;
+}
+
+  
+static const command_rec mod_authopenid_cmds[] = {
+  AP_INIT_TAKE1("AuthOpenIDListenLocation", (CMD_HAND_TYPE) set_modauthopenid_listen_location, 
+		NULL, RSRC_CONF, "AuthOpenIDListenLocation <string>."),
+  AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, RSRC_CONF,
+		"AuthOpenIDDBLocation <string>"),
+  AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, RSRC_CONF,
+	       "AuthOpenIDEnabled <On | Off>"),
+  {NULL}
+};
+
 static int mod_authopenid_method_handler (request_rec *r) {
-  opkele::MoidConsumer *consumer = new opkele::MoidConsumer("/tmp/thisisyourmom.db");
-  delete consumer;
+  //opkele::MoidConsumer *consumer = new opkele::MoidConsumer("/tmp/thisisyourmom.db");
+  //delete consumer;
+
+  modauthopenid_config *s_cfg;
+  s_cfg = (modauthopenid_config *) ap_get_module_config(r->server->module_config, &authopenid_module);
+  std::string e = "no";
+  if(s_cfg->enabled) e="yes";
+
+
 
   fprintf(stderr, r->uri);
+
+  fflush(stderr);
+
   apr_table_t *env = r->subprocess_env; 
   apr_table_setn(env, "OPENID_IDENTITY", "on");
   if(apr_strnatcmp(r->uri, "/hello")!=0) return DECLINED;
@@ -58,12 +119,13 @@ static void mod_authopenid_register_hooks (apr_pool_t *p) {
   ap_hook_handler(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_LAST);
 }
 
+//module AP_MODULE_DECLARE_DATA 
 module AP_MODULE_DECLARE_DATA authopenid_module = {
 	STANDARD20_MODULE_STUFF,
 	NULL,
 	NULL,
+	create_modauthopenid_config,
 	NULL,
-	NULL,
-	NULL,
+	mod_authopenid_cmds,
 	mod_authopenid_register_hooks,
 };
