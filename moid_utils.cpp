@@ -17,14 +17,16 @@ namespace opkele {
       ret.push_back(s);
     return ret;
   }
+
   params_t parse_query_string(const string& str) {
+    params_t p;
+    if(str.size() == 0) return p;
     char * t = curl_unescape(str.c_str(), str.length());
     if(!t)
       throw failed_conversion(OPKELE_CP_ "failed to curl_unescape()");
     string rv(t);
     curl_free(t);
 
-    params_t p;
     vector<string> pairs = explode(rv, "&");
     for(unsigned int i=0; i < pairs.size(); i++) {
       //fprintf(stdout, "pair = \"%s\"\n", pairs[i].c_str());
