@@ -110,6 +110,8 @@ static int http_redirect(request_rec *r, std::string location) {
 
 static int mod_authopenid_method_handler (request_rec *r) {
 
+  // header for cookie Set-Cookie: _session_id=5d3ef8ed0dd06a083bd4bf5ed27d6388; path=/
+
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
