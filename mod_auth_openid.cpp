@@ -20,6 +20,7 @@
  * Include the core server components.
  */
 #include "httpd.h"
+#include "http_core.h"
 #include "http_config.h"
 #include "apr_strings.h"
 
@@ -34,7 +35,6 @@
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
-  char *listen_location;
   char *db_location;
   bool enabled;
 } modauthopenid_config;
@@ -45,7 +45,6 @@ typedef const char *(*CMD_HAND_TYPE) ();
 static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
-  newcfg->listen_location = "/openid";
   newcfg->db_location = "/tmp/mod_auth_openid.db";
   newcfg->enabled = false;
   return (void *) newcfg;
@@ -53,13 +52,6 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
 
 static void *modauthopenid_config_merge(apr_pool_t *p, void *basev, void *overridesv) {
   return overridesv;
-}
-
-static const char *set_modauthopenid_listen_location(cmd_parms *parms, void *mconfig, const char *arg) {
-  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
-  //s_cfg = (modauthopenid_config *) ap_get_module_config(parms->server->module_config, &authopenid_module);
-  s_cfg->listen_location = (char *) arg;
-  return NULL;
 }
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
@@ -78,8 +70,6 @@ static const char *set_modauthopenid_enabled(cmd_parms *parms, void *mconfig, in
 
   
 static const command_rec mod_authopenid_cmds[] = {
-  AP_INIT_TAKE1("AuthOpenIDListenLocation", (CMD_HAND_TYPE) set_modauthopenid_listen_location, 
-		NULL, ACCESS_CONF, "AuthOpenIDListenLocation <string>."),
   AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, ACCESS_CONF,
 		"AuthOpenIDDBLocation <string>"),
   AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, ACCESS_CONF,
@@ -108,34 +98,62 @@ static int http_redirect(request_rec *r, std::string location) {
   return HTTP_MOVED_TEMPORARILY;
 }
 
+static void full_uri(request_rec *r, std::string& result) {
+  std::string hostname(r->hostname);
+  std::string protocol(r->protocol);
+  std::string uri(r->uri);
+  std::string prefix = (protocol.substr(0, 4) == "HTTP") ? "http://" : "https://";
+  apr_port_t i_port = ap_get_server_port(r);
+  char port[6];
+  sprintf(port, "%lu", (unsigned long) i_port);
+  std::string s_port = (i_port == 80) ? "" : ":" + std::string(port);
+  result = prefix+hostname+s_port+uri;
+}
+
 static int mod_authopenid_method_handler (request_rec *r) {
-
   // header for cookie Set-Cookie: _session_id=5d3ef8ed0dd06a083bd4bf5ed27d6388; path=/
-
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
   // if we're not enabled for this location/dir, decline doing anything
   if(!s_cfg->enabled) return DECLINED;
 
+  // test for valid session - if so, return DECLINED
+  // INSERT CODE HERE
+
+  // parse the get params
   opkele::params_t params;
   if(r->args != NULL) params = opkele::parse_query_string(std::string(r->args));
 
-
-  // if user is posting id, or requesting input box to put in id
-  if(strcmp(r->uri, s_cfg->listen_location) == 0) {
-    if(params.has_param("openid_identity")) {
+  // if user is posting id
+  if(params.has_param("openid_identity")) {
       opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));     
       opkele::mode_t mode = opkele::mode_checkid_setup;
-      const std::string return_to(r->uri);
-      const std::string trust_root("http://itchy.lambastard.com");
+      std::string f_uri;
+      full_uri(r, f_uri);
+      const std::string return_to(f_uri);
+      const std::string trust_root(f_uri);
       std::string re_direct = consumer->checkid_(mode, params.get_param("openid_identity"), return_to, trust_root);
-      return http_redirect(r, re_direct);
       delete consumer;
-    } else { //display an input form
-      return http_sendstring(r, "hello there!");
+      return http_redirect(r, re_direct);
+  } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
+    opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));
+    try {
+      consumer->id_res(params);
+      delete consumer;
+      // now set auth cookie
+      // INSERT CODE HERE
+      return http_sendstring(r, "You should come home and meet my sister.\n");
+    } catch(opkele::exception &e) {
+      std::string result = "UNAUTHORIZED!!!!!" + std::string(e.what());
+      delete consumer;
+      return http_sendstring(r, result);
     }
+  } else { //display an input form
+    std::string result = "<html><head><script type=\"text/javascript\">function s() { window.location=window.location+\"?openid_identity=\"+prompt(\"Enter your identity url.\",\"\"); }</script><body onload=\"s();\"></body></html>";
+    return http_sendstring(r, result);
   }
+  
 
   // otherwise....
   // if this is a callback attempt to athenticate, test credentials

@@ -12,11 +12,10 @@ namespace opkele {
 
   MoidConsumer::MoidConsumer(const string& storage_location) : db_(NULL, 0) {
     u_int32_t oFlags = DB_CREATE; // Open flags;
-
     try {
       db_.open(NULL,                // Transaction pointer
 	       storage_location.c_str(),          // Database file name
-	       NULL,                // Optional logical database name
+	       "associations",                // Optional logical database name
 	       DB_BTREE,            // Database access method
 	       oFlags,              // Open flags
 	       0);                  // File mode (using defaults)
@@ -54,9 +53,17 @@ namespace opkele {
     string id = server+handle;
     char c_id[255];
     strcpy(c_id, id.c_str());
+
+    fprintf(stderr, "storing \"%s\" in db.\n", c_id);
+
     Dbt key(c_id, strlen(c_id) + 1);
     Dbt data(&bassoc, sizeof(BDB_ASSOC));
     db_.put(NULL, &key, &data, 0);
+    db_.sync(0);
+
+    print_db();
+    fflush(stderr);
+
     auto_ptr<association_t> a(new association(server, handle, "assoc type", secret, expires_in, false));
     return a;
   };
@@ -66,6 +73,11 @@ namespace opkele {
     string id = server+handle;
     char c_id[255];
     strcpy(c_id, id.c_str());
+
+    fprintf(stderr, "fetching \"%s\" in db.\n", c_id);
+    print_db();
+    fflush(stderr);
+
     Dbt key(c_id, strlen(c_id) + 1);
     data.set_data(&bassoc);
     data.set_ulen(sizeof(BDB_ASSOC));
@@ -91,6 +103,28 @@ namespace opkele {
     Dbt key(c_id, strlen(c_id) + 1);
     db_.del(NULL, &key, 0);
   };
+
+  void MoidConsumer::print_db() {
+    Dbt key, data;
+    Dbc *cursorp;
+    db_.cursor(NULL, &cursorp, 0); 
+    try {
+      Dbt nkey, ndata;
+      puts("Iterating....");
+      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
+	char * key_v = (char *) key.get_data();
+	BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
+	fprintf(stderr, "possible key: \"%s\" and \"%s\"\n", key_v, data_v->secret);
+      }
+    } catch(DbException &e) {
+      db_.err(e.get_errno(), "Error!");
+    } catch(std::exception &e) {
+      db_.errx("Error! %s", e.what());
+    }
+    if (cursorp != NULL) 
+      cursorp->close(); 
+  };
+
   assoc_t MoidConsumer::find_assoc(const string& server) { throw failed_lookup("blah"); };
 
 
@@ -128,3 +162,23 @@ namespace opkele {
   }
 
 }
+
+
+/* cursor code
+      Dbc *cursorp;
+      db_.cursor(NULL, &cursorp, 0); 
+      try {
+	Dbt nkey, ndata;
+	puts("Iterating....");
+	while (cursorp->get(&key, &data, DB_NEXT) == 0) {
+	  char * data = (char *) key.get_data();
+	  fprintf(stdout, "possible key: \"%s\"\n", data);
+	}
+      } catch(DbException &e) {
+        db_.err(e.get_errno(), "Error!");
+      } catch(std::exception &e) {
+        db_.errx("Error! %s", e.what());
+      }
+      if (cursorp != NULL) 
+	cursorp->close(); 
+*/

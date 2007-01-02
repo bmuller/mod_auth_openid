@@ -6,20 +6,29 @@
 
 namespace opkele {
   using namespace std;
+  using namespace modauthopenid;
 
 void test() {
+  string db_location = "/home/bmuller/mod_auth_openid/mod_auth_openid/mod_auth_openid.db";
+  //SessionManager *s = new SessionManager(db_location);
+  //s->store_session("one", "path", "identity", "server");
+  //SESSION sess;
+  //s->get_session("one", sess);
+  //puts(sess.path);
+  //delete s;
+  //return;
   //std::string s = opkele::consumer_t::canonicalize("yourmom.com");
   //puts(s.c_str());
   //opkele::association a;
-  mode_t mode = mode_checkid_setup; // mode_associate; //mode_checkid_setup;
-  MoidConsumer *consumer = new MoidConsumer("/home/bmuller/mod_auth_openid/opkele_test/test.bdb");
+
+  MoidConsumer *consumer = new MoidConsumer(db_location);
   const string id = "http://identity.musc.edu/users/mullerb";
   const string return_to = "http://itchy.lambastard.com/openid/final";
   const string trust_root = "http://itchy.lambastard.com";
-  //string r = consumer->checkid_(mode, id, return_to, trust_root);
+  //string r = consumer->checkid_setup(id, return_to, trust_root);
   //puts(r.c_str());
-
-  string resp = "openid.assoc_handle=%7BHMAC-SHA1%7D%7B4598668e%7D%7BGFVArQ%3D%3D%7D&openid.identity=http%3A%2F%2Fidentity.musc.edu%2Fusers%2Fmullerb&openid.mode=id_res&openid.return_to=http%3A%2F%2Fitchy.lambastard.com%2Fopenid%2Ffinal&openid.sig=%2FOVZ%2FUT9I6BD0JBn5%2F5A50AE1F0%3D&openid.signed=mode%2Cidentity%2Creturn_to";
+  //return;
+  string resp = "openid.assoc_handle=%7BHMAC-SHA1%7D%7B459a977a%7D%7BBC2rwg%3D%3D%7D&openid.identity=http%3A%2F%2Fidentity.musc.edu%2Fusers%2Fmullerb&openid.mode=id_res&openid.return_to=http%3A%2F%2Fitchy.lambastard.com%2Fopenid%2Ffinal&openid.sig=h6xu9vukxPxg%2Byj16Audyz2pLPo%3D&openid.signed=mode%2Cidentity%2Creturn_to";
   params_t p = parse_query_string(resp);
   try {
     consumer->id_res(p, id);

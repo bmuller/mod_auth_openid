@@ -39,7 +39,10 @@ MoidConsumer.o:
 	g++ MoidConsumer.cpp -o MoidConsumer.o -c
 moid_utils.o:
 	g++ moid_utils.cpp -o moid_utils.o -c
-
+SessionManager.o:
+	g++ -c SessionManager.cpp -o SessionManager.o
+test: MoidConsumer.o moid_utils.o SessionManager.o
+	g++ test.cpp MoidConsumer.o moid_utils.o SessionManager.o -I$(APXS_INCLUDEDIR) -I. -I- $(APXS_CFLAGS) $(APXS_CFLAGS_SHLIB) -o test -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx -I/usr/include/curl
 
 # install the shared object file into Apache 
 install: all
