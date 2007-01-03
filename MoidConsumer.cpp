@@ -39,6 +39,7 @@ namespace opkele {
   };
 
   assoc_t MoidConsumer::store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in) {
+    ween_expired();
     string secret_b64;
     secret.to_base64(secret_b64);
     time_t rawtime;
@@ -54,29 +55,22 @@ namespace opkele {
     char c_id[255];
     strcpy(c_id, id.c_str());
 
-    fprintf(stderr, "storing \"%s\" in db.\n", c_id);
-
     Dbt key(c_id, strlen(c_id) + 1);
     Dbt data(&bassoc, sizeof(BDB_ASSOC));
     db_.put(NULL, &key, &data, 0);
     db_.sync(0);
 
-    print_db();
-    fflush(stderr);
-
     auto_ptr<association_t> a(new association(server, handle, "assoc type", secret, expires_in, false));
     return a;
   };
+
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle) {
+    ween_expired();
     Dbt data;
     BDB_ASSOC bassoc;
     string id = server+handle;
     char c_id[255];
     strcpy(c_id, id.c_str());
-
-    fprintf(stderr, "fetching \"%s\" in db.\n", c_id);
-    print_db();
-    fflush(stderr);
 
     Dbt key(c_id, strlen(c_id) + 1);
     data.set_data(&bassoc);
@@ -84,6 +78,7 @@ namespace opkele {
     data.set_flags(DB_DBT_USERMEM);
     if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
       fprintf(stderr, "Could not find server %s and handle %s in db.\n", server.c_str(), handle.c_str());
+      throw failed_lookup("Could not find association.");
     }
 
     time_t rawtime;
@@ -127,6 +122,30 @@ namespace opkele {
 
   assoc_t MoidConsumer::find_assoc(const string& server) { throw failed_lookup("blah"); };
 
+  void MoidConsumer::ween_expired() {
+    time_t rawtime;
+    time (&rawtime);
+    Dbt key, data;
+    Dbc *cursorp;
+    db_.cursor(NULL, &cursorp, 0);
+    try {
+      Dbt nkey, ndata;
+      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
+        char * key_v = (char *) key.get_data();
+        BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
+	if(rawtime > data_v->expires_on) {
+	  //fprintf(stderr, "Expires_on %i is greater than current time %i", data_v->expires_on, rawtime); fflush(stderr);
+	  db_.del(NULL, &key, 0);
+	}
+      }
+    } catch(DbException &e) {
+      db_.err(e.get_errno(), "Error!");
+    } catch(std::exception &e) {
+      db_.errx("Error! %s", e.what());
+    }
+    if (cursorp != NULL)
+      cursorp->close();
+  };
 
   // due to poor design in libopkele - this stuff must go here
   class curl_t {
@@ -164,21 +183,4 @@ namespace opkele {
 }
 
 
-/* cursor code
-      Dbc *cursorp;
-      db_.cursor(NULL, &cursorp, 0); 
-      try {
-	Dbt nkey, ndata;
-	puts("Iterating....");
-	while (cursorp->get(&key, &data, DB_NEXT) == 0) {
-	  char * data = (char *) key.get_data();
-	  fprintf(stdout, "possible key: \"%s\"\n", data);
-	}
-      } catch(DbException &e) {
-        db_.err(e.get_errno(), "Error!");
-      } catch(std::exception &e) {
-        db_.errx("Error! %s", e.what());
-      }
-      if (cursorp != NULL) 
-	cursorp->close(); 
-*/
+

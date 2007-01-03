@@ -25,6 +25,7 @@ namespace opkele {
   private:
     Db db_;
     void close();    
+    void ween_expired();
   };
 
   // in moid_utils.cpp
@@ -36,6 +37,10 @@ namespace opkele {
 namespace modauthopenid {
 
   using namespace std;
+
+  typedef struct nonce {
+    int expires_on; // exact moment it expires
+  } NONCE;
 
   typedef struct session {
     char session_id[33];
@@ -54,6 +59,7 @@ namespace modauthopenid {
   private:
    Db db_;
    void close();
+   void ween_expired();
  };
 
  class NonceManager {
@@ -65,6 +71,7 @@ namespace modauthopenid {
  private:
    Db db_;
    void close();
+   void ween_expired();
  };
 
 

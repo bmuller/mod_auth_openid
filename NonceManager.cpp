@@ -23,17 +23,18 @@ namespace modauthopenid {
   };
   
   bool NonceManager::is_valid(const string& nonce, bool delete_on_find) {
+    ween_expired();
     Dbt data;
+    NONCE n;
     char id[255];
     strcpy(id, nonce.c_str());
     Dbt key(id, strlen(id) + 1);
 
-    time_t rawtime;
-    data.set_data(&rawtime);
-    data.set_ulen(sizeof(time_t));
+    data.set_data(&n);
+    data.set_ulen(sizeof(NONCE));
     data.set_flags(DB_DBT_USERMEM);
     if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
-      fprintf(stderr, "Could not find nonce %s in nonce db.\n", nonce.c_str());
+      fprintf(stderr, "Failed Auth Attempt: Could not find nonce \"%s\" in nonce db.\n", nonce.c_str());
       return false;
     }
     if(delete_on_find) 
@@ -43,15 +44,42 @@ namespace modauthopenid {
   
 
   void NonceManager::add(const string& nonce) {
+    ween_expired();
     time_t rawtime;
     time (&rawtime);
+    NONCE n;
+    n.expires_on = rawtime + 3600; // allow nonce to exist for one hour
     
     char id[255];
     strcpy(id, nonce.c_str());
     Dbt key(id, strlen(id) + 1);
-    Dbt data(&rawtime, sizeof(time_t));
+    Dbt data(&n, sizeof(NONCE));
     db_.put(NULL, &key, &data, 0);
   };
+
+  void NonceManager::ween_expired() {
+    time_t rawtime;
+    time (&rawtime);
+    Dbt key, data;
+    Dbc *cursorp;
+    db_.cursor(NULL, &cursorp, 0);
+    try {
+      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
+	NONCE *n = (NONCE *) data.get_data();
+        if(rawtime > n->expires_on) {
+          //fprintf(stderr, "Expires_on %i is greater than current time %i", data_v->expires_on, rawtime); fflush(stderr);
+          db_.del(NULL, &key, 0);
+        }
+      }
+    } catch(DbException &e) {
+      db_.err(e.get_errno(), "Error!");
+    } catch(std::exception &e) {
+      db_.errx("Error! %s", e.what());
+    }
+    if (cursorp != NULL)
+      cursorp->close();
+  };
+
 
   void NonceManager::close() {
     try {

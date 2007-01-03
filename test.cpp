@@ -22,7 +22,7 @@ void test() {
   //opkele::association a;
 
   NonceManager *nm = new NonceManager(db_location);
-  //nm->add("a nonce");
+  nm->add("a nonce");
   if(nm->is_valid("a nonce"))
     puts("valid!");
   delete nm;
