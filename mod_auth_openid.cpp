@@ -41,6 +41,22 @@ typedef struct {
 
 typedef const char *(*CMD_HAND_TYPE) ();
 
+static void base_dir(std::string path, std::string& s) {
+  // guaranteed that path will at least be "/" - but just to be safe...
+  if(path.size() == 0)
+    return;
+  int i = path.find_last_of('/');
+  s = path.substr(0, i+1);
+}
+
+static void make_rstring(int size, std::string& s) {
+  s = "";
+  char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  srand((unsigned) time(0));
+  for(int index=0; index<size; index++)
+    s += cs[rand()%62];
+}
+
 //static void *create_modauthopenid_config(apr_pool_t *p, server_rec *s) {
 static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
@@ -78,6 +94,7 @@ static const command_rec mod_authopenid_cmds[] = {
 };
 
 static int http_sendstring(request_rec *r, std::string s) {
+  apr_table_setn(r->headers_out, "Content-Type", "text/html");
   const char *c_s = s.c_str();
   conn_rec *c = r->connection;
   apr_bucket *b;
@@ -110,8 +127,36 @@ static void full_uri(request_rec *r, std::string& result) {
   result = prefix+hostname+s_port+uri;
 }
 
+static void strip(std::string& s) {
+  while(!s.empty() && s.substr(0,1) == " ") s.erase(0,1);
+  while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
+}
+
+static void get_session_id(request_rec *r, std::string& session_id) {
+  const char * cookies_c = apr_table_get(r->headers_in, "Cookie");
+  if(cookies_c == NULL) 
+    return;
+  std::string cookies(cookies_c);
+  std::vector<std::string> pairs = opkele::explode(cookies, ";");
+  for(std::string::size_type i = 0; i < pairs.size(); i++) {
+    std::vector<std::string> pair = opkele::explode(pairs[i], "=");
+    if(pair.size() == 2) {
+      std::string key = pair[0];
+      strip(key);
+      std::string value = pair[1];
+      strip(value);
+      fprintf(stderr, "COOKIE: \"%s\"=\"%s\"\n", key.c_str(), value.c_str()); fflush(stderr);
+      if(key == "open_id_session_id") {
+	session_id = pair[1];
+	return;
+      }
+    }
+  }
+}
+
 static int mod_authopenid_method_handler (request_rec *r) {
-  // header for cookie Set-Cookie: _session_id=5d3ef8ed0dd06a083bd4bf5ed27d6388; path=/
+  apr_table_t *env = r->subprocess_env;
+
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
@@ -119,7 +164,27 @@ static int mod_authopenid_method_handler (request_rec *r) {
   if(!s_cfg->enabled) return DECLINED;
 
   // test for valid session - if so, return DECLINED
-  // INSERT CODE HERE
+  std::string session_id = "";
+  get_session_id(r, session_id);
+  if(session_id != "") {
+    fprintf(stderr, "found session_id: %s\n", session_id.c_str()); fflush(stderr);
+    modauthopenid::SESSION session;
+    modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
+    sm->get_session(session_id, session);
+    delete sm;
+
+    // if session found 
+    if(std::string(session.identity) != "") {
+      std::string uri_path;
+      base_dir(std::string(r->uri), uri_path);
+      std::string valid_path(session.path);
+      // if found session has a valid path
+      if(valid_path == uri_path.substr(0, valid_path.size())) {
+	apr_table_setn(env, "REMOTE_USER", session.identity);
+	return DECLINED;
+      }
+    }
+  }
 
   // parse the get params
   opkele::params_t params;
@@ -141,9 +206,23 @@ static int mod_authopenid_method_handler (request_rec *r) {
     try {
       consumer->id_res(params);
       delete consumer;
-      // now set auth cookie
-      // INSERT CODE HERE
-      return http_sendstring(r, "You should come home and meet my sister.\n");
+      std::string identity = (params.has_param("openid.identity")) ? params.get_param("openid.identity") : "unknown";
+
+      // if no exception raised, now set auth cookie
+      std::string session_id, path;
+      make_rstring(32, session_id);
+      base_dir(std::string(r->uri), path);
+      std::string cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
+      apr_table_setn(r->headers_out, "Set-Cookie", cookie_value.c_str());
+
+      // save session values
+      modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
+      sm->store_session(session_id, path, identity);
+      delete sm;
+      
+      // set remote user CGI var
+      apr_table_setn(env, "REMOTE_USER", identity.c_str());
+      return DECLINED;
     } catch(opkele::exception &e) {
       std::string result = "UNAUTHORIZED!!!!!" + std::string(e.what());
       delete consumer;

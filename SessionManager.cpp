@@ -36,7 +36,7 @@ void SessionManager::get_session(const string& session_id, SESSION& session) {
   }
 };
 
-void SessionManager::store_session(const string& session_id, const string& path, const string& identity, const string& identity_server) {
+void SessionManager::store_session(const string& session_id, const string& path, const string& identity) {
   time_t rawtime;
   time (&rawtime);
 
@@ -44,7 +44,7 @@ void SessionManager::store_session(const string& session_id, const string& path,
   strcpy(s.session_id, session_id.c_str());
   strcpy(s.path, path.c_str());
   strcpy(s.identity, identity.c_str());
-  strcpy(s.identity_server, identity_server.c_str());
+  //strcpy(s.identity_server, identity_server.c_str());
   s.expires_on = rawtime + 86400;
   
   char id[255];

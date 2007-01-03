@@ -32,8 +32,8 @@ mod_auth_openid.o: mod_auth_openid.cpp
 	g++ -c -fPIC -I$(APXS_INCLUDEDIR) -I. -I- $(APXS_CFLAGS) $(APXS_CFLAGS_SHLIB) -o $@ $< -I/usr/include/curl
 
 # link
-libmodauthopenid.so: MoidConsumer.o moid_utils.o mod_auth_openid.o 
-	g++ -fPIC -shared -o $@ MoidConsumer.o moid_utils.o mod_auth_openid.o $(APXS_LIBS_SHLIB) -Wall -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx
+libmodauthopenid.so: MoidConsumer.o SessionManager.o moid_utils.o mod_auth_openid.o 
+	g++ -fPIC -shared -o $@ MoidConsumer.o SessionManager.o moid_utils.o mod_auth_openid.o $(APXS_LIBS_SHLIB) -Wall -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx
 
 MoidConsumer.o:
 	g++ MoidConsumer.cpp -o MoidConsumer.o -c

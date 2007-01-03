@@ -7,6 +7,7 @@
 #include <db_cxx.h>
 #include <time.h>
 #include <string>
+#include <vector>
 
 namespace opkele {
 
@@ -29,7 +30,6 @@ namespace opkele {
   // in moid_utils.cpp
   params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
-
 }
 
 namespace modauthopenid {
@@ -37,10 +37,10 @@ namespace modauthopenid {
 using namespace std;
 
 typedef struct session {
-  char session_id[32];
+  char session_id[33];
   char path[255];
   char identity[255];
-  char identity_server[255];
+  //char identity_server[255];
   int expires_on; // exact moment it expires
 } SESSION;
 
@@ -49,7 +49,7 @@ class SessionManager {
   SessionManager(const string& storage_location);
   ~SessionManager() { close(); };
   void get_session(const string& session_id, SESSION& session);
-  void store_session(const string& session_id, const string& path, const string& identity, const string& identity_server);
+  void store_session(const string& session_id, const string& path, const string& identity);
  private:
   Db db_;
   void close();

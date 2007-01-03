@@ -3,15 +3,6 @@
 namespace opkele {
   using namespace std;
 
-  string make_rstring(int size) {
-    string s = "";
-    char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    srand((unsigned) time(0));
-    for(int index=0; index<size; index++)
-      s+= cs[rand()%62];
-    return s;
-  }
-
   vector<string> explode(string s, string e) {
     vector<string> ret;
     int iPos = s.find(e, 0);
