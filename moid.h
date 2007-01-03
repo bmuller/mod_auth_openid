@@ -35,25 +35,37 @@ namespace opkele {
 
 namespace modauthopenid {
 
-using namespace std;
+  using namespace std;
 
-typedef struct session {
-  char session_id[33];
-  char path[255];
-  char identity[255];
-  //char identity_server[255];
-  int expires_on; // exact moment it expires
-} SESSION;
+  typedef struct session {
+    char session_id[33];
+    char path[255];
+    char identity[255];
+    //char identity_server[255];
+    int expires_on; // exact moment it expires
+  } SESSION;
+  
+  class SessionManager {
+  public:
+    SessionManager(const string& storage_location);
+    ~SessionManager() { close(); };
+    void get_session(const string& session_id, SESSION& session);
+    void store_session(const string& session_id, const string& path, const string& identity);
+  private:
+   Db db_;
+   void close();
+ };
 
-class SessionManager {
+ class NonceManager {
  public:
-  SessionManager(const string& storage_location);
-  ~SessionManager() { close(); };
-  void get_session(const string& session_id, SESSION& session);
-  void store_session(const string& session_id, const string& path, const string& identity);
+   NonceManager(const string& storage_location);
+   ~NonceManager() { close(); };
+   bool is_valid(const string& nonce, bool delete_on_find = true);
+   void add(const string& nonce);
  private:
-  Db db_;
-  void close();
-};
+   Db db_;
+   void close();
+ };
+
 
 }

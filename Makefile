@@ -32,17 +32,19 @@ mod_auth_openid.o: mod_auth_openid.cpp
 	g++ -c -fPIC -I$(APXS_INCLUDEDIR) -I. -I- $(APXS_CFLAGS) $(APXS_CFLAGS_SHLIB) -o $@ $< -I/usr/include/curl
 
 # link
-libmodauthopenid.so: MoidConsumer.o SessionManager.o moid_utils.o mod_auth_openid.o 
-	g++ -fPIC -shared -o $@ MoidConsumer.o SessionManager.o moid_utils.o mod_auth_openid.o $(APXS_LIBS_SHLIB) -Wall -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx
+libmodauthopenid.so: NonceManager.o MoidConsumer.o SessionManager.o moid_utils.o mod_auth_openid.o 
+	g++ -fPIC -shared -o $@ NonceManager.o MoidConsumer.o SessionManager.o moid_utils.o mod_auth_openid.o $(APXS_LIBS_SHLIB) -Wall -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx
 
 MoidConsumer.o:
 	g++ MoidConsumer.cpp -o MoidConsumer.o -c
+NonceManager.o:
+	g++ NonceManager.cpp -o NonceManager.o -c
 moid_utils.o:
 	g++ moid_utils.cpp -o moid_utils.o -c
 SessionManager.o:
 	g++ -c SessionManager.cpp -o SessionManager.o
-test: MoidConsumer.o moid_utils.o SessionManager.o
-	g++ test.cpp MoidConsumer.o moid_utils.o SessionManager.o -I$(APXS_INCLUDEDIR) -I. -I- $(APXS_CFLAGS) $(APXS_CFLAGS_SHLIB) -o test -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx -I/usr/include/curl
+test: NonceManager.o MoidConsumer.o moid_utils.o SessionManager.o
+	g++ test.cpp NonceManager.o MoidConsumer.o moid_utils.o SessionManager.o -I$(APXS_INCLUDEDIR) -I. -I- $(APXS_CFLAGS) $(APXS_CFLAGS_SHLIB) -o test -Wl,--rpath -Wl,/usr/local/lib -lopkele -lcurl -lpcre++ -lmimetic -ldb_cxx -I/usr/include/curl
 
 # install the shared object file into Apache 
 install: all
