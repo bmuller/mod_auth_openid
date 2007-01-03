@@ -30,6 +30,7 @@ namespace opkele {
   // in moid_utils.cpp
   params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
+  bool is_valid_url(string url);
 }
 
 namespace modauthopenid {

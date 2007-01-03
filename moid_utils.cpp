@@ -3,6 +3,11 @@
 namespace opkele {
   using namespace std;
 
+  bool is_valid_url(string url) {
+    pcrepp::Pcre reg("^https?://([-\\w\\.]+)+(:\\d+)?(/([\\w/_\\.]*(\\?\\S+)?)?)?");
+    return reg.search(url);
+  }
+
   vector<string> explode(string s, string e) {
     vector<string> ret;
     int iPos = s.find(e, 0);
