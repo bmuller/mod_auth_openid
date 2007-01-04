@@ -11,15 +11,13 @@ AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
-AC_CHECK_HEADERS(string vector opkele/exception.h openssl/ssl.h)
-
 AC_HEADER_STDC
 
 AC_PROG_RANLIB
 
 dnl provide flag --enable-debug
 AC_ARG_ENABLE(debug,
-[  --enable-debug          enable debugging output],
+[  --enable-debug          enable debugging output to Apache error log],
 [if test "$enableval" = "yes"; then
     DEBUG="yes"
     CPPFLAGS="$CPPFLAGS -DDEBUG"
@@ -86,8 +84,13 @@ AC_CHECK_LIB(db_cxx, main, [
   ]
 )
 
-OPKELE_LIBS=-lopkele;
-AC_SUBST([OPKELE_LIBS]) 
+AC_CHECK_HEADER(opkele/opkele-config.h, [
+    OPKELE_LIBS=-lopkele;
+    AC_SUBST([OPKELE_LIBS]) 
+  ],[
+    AC_MSG_ERROR( Could not find opkele library.  Get it at http://kin.klever.net/libopkele/. )
+  ]
+)
 
 AC_CONFIG_FILES([
  Makefile

@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libmodauthopenid.la
 
 INCLUDES = -I@apache_dir@/include -I/usr/include/curl
-LDADD = ${LIBCURL} ${PCREPP_LIBS} ${MIMETIC_LIBS} ${BDB_LIBS} ${OPKELE_LIBS}
+libmodauthopenid_la_LDFLAGS = ${LIBCURL} ${PCREPP_LIBS} ${MIMETIC_LIBS} ${BDB_LIBS} ${OPKELE_LIBS}
 
 libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cpp NonceManager.cpp SessionManager.cpp
 
