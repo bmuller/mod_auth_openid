@@ -1,8 +1,8 @@
-AC_INIT([mod_auth_openid.so], [0.0], [bmuller@butterfat.net])
+AC_INIT([mod_auth_openid], [0.0], [bmuller@butterfat.net])
 # AC_CONFIG_SRCDIR([include/opkele/opkele-config.h])
 # AC_CONFIG_HEADERS([config.h include/opkele/acconfig.h])
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE([dist-bzip2])
+AM_INIT_AUTOMAKE([no-dist gnu])
 
 AC_PROG_CXX
 AC_PROG_CXXCPP
@@ -105,6 +105,9 @@ echo " ***"
 echo " *** $> make"
 echo " *** $> $apache_dir/bin/apxs -i -a -n 'authopenid' libmodauthopenid.la"
 echo " ***"
+echo " *** Do NOT run \"make install\".  Use apache's apxs for that."
+echo " ***"
+echo " *** Report bugs at https://www.butterfat.net/tracker/butterfat/index"
 echo " *** Thanks for using GNU software."
 echo " ***"
 echo

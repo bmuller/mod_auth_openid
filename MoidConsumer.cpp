@@ -201,7 +201,7 @@ namespace opkele {
       || (r=curl_easy_setopt(c,CURLOPT_MAXREDIRS,5))
       || (r=curl_easy_setopt(c,CURLOPT_DNS_CACHE_TIMEOUT,120))
       || (r=curl_easy_setopt(c,CURLOPT_DNS_USE_GLOBAL_CACHE,1))
-      //|| (r=curl_easy_setopt(c,CURLOPT_USERAGENT,PACKAGE_NAME"/"PACKAGE_VERSION))
+      || (r=curl_easy_setopt(c,CURLOPT_USERAGENT,PACKAGE_NAME"/"PACKAGE_VERSION))
       || (r=curl_easy_setopt(c,CURLOPT_TIMEOUT,20))
       ;
     return r;

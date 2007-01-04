@@ -6,9 +6,9 @@ libmodauthopenid_la_LDFLAGS = ${LIBCURL} ${PCREPP_LIBS} ${MIMETIC_LIBS} ${BDB_LI
 libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cpp NonceManager.cpp SessionManager.cpp
 
 APXS=@apache_dir@/bin/apxs
-CXXFLAGS=`@apache_dir@/bin/apr-1-config --cflags --cppflags` 
-LIBS=$LIBS `@apache_dir@/bin/apr-1-config --libs`
-LDFLAGS=$LDFLAGS -Wl,--rpath -Wl,/usr/local/lib
+AM_CXXFLAGS=`@apache_dir@/bin/apr-1-config --cflags --cppflags` 
+LIBS=`@apache_dir@/bin/apr-1-config --libs`
+AM_LDFLAGS= -Wl,--rpath -Wl,/usr/local/lib
 
 install: all
 	$(APXS) -i -a -n 'authopenid' libmodauthopenid.la

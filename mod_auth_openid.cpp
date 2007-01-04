@@ -41,6 +41,15 @@ typedef struct {
 
 typedef const char *(*CMD_HAND_TYPE) ();
 
+static std::string url_encode(const std::string& str) {
+  char * t = curl_escape(str.c_str(),str.length());
+  if(!t)
+    return std::string("");
+  std::string rv(t);
+  curl_free(t);
+  return rv;
+}
+
 static void base_dir(std::string path, std::string& s) {
   // guaranteed that path will at least be "/" - but just to be safe...
   if(path.size() == 0)
@@ -133,8 +142,8 @@ static void full_uri(request_rec *r, std::string& result) {
   char port[6];
   sprintf(port, "%lu", (unsigned long) i_port);
   std::string s_port = (i_port == 80) ? "" : ":" + std::string(port);
-  std::string args = (r->args == NULL) ? "" : std::string(r->args);
-  result = prefix + hostname + s_port + uri + "?" + args;
+  std::string args = (r->args == NULL) ? "" : "?" + std::string(r->args);
+  result = prefix + hostname + s_port + uri + args;
 }
 
 static void strip(std::string& s) {
@@ -226,7 +235,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
     make_rstring(10, nonce);
     nm->add(nonce);
     delete nm;
-    params["openid.nonce"] = nonce;
+    //params["nonce"] = nonce;
     //remove first char - ? to fit r->args standard
     std::string args = params.append_query("", "").substr(1); 
     strcpy(r->args, args.c_str());
@@ -242,27 +251,32 @@ static int mod_authopenid_method_handler (request_rec *r) {
       re_direct = consumer->checkid_setup(id_location, return_to, trust_root);
     } catch (opkele::exception &e) {
       delete consumer;
-      return show_input(r, "Could not open \\\""+id_location+"\\\".  Please check the URL.");
+      return show_input(r, "Could not open \\\""+id_location+"\\\" or no identity found there.  Please check the URL.");
     }
     delete consumer;
     return http_redirect(r, re_direct);
     //return http_sendstring(r, re_direct);
   } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
     // make sure nonce is present
-    if(!params.has_param("openid.nonce"))
-      return show_input(r, "Error in authentication.  Nonce not found.");
+    //\\if(!params.has_param("openid.nonce"))
+    //\\return show_input(r, "Error in authentication.  Nonce not found.");
     opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));
     try {
+      std::string ort = params.get_param("openid.return_to");
+      std::string sort = url_encode(ort);
+      params["openid.return_to"] = sort;
       consumer->id_res(params);
       delete consumer;
 
       // if no exception raised, check nonce
+      /*
       modauthopenid::NonceManager *nm = new modauthopenid::NonceManager(std::string(s_cfg->db_location));
       if(!nm->is_valid(params.get_param("openid.nonce"))) {
 	delete nm;
 	return show_input(r, "Error in authentication.  Nonce invalid."); 
       }
       delete nm;
+      */
 
       // now set auth cookie
       std::string session_id, path;
@@ -276,9 +290,28 @@ static int mod_authopenid_method_handler (request_rec *r) {
       sm->store_session(session_id, path, identity);
       delete sm;
       
+      std::map<std::string,std::string>::iterator iter;
+      for(iter = params.begin(); iter != params.end(); iter++) {
+	std::string param_key = (iter->first);
+	fprintf(stderr, "looking at param: %s - does \"%s\" == \"openid.\"\n", param_key.c_str(), param_key.substr(0,7).c_str()); fflush(stderr);
+	if(param_key.substr(0, 7) == "openid.")
+	  params.erase(param_key);
+      }
+      std::string args = params.append_query("", "").substr(1);
+      if(args.length() == 0)
+	r->args = NULL;
+      else
+	strcpy(r->args, args.c_str());
+      std::string redirect_location;
+      full_uri(r, redirect_location);
+      fprintf(stderr, "would be redirecting to: %s\n", redirect_location.c_str());  fflush(stderr);
+
       // set remote user CGI var
       apr_table_setn(env, "REMOTE_USER", identity.c_str());
       return DECLINED;
+
+      return http_redirect(r, redirect_location);
+      
     } catch(opkele::exception &e) {
       std::string result = "UNAUTHORIZED!!!!!" + std::string(e.what());
       delete consumer;
@@ -288,7 +321,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
     return show_input(r, "");
   }
 }
- 
+
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
   ap_hook_handler(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
 }

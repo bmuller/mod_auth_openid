@@ -9,6 +9,14 @@
 #include <string>
 #include <vector>
 
+/* overwrite package vars set by apache */
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#include "config.h"
+
 namespace opkele {
 
   using namespace std;
@@ -74,5 +82,16 @@ namespace modauthopenid {
    void ween_expired();
  };
 
-
 }
+
+//void debug(std::string s) {
+#ifdef DEBUG
+  /*
+  time_t rawtime;
+  time (&rawtime);
+  s = PACKAGE_NAME + ": ";
+  fprintf(stderr, s.c_str());
+  fflush();
+  */
+#endif
+//}
