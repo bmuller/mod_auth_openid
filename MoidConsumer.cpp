@@ -51,9 +51,11 @@ namespace opkele {
     strcpy(bassoc.handle, handle.c_str());
     bassoc.expires_on = rawtime + expires_in;
 
-    string id = server+handle;
+    // We want to store with unique key on server and handle, but
+    // want to be able to search by server
+    string id = server + " " + handle;
     char c_id[255];
-    strcpy(c_id, id.c_str());
+    strcpy(c_id, id.substr(0, 254).c_str()); // safety first!
 
     Dbt key(c_id, strlen(c_id) + 1);
     Dbt data(&bassoc, sizeof(BDB_ASSOC));
@@ -68,9 +70,9 @@ namespace opkele {
     ween_expired();
     Dbt data;
     BDB_ASSOC bassoc;
-    string id = server+handle;
+    string id = server + " " + handle;
     char c_id[255];
-    strcpy(c_id, id.c_str());
+    strcpy(c_id, id.substr(0, 254).c_str());
 
     Dbt key(c_id, strlen(c_id) + 1);
     data.set_data(&bassoc);
@@ -92,9 +94,9 @@ namespace opkele {
     return a;    
   };
   void MoidConsumer::invalidate_assoc(const string& server,const string& handle) {
-    string id = server+handle;
+    string id = server + " " + handle;
     char c_id[255];
-    strcpy(c_id, id.c_str());
+    strcpy(c_id, id.substr(0, 254).c_str());
     Dbt key(c_id, strlen(c_id) + 1);
     db_.del(NULL, &key, 0);
   };
@@ -120,7 +122,39 @@ namespace opkele {
       cursorp->close(); 
   };
 
-  assoc_t MoidConsumer::find_assoc(const string& server) { throw failed_lookup("blah"); };
+  assoc_t MoidConsumer::find_assoc(const string& server) {
+    ween_expired();
+    time_t rawtime;
+    time (&rawtime);
+    Dbt key, data;
+    Dbc *cursorp;
+    db_.cursor(NULL, &cursorp, 0);
+    try {
+      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
+        char * key_v = (char *) key.get_data();
+        BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
+	string key_s(key_v);
+	vector<string> parts = explode(key_s, " ");
+	// If server url we were given matches the current record, and it still has
+	// at least five minutes until it expires (to give the user time to be redirected -> there -> back)
+        if(parts.size()==2 && parts[0] == server && rawtime < (data_v->expires_on + 18000)) {
+	  int expires_in = data_v->expires_on - rawtime;
+	  secret_t secret;
+	  secret.from_base64(data_v->secret);
+	  auto_ptr<association_t> a(new association(data_v->server, data_v->handle, "assoc type", secret, expires_in, false));
+	  return a;
+        }
+      }
+    } catch(DbException &e) {
+      db_.err(e.get_errno(), "Error!");
+    } catch(std::exception &e) {
+      db_.errx("Error! %s", e.what());
+    }
+    if (cursorp != NULL)
+      cursorp->close();
+
+    throw failed_lookup("Could not find a valid handle."); 
+  };
 
   void MoidConsumer::ween_expired() {
     time_t rawtime;
