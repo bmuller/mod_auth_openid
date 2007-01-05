@@ -1,4 +1,4 @@
-#include "moid.h"
+#include "mod_auth_openid.h"
 
 namespace opkele {
   using namespace std;
@@ -60,7 +60,8 @@ namespace opkele {
     Dbt key(c_id, strlen(c_id) + 1);
     Dbt data(&bassoc, sizeof(BDB_ASSOC));
     db_.put(NULL, &key, &data, 0);
-    db_.sync(0);
+
+    fprintf(stderr, "Storing server \"%s\" and handle \"%s\" in db.\n", server.c_str(), handle.c_str()); fflush(stderr);
 
     auto_ptr<association_t> a(new association(server, handle, "assoc type", secret, expires_in, false));
     return a;
@@ -79,7 +80,7 @@ namespace opkele {
     data.set_ulen(sizeof(BDB_ASSOC));
     data.set_flags(DB_DBT_USERMEM);
     if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
-      fprintf(stderr, "Could not find server %s and handle %s in db.\n", server.c_str(), handle.c_str());
+      fprintf(stderr, "Could not find server %s and handle %s in db.\n", server.c_str(), handle.c_str()); fflush(stderr);
       throw failed_lookup("Could not find association.");
     }
 

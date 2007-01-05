@@ -1,3 +1,15 @@
+/* Apache includes. */
+#include "httpd.h"
+#include "http_core.h"
+#include "http_config.h"
+#include "apr_strings.h"
+#include "http_protocol.h"
+#include "http_main.h"
+#include "util_script.h"
+#include "ap_config.h"
+#include "http_log.h"
+
+/* other includes */
 #include <curl/curl.h>
 #include <pcre++.h>
 #include <algorithm>

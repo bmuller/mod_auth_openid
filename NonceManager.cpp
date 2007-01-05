@@ -1,4 +1,4 @@
-#include "moid.h"
+#include "mod_auth_openid.h"
 
 namespace modauthopenid {
 

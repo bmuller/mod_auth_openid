@@ -2,7 +2,7 @@
 #include <opkele/association.h>
 #include <stdio.h>
 #include <string>
-#include "moid.h"
+#include "mod_auth_openid.h"
 
 namespace opkele {
   using namespace std;
@@ -20,12 +20,31 @@ void test() {
   //std::string s = opkele::consumer_t::canonicalize("yourmom.com");
   //puts(s.c_str());
   //opkele::association a;
-
+  /*
   NonceManager *nm = new NonceManager(db_location);
   nm->add("a nonce");
   if(nm->is_valid("a nonce"))
     puts("valid!");
   delete nm;
+  return;
+  */
+
+  util::dh_t dh = DH_new();
+  if(!dh)
+    throw exception_openssl(OPKELE_CP_ "failed to DH_new()");
+  dh->p = util::dec_to_bignum(data::_default_p);
+  dh->g = util::dec_to_bignum(data::_default_g);
+  if(!DH_generate_key(dh))
+    throw exception_openssl(OPKELE_CP_ "failed to DH_generate_key()");
+  string request = 
+        "openid.mode=associate"
+        "&openid.assoc_type=HMAC-SHA1"
+        "&openid.session_type=DH-SHA1"
+    "&openid.dh_consumer_public=";
+  request += util::url_encode(util::bignum_to_base64(dh->pub_key));
+  puts(request.c_str());
+
+
   return;
   MoidConsumer *consumer = new MoidConsumer(db_location);
   const string id = "http://identity.musc.edu/users/mullerb";

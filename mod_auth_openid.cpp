@@ -15,7 +15,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "moid.h"
+#include "mod_auth_openid.h"
 
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
@@ -123,8 +123,7 @@ static void full_uri(request_rec *r, std::string& result) {
   std::string uri(r->uri);
   std::string prefix = (protocol.substr(0, 4) == "HTTP") ? "http://" : "https://";
   apr_port_t i_port = ap_get_server_port(r);
-  char port[6];
-  sprintf(port, "%lu", (unsigned long) i_port);
+  char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
   std::string s_port = (i_port == 80) ? "" : ":" + std::string(port);
   std::string args = (r->args == NULL) ? "" : "?" + std::string(r->args);
   result = prefix + hostname + s_port + uri + args;
@@ -161,11 +160,11 @@ static int show_input(request_rec *r, std::string msg) {
   std::string result = "<html><head><script type=\"text/javascript\">function s() { ";
   if(msg != "")
     result+="alert(\"" + msg + "\");";
-  result += " var location = \"\"+window.location; var sections = location.split('?');";
-  result += " if(sections.length == 1) location+='?'; else location+='&';";
+  result += " var qstring = ''; var parts = window.location.search.substring(1, window.location.search.length).split('&');";
+  result += " if(parts.length>1) for(var i=0; i<parts.length; i++) if(parts[i].split('=')[0].substr(0,7)!='openid.') qstring+='&'+parts[i];";
   result += " var p = prompt(\"Enter your identity url.\"); if(!p) { document.getElementById(\"msg\").innerHTML=";
   result += "\"Authentication required!\"; return;} document.getElementById(\"msg\").innerHTML=\"Loading...\";";
-  result += " window.location=location+\"openid.identity=\"+p; }</script><body onload=\"s();\">";
+  result += " window.location='?openid.identity='+p+qstring; }</script><body onload=\"s();\">";
   result += " <h1><div id=\"msg\"></div></h1></body></html>";
   return http_sendstring(r, result);
 }
@@ -222,15 +221,14 @@ static int mod_authopenid_method_handler (request_rec *r) {
     params["openid.nonce"] = nonce;
     //remove first char - ? to fit r->args standard
     std::string args = params.append_query("", "").substr(1); 
-    strcpy(r->args, args.c_str());
+    apr_cpystrn(r->args, args.c_str(), 1024);
 
     if(!opkele::is_valid_url(identity))
       return show_input(r, "You must give a valid URL for your identity.");
     opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));     
-    std::string f_uri, trust_root, re_direct;
-    full_uri(r, f_uri);
-    std::string return_to(f_uri);
-    base_dir(f_uri, trust_root);
+    std::string return_to, trust_root, re_direct;
+    full_uri(r, return_to);
+    base_dir(return_to, trust_root);
     try {
       re_direct = consumer->checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
@@ -257,10 +255,10 @@ static int mod_authopenid_method_handler (request_rec *r) {
       delete nm;
 
       // now set auth cookie
-      std::string session_id, path;
+      std::string session_id, path, cookie_value, redirect_location;
       make_rstring(32, session_id);
       base_dir(std::string(r->uri), path);
-      std::string cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
+      cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
       apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
 
       // save session values
@@ -273,11 +271,13 @@ static int mod_authopenid_method_handler (request_rec *r) {
       if(args.length() == 0)
 	r->args = NULL;
       else
-	strcpy(r->args, args.c_str());
-      std::string redirect_location;
+	apr_cpystrn(r->args, args.c_str(), 1024);
       full_uri(r, redirect_location);
       return http_redirect(r, redirect_location);
     } catch(opkele::exception &e) {
+      // TODO
+      // IF THIS IS BECAUSE OF openid.user_setup_url, REDIRECT TO THAT URL
+      //
       std::string result = "Error in authentication: " + std::string(e.what());
       delete consumer;
       return show_input(r, result);

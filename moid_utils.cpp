@@ -1,4 +1,4 @@
-#include "moid.h"
+#include "mod_auth_openid.h"
 
 namespace modauthopenid {
   using namespace std;
@@ -78,7 +78,7 @@ namespace opkele {
         string key = url_decode(pairs[i].substr(0, loc));
         string value = url_decode(pairs[i].substr(loc+1));
         p[key] = value;
-        fprintf(stderr, "\"%s\" = \"%s\"\n", key.c_str(), value.c_str());
+        fprintf(stderr, "\"%s\" = \"%s\"\n", key.c_str(), value.c_str()); fflush(stderr);
       }
     }
     return p;
