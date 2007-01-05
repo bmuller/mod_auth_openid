@@ -40,6 +40,8 @@ namespace opkele {
   params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
   bool is_valid_url(string url);
+  string url_decode(const string& str);
+  params_t remove_openid_vars(params_t params);
 }
 
 namespace modauthopenid {
@@ -82,16 +84,6 @@ namespace modauthopenid {
    void ween_expired();
  };
 
+ void debug(string s);
 }
 
-//void debug(std::string s) {
-#ifdef DEBUG
-  /*
-  time_t rawtime;
-  time (&rawtime);
-  s = PACKAGE_NAME + ": ";
-  fprintf(stderr, s.c_str());
-  fflush();
-  */
-#endif
-//}

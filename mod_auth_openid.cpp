@@ -61,7 +61,6 @@ static void base_dir(std::string path, std::string& s) {
   else
     i = path.find_last_of('/');
   s = path.substr(0, i+1);
-  fprintf(stderr, "basdir of \"%s\" is \"%s\"\n", path.c_str(), s.c_str()); fflush(stderr);
 }
 
 static void make_rstring(int size, std::string& s) {
@@ -81,9 +80,11 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   return (void *) newcfg;
 }
 
+/*
 static void *modauthopenid_config_merge(apr_pool_t *p, void *basev, void *overridesv) {
   return overridesv;
 }
+*/
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
@@ -129,7 +130,7 @@ static int http_sendstring(request_rec *r, std::string s) {
 static int http_redirect(request_rec *r, std::string location) {
   apr_table_setn(r->headers_out, "Location", location.c_str());
   apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
-  fprintf(stderr, "Redirecting to: \"%s\"\n", location.c_str()); fflush(stderr);
+  modauthopenid::debug("redirecting client to: " + location);
   return HTTP_MOVED_TEMPORARILY;
 }
 
@@ -164,7 +165,7 @@ static void get_session_id(request_rec *r, std::string& session_id) {
       strip(key);
       std::string value = pair[1];
       strip(value);
-      fprintf(stderr, "COOKIE: \"%s\"=\"%s\"\n", key.c_str(), value.c_str()); fflush(stderr);
+      modauthopenid::debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
       if(key == "open_id_session_id") {
 	session_id = pair[1];
 	return;
@@ -181,13 +182,13 @@ static int show_input(request_rec *r, std::string msg) {
   result += " if(sections.length == 1) location+='?'; else location+='&';";
   result += " var p = prompt(\"Enter your identity url.\"); if(!p) { document.getElementById(\"msg\").innerHTML=";
   result += "\"Authentication required!\"; return;} document.getElementById(\"msg\").innerHTML=\"Loading...\";";
-  result += " window.location=location+\"modauthopenid_identity=\"+p; }</script><body onload=\"s();\">";
+  result += " window.location=location+\"openid.identity=\"+p; }</script><body onload=\"s();\">";
   result += " <h1><div id=\"msg\"></div></h1></body></html>";
   return http_sendstring(r, result);
 }
 
 static int mod_authopenid_method_handler (request_rec *r) {
-  apr_table_t *env = r->subprocess_env;
+  modauthopenid::debug("***mod_auth_openid has been called***");
 
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
@@ -199,7 +200,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
   std::string session_id = "";
   get_session_id(r, session_id);
   if(session_id != "") {
-    fprintf(stderr, "found session_id: %s\n", session_id.c_str()); fflush(stderr);
+    modauthopenid::debug("found session_id: " + session_id);
     modauthopenid::SESSION session;
     modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
     sm->get_session(session_id, session);
@@ -212,7 +213,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
       std::string valid_path(session.path);
       // if found session has a valid path
       if(valid_path == uri_path.substr(0, valid_path.size())) {
-	apr_table_setn(env, "REMOTE_USER", session.identity);
+	apr_table_setn(r->subprocess_env, "REMOTE_USER", session.identity);
 	return DECLINED;
       }
     }
@@ -223,24 +224,23 @@ static int mod_authopenid_method_handler (request_rec *r) {
   if(r->args != NULL) params = opkele::parse_query_string(std::string(r->args));
   std::string identity = (params.has_param("openid.identity")) ? params.get_param("openid.identity") : "unknown";
 
-  // if user is posting id
-  if(params.has_param("modauthopenid_identity")) {
-    std::string id_location = params.get_param("modauthopenid_identity"); 
-    // remove the modauthopenid_identity GET query param - we don't want that maintained through
+  // if user is posting id (only openid.identity will contain a value)
+  if(params.has_param("openid.identity") && !params.has_param("openid.assoc_handle")) {
+    // remove all openid GET query params (openid.*) - we don't want that maintained through
     // the redirection process.  We do, however, want to keep all aother GET params.
     // also, add a nonce for security
-    params.erase("modauthopenid_identity");
+    params = opkele::remove_openid_vars(params);
     modauthopenid::NonceManager *nm = new modauthopenid::NonceManager(std::string(s_cfg->db_location));
     std::string nonce;
     make_rstring(10, nonce);
     nm->add(nonce);
     delete nm;
-    //params["nonce"] = nonce;
+    params["openid.nonce"] = nonce;
     //remove first char - ? to fit r->args standard
     std::string args = params.append_query("", "").substr(1); 
     strcpy(r->args, args.c_str());
 
-    if(!opkele::is_valid_url(id_location))
+    if(!opkele::is_valid_url(identity))
       return show_input(r, "You must give a valid URL for your identity.");
     opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));     
     std::string f_uri, trust_root, re_direct;
@@ -248,55 +248,43 @@ static int mod_authopenid_method_handler (request_rec *r) {
     std::string return_to(f_uri);
     base_dir(f_uri, trust_root);
     try {
-      re_direct = consumer->checkid_setup(id_location, return_to, trust_root);
+      re_direct = consumer->checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
       delete consumer;
-      return show_input(r, "Could not open \\\""+id_location+"\\\" or no identity found there.  Please check the URL.");
+      return show_input(r, "Could not open \\\""+identity+"\\\" or no identity found there.  Please check the URL.");
     }
     delete consumer;
     return http_redirect(r, re_direct);
-    //return http_sendstring(r, re_direct);
   } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
     // make sure nonce is present
-    //\\if(!params.has_param("openid.nonce"))
-    //\\return show_input(r, "Error in authentication.  Nonce not found.");
+    if(!params.has_param("openid.nonce"))
+      return show_input(r, "Error in authentication.  Nonce not found.");
     opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));
     try {
-      std::string ort = params.get_param("openid.return_to");
-      std::string sort = url_encode(ort);
-      params["openid.return_to"] = sort;
       consumer->id_res(params);
       delete consumer;
 
       // if no exception raised, check nonce
-      /*
       modauthopenid::NonceManager *nm = new modauthopenid::NonceManager(std::string(s_cfg->db_location));
       if(!nm->is_valid(params.get_param("openid.nonce"))) {
 	delete nm;
 	return show_input(r, "Error in authentication.  Nonce invalid."); 
       }
       delete nm;
-      */
 
       // now set auth cookie
       std::string session_id, path;
       make_rstring(32, session_id);
       base_dir(std::string(r->uri), path);
       std::string cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
-      apr_table_setn(r->headers_out, "Set-Cookie", cookie_value.c_str());
+      apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
 
       // save session values
       modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
       sm->store_session(session_id, path, identity);
       delete sm;
       
-      std::map<std::string,std::string>::iterator iter;
-      for(iter = params.begin(); iter != params.end(); iter++) {
-	std::string param_key = (iter->first);
-	fprintf(stderr, "looking at param: %s - does \"%s\" == \"openid.\"\n", param_key.c_str(), param_key.substr(0,7).c_str()); fflush(stderr);
-	if(param_key.substr(0, 7) == "openid.")
-	  params.erase(param_key);
-      }
+      params = opkele::remove_openid_vars(params);
       std::string args = params.append_query("", "").substr(1);
       if(args.length() == 0)
 	r->args = NULL;
@@ -304,18 +292,11 @@ static int mod_authopenid_method_handler (request_rec *r) {
 	strcpy(r->args, args.c_str());
       std::string redirect_location;
       full_uri(r, redirect_location);
-      fprintf(stderr, "would be redirecting to: %s\n", redirect_location.c_str());  fflush(stderr);
-
-      // set remote user CGI var
-      apr_table_setn(env, "REMOTE_USER", identity.c_str());
-      return DECLINED;
-
       return http_redirect(r, redirect_location);
-      
     } catch(opkele::exception &e) {
-      std::string result = "UNAUTHORIZED!!!!!" + std::string(e.what());
+      std::string result = "Error in authentication: " + std::string(e.what());
       delete consumer;
-      return http_sendstring(r, result);
+      return show_input(r, result);
     }
   } else { //display an input form
     return show_input(r, "");
@@ -323,14 +304,14 @@ static int mod_authopenid_method_handler (request_rec *r) {
 }
 
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
-  ap_hook_handler(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
+  ap_hook_handler(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_FIRST);
 }
 
 //module AP_MODULE_DECLARE_DATA 
 module AP_MODULE_DECLARE_DATA authopenid_module = {
 	STANDARD20_MODULE_STUFF,
 	create_modauthopenid_config,
-	modauthopenid_config_merge,
+	NULL, // default is to override :modauthopenid_config_merge,
 	NULL,
 	NULL,
 	mod_authopenid_cmds,
