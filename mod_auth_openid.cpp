@@ -1,10 +1,9 @@
 /*
-	Copyright 2002 Kevin O'Donnell
+	Copyright 2007 Brian Muller <bmuller@butterfat.net>
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 2 of the License, or
-	(at your option) any later version.
+	the Free Software Foundation version 2 only.
 
 	This program is distributed in the hope that it will be useful,
 	but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,20 +14,6 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-
-/*
- * Include the core server components.
- */
-#include "httpd.h"
-#include "http_core.h"
-#include "http_config.h"
-#include "apr_strings.h"
-
-#include "http_protocol.h"
-#include "http_main.h"
-#include "util_script.h"
-#include "ap_config.h"
-#include "http_log.h"
 
 #include "moid.h"
 
@@ -88,14 +73,12 @@ static void *modauthopenid_config_merge(apr_pool_t *p, void *basev, void *overri
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
-  //s_cfg = (modauthopenid_config *) ap_get_module_config(parms->server->module_config, &authopenid_module);
   s_cfg->db_location = (char *) arg;
   return NULL;
 }
 
 static const char *set_modauthopenid_enabled(cmd_parms *parms, void *mconfig, int flag) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
-  //s_cfg = (modauthopenid_config *) ap_get_module_config(parms->server->module_config, &authopenid_module);
   s_cfg->enabled = (bool) flag;
   return NULL;
 }
@@ -194,7 +177,8 @@ static int mod_authopenid_method_handler (request_rec *r) {
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
   // if we're not enabled for this location/dir, decline doing anything
-  if(!s_cfg->enabled) return DECLINED;
+  if(!s_cfg->enabled) 
+    return DECLINED;
 
   // test for valid session - if so, return DECLINED
   std::string session_id = "";

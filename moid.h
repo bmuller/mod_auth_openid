@@ -87,6 +87,10 @@ namespace modauthopenid {
    void ween_expired();
  };
 
+ /* Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
+  * gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
+  * apache redirects stderr to the error log anyway.
+  */
  void debug(string s);
 }
 
