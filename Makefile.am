@@ -8,7 +8,10 @@ libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cp
 APXS=@apache_dir@/bin/apxs
 AM_CXXFLAGS=`@apache_dir@/bin/apr-1-config --cflags --cppflags` 
 LIBS=`@apache_dir@/bin/apr-1-config --libs`
-AM_LDFLAGS= -Wl,--rpath -Wl,/usr/local/lib
+LDFLAGS= -Wl,--rpath -Wl,/usr/local/lib
 
 install: all
 	$(APXS) -i -a -n 'authopenid' libmodauthopenid.la
+db_info: ${libmodauthopenid_la_OBJECTS}
+	${CXX} db_info.cpp NonceManager.o MoidConsumer.o moid_utils.o SessionManager.o -o $@ ${LDFLAGS} \
+	${libmodauthopenid_la_LDFLAGS} ${INCLUDES}

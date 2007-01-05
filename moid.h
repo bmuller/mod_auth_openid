@@ -30,6 +30,7 @@ namespace opkele {
     void invalidate_assoc(const string& server,const string& handle);
     assoc_t find_assoc(const string& server);
     void print_db();
+    int num_records();
   private:
     Db db_;
     void close();    
@@ -66,6 +67,7 @@ namespace modauthopenid {
     ~SessionManager() { close(); };
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& path, const string& identity);
+    int num_records();
   private:
    Db db_;
    void close();
@@ -78,6 +80,7 @@ namespace modauthopenid {
    ~NonceManager() { close(); };
    bool is_valid(const string& nonce, bool delete_on_find = true);
    void add(const string& nonce);
+   int num_records();
  private:
    Db db_;
    void close();

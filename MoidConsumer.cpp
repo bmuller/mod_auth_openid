@@ -181,6 +181,25 @@ namespace opkele {
       cursorp->close();
   };
 
+  int MoidConsumer::num_records() {
+    ween_expired();
+    Dbt key, data;
+    Dbc *cursorp;
+    db_.cursor(NULL, &cursorp, 0);
+    int count = 0;
+    try {
+      while (cursorp->get(&key, &data, DB_NEXT) == 0) 
+	count++;
+    } catch(DbException &e) {
+      db_.err(e.get_errno(), "Error!");
+    } catch(std::exception &e) {
+      db_.errx("Error! %s", e.what());
+    }
+    if (cursorp != NULL)
+      cursorp->close();
+    return count;
+  };
+
   // due to poor design in libopkele - this stuff must go here
   class curl_t {
   public:
