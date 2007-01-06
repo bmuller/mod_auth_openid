@@ -1,2 +1,3 @@
 openid.mode = cancel, etc
-store session_ids with servername as well
+automatic purge if too many records in db?
+AuthOpenIDTrusted "blah blah blah"

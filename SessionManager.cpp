@@ -38,16 +38,17 @@ namespace modauthopenid {
     }
   };
 
-  void SessionManager::store_session(const string& session_id, const string& path, const string& identity) {
+  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity) {
     ween_expired();
     time_t rawtime;
     time (&rawtime);
     
     SESSION s;
-    // session_id is char[33], path and identity are char[255]
+    // session_id is char[33], path, identity and hostname are char[255]
     strcpy(s.session_id, session_id.substr(0, 32).c_str());
     strcpy(s.path, path.substr(0, 254).c_str());
     strcpy(s.identity, identity.substr(0, 254).c_str());
+    strcpy(s.hostname, hostname.substr(0, 254).c_str());
 
     // sessions last for a day becore being automatically invalidated
     s.expires_on = rawtime + 86400; 

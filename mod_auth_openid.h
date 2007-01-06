@@ -62,6 +62,7 @@ namespace opkele {
   bool is_valid_url(string url);
   string url_decode(const string& str);
   params_t remove_openid_vars(params_t params);
+  string get_base_url(string url);
 }
 
 namespace modauthopenid {
@@ -74,9 +75,9 @@ namespace modauthopenid {
 
   typedef struct session {
     char session_id[33];
+    char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
     char path[255];
     char identity[255];
-    //char identity_server[255];
     int expires_on; // exact moment it expires
   } SESSION;
  
@@ -85,7 +86,7 @@ namespace modauthopenid {
     SessionManager(const string& storage_location);
     ~SessionManager() { close(); };
     void get_session(const string& session_id, SESSION& session);
-    void store_session(const string& session_id, const string& path, const string& identity);
+    void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
   private:
    Db db_;

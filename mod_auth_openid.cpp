@@ -196,9 +196,11 @@ static int mod_authopenid_method_handler (request_rec *r) {
       base_dir(std::string(r->uri), uri_path);
       std::string valid_path(session.path);
       // if found session has a valid path
-      if(valid_path == uri_path.substr(0, valid_path.size())) {
+      if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname, r->hostname)==0) {
 	apr_table_setn(r->subprocess_env, "REMOTE_USER", session.identity);
 	return DECLINED;
+      } else {
+	modauthopenid::debug("session found for different path or hostname");
       }
     }
   }
@@ -255,15 +257,17 @@ static int mod_authopenid_method_handler (request_rec *r) {
       delete nm;
 
       // now set auth cookie
-      std::string session_id, path, cookie_value, redirect_location;
+      std::string session_id, hostname, path, cookie_value, redirect_location;
       make_rstring(32, session_id);
       base_dir(std::string(r->uri), path);
       cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
+      debug("setting cookie: " + cookie_value);
       apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
+      hostname = std::string(r->hostname);
 
       // save session values
       modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
-      sm->store_session(session_id, path, identity);
+      sm->store_session(session_id, hostname, path, identity);
       delete sm;
       
       params = opkele::remove_openid_vars(params);
@@ -279,6 +283,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
       // IF THIS IS BECAUSE OF openid.user_setup_url, REDIRECT TO THAT URL
       //
       std::string result = "Error in authentication: " + std::string(e.what());
+      debug(result);
       delete consumer;
       return show_input(r, result);
     }
