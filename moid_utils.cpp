@@ -12,8 +12,14 @@ namespace modauthopenid {
     if(strftime(rv, sizeof(rv)-1, "%a %b %d %H:%M:%S %Y", tm_t)) 
       time_s = "[" + string(rv) + "] ";
     s = time_s + "[" + string(PACKAGE_NAME) + "] " + s + "\n";
+    // escape %'s
+    string cleaned_s = "";
+    vector<string> parts = opkele::explode(s, "%");
+    for(int i=0; i<parts.size()-1; i++)
+      cleaned_s += parts[i] + "%%";
+    cleaned_s += parts[parts.size()-1];
     // stderr is redirected by apache to apache's error log
-    fprintf(stderr, s.c_str());
+    fprintf(stderr, cleaned_s.c_str());
     fflush(stderr);
 #endif
   };
@@ -78,7 +84,7 @@ namespace opkele {
         string key = url_decode(pairs[i].substr(0, loc));
         string value = url_decode(pairs[i].substr(loc+1));
         p[key] = value;
-        fprintf(stderr, "\"%s\" = \"%s\"\n", key.c_str(), value.c_str()); fflush(stderr);
+        //fprintf(stderr, "\"%s\" = \"%s\"\n", key.c_str(), value.c_str()); fflush(stderr);
       }
     }
     return p;

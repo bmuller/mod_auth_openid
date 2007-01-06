@@ -2,14 +2,8 @@
 
 namespace opkele {
   using namespace std;
-  
-  typedef struct bdb_association {
-    char server[255];
-    char handle[100];
-    char secret[30];
-    int expires_on; // exact moment it expires
-  } BDB_ASSOC;
-
+  using namespace modauthopenid;
+ 
   MoidConsumer::MoidConsumer(const string& storage_location) : db_(NULL, 0) {
     u_int32_t oFlags = DB_CREATE; // Open flags;
     try {
@@ -19,7 +13,7 @@ namespace opkele {
 	       DB_BTREE,            // Database access method
 	       oFlags,              // Open flags
 	       0);                  // File mode (using defaults)
-      db_.set_errpfx("mod_openid bdb: ");
+      db_.set_errpfx("mod_auth_openid BDB error: ");
       db_.set_error_stream(&cerr); //this is apache's log
     } catch(DbException &e) {
       db_.err(e.get_errno(), "Database open failed %s", storage_location.c_str());
@@ -46,22 +40,24 @@ namespace opkele {
     time (&rawtime);
 
     BDB_ASSOC bassoc;
-    strcpy(bassoc.secret, secret_b64.c_str());
-    strcpy(bassoc.server, server.c_str());
-    strcpy(bassoc.handle, handle.c_str());
+    // server is char[255], handle is char[100], and secret is char[30]
+    strcpy(bassoc.secret, secret_b64.substr(0, 29).c_str());
+    strcpy(bassoc.server, server.substr(0, 254).c_str());
+    strcpy(bassoc.handle, handle.substr(0, 99).c_str());
     bassoc.expires_on = rawtime + expires_in;
 
-    // We want to store with unique key on server and handle, but
-    // want to be able to search by server
+    // We want to store with unique key on server and handle, but want to be able to search by server.
+    // If the server+" "+handle string is greater than 254 chars it will be truncated.  This should
+    // be ok....
     string id = server + " " + handle;
-    char c_id[255];
+    char c_id[255]; 
     strcpy(c_id, id.substr(0, 254).c_str()); // safety first!
 
     Dbt key(c_id, strlen(c_id) + 1);
     Dbt data(&bassoc, sizeof(BDB_ASSOC));
     db_.put(NULL, &key, &data, 0);
 
-    fprintf(stderr, "Storing server \"%s\" and handle \"%s\" in db.\n", server.c_str(), handle.c_str()); fflush(stderr);
+    debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
 
     auto_ptr<association_t> a(new association(server, handle, "assoc type", secret, expires_in, false));
     return a;
@@ -69,6 +65,7 @@ namespace opkele {
 
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle) {
     ween_expired();
+    debug("looking up association: server = "+server+" handle = "+handle);
     Dbt data;
     BDB_ASSOC bassoc;
     string id = server + " " + handle;
@@ -80,7 +77,7 @@ namespace opkele {
     data.set_ulen(sizeof(BDB_ASSOC));
     data.set_flags(DB_DBT_USERMEM);
     if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
-      fprintf(stderr, "Could not find server %s and handle %s in db.\n", server.c_str(), handle.c_str()); fflush(stderr);
+      debug("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
       throw failed_lookup("Could not find association.");
     }
 
@@ -95,6 +92,7 @@ namespace opkele {
     return a;    
   };
   void MoidConsumer::invalidate_assoc(const string& server,const string& handle) {
+    debug("invalidating association: server = " + server + " handle = " + handle);
     string id = server + " " + handle;
     char c_id[255];
     strcpy(c_id, id.substr(0, 254).c_str());
@@ -102,29 +100,9 @@ namespace opkele {
     db_.del(NULL, &key, 0);
   };
 
-  void MoidConsumer::print_db() {
-    Dbt key, data;
-    Dbc *cursorp;
-    db_.cursor(NULL, &cursorp, 0); 
-    try {
-      Dbt nkey, ndata;
-      puts("Iterating....");
-      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
-	char * key_v = (char *) key.get_data();
-	BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
-	fprintf(stderr, "possible key: \"%s\" and \"%s\"\n", key_v, data_v->secret);
-      }
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error!");
-    } catch(std::exception &e) {
-      db_.errx("Error! %s", e.what());
-    }
-    if (cursorp != NULL) 
-      cursorp->close(); 
-  };
-
   assoc_t MoidConsumer::find_assoc(const string& server) {
     ween_expired();
+    debug("looking for any association with server = "+server);
     time_t rawtime;
     time (&rawtime);
     Dbt key, data;
@@ -139,6 +117,7 @@ namespace opkele {
 	// If server url we were given matches the current record, and it still has
 	// at least five minutes until it expires (to give the user time to be redirected -> there -> back)
         if(parts.size()==2 && parts[0] == server && rawtime < (data_v->expires_on + 18000)) {
+	  debug("....found one");
 	  int expires_in = data_v->expires_on - rawtime;
 	  secret_t secret;
 	  secret.from_base64(data_v->secret);
@@ -147,9 +126,9 @@ namespace opkele {
         }
       }
     } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error!");
+      db_.err(e.get_errno(), "Error while looking for an assocation!");
     } catch(std::exception &e) {
-      db_.errx("Error! %s", e.what());
+      db_.errx("Error while looking for an association! %s", e.what());
     }
     if (cursorp != NULL)
       cursorp->close();
@@ -158,30 +137,30 @@ namespace opkele {
   };
 
   void MoidConsumer::ween_expired() {
+    debug("weening table associations");
     time_t rawtime;
     time (&rawtime);
     Dbt key, data;
     Dbc *cursorp;
     db_.cursor(NULL, &cursorp, 0);
     try {
-      Dbt nkey, ndata;
       while (cursorp->get(&key, &data, DB_NEXT) == 0) {
         char * key_v = (char *) key.get_data();
         BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
 	if(rawtime > data_v->expires_on) {
-	  //fprintf(stderr, "Expires_on %i is greater than current time %i", data_v->expires_on, rawtime); fflush(stderr);
 	  db_.del(NULL, &key, 0);
 	}
       }
     } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error!");
+      db_.err(e.get_errno(), "Error while weening associations table!");
     } catch(std::exception &e) {
-      db_.errx("Error! %s", e.what());
+      db_.errx("Error while weening associations table! %s", e.what());
     }
     if (cursorp != NULL)
       cursorp->close();
   };
 
+  // This is a method to be used by a utility program, never the apache module
   int MoidConsumer::num_records() {
     ween_expired();
     Dbt key, data;
@@ -192,16 +171,16 @@ namespace opkele {
       while (cursorp->get(&key, &data, DB_NEXT) == 0) 
 	count++;
     } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error!");
+      db_.err(e.get_errno(), "Error while counting associations records!");
     } catch(std::exception &e) {
-      db_.errx("Error! %s", e.what());
+      db_.errx("Error while counting associations records! %s", e.what());
     }
     if (cursorp != NULL)
       cursorp->close();
     return count;
   };
 
-  // due to poor design in libopkele - this stuff must go here
+  // word for word from libopkele (none of these were included in the header files)
   class curl_t {
   public:
     CURL *_c;

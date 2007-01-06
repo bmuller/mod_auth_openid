@@ -170,14 +170,15 @@ static int show_input(request_rec *r, std::string msg) {
 }
 
 static int mod_authopenid_method_handler (request_rec *r) {
-  modauthopenid::debug("***mod_auth_openid has been called***");
-
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
   // if we're not enabled for this location/dir, decline doing anything
   if(!s_cfg->enabled) 
     return DECLINED;
+  
+  // make a record of our being called
+  modauthopenid::debug("***mod_auth_openid has been called***");
 
   // test for valid session - if so, return DECLINED
   std::string session_id = "";
@@ -222,7 +223,6 @@ static int mod_authopenid_method_handler (request_rec *r) {
     //remove first char - ? to fit r->args standard
     std::string args = params.append_query("", "").substr(1); 
     apr_cpystrn(r->args, args.c_str(), 1024);
-
     if(!opkele::is_valid_url(identity))
       return show_input(r, "You must give a valid URL for your identity.");
     opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));     

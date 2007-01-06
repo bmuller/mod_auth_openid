@@ -33,6 +33,13 @@ namespace opkele {
 
   using namespace std;
 
+  typedef struct bdb_association {
+    char server[255];
+    char handle[100];
+    char secret[30];
+    int expires_on; // exact moment it expires
+  } BDB_ASSOC;
+
   class MoidConsumer : public opkele::consumer_t {
   public:
     MoidConsumer(const string& storage_location);
@@ -72,7 +79,7 @@ namespace modauthopenid {
     //char identity_server[255];
     int expires_on; // exact moment it expires
   } SESSION;
-  
+ 
   class SessionManager {
   public:
     SessionManager(const string& storage_location);

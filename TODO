@@ -1,0 +1,2 @@
+openid.mode = cancel, etc
+store session_ids with servername as well
