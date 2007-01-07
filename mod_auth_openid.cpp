@@ -1,18 +1,20 @@
 /*
-	Copyright 2007 Brian Muller <bmuller@butterfat.net>
+Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
 
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation version 2 only.
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, version 2.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program; if not, write to the Free Software
-	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+Created by bmuller <bmuller@butterfat.net>
 */
 
 #include "mod_auth_openid.h"
@@ -22,6 +24,7 @@ extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 typedef struct {
   char *db_location;
   bool enabled;
+  apr_array_header_t *trusted;
 } modauthopenid_config;
 
 typedef const char *(*CMD_HAND_TYPE) ();
@@ -62,14 +65,9 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
   newcfg->db_location = "/tmp/mod_auth_openid.db";
   newcfg->enabled = false;
+  newcfg->trusted = apr_array_make(p, 5, sizeof(char *));
   return (void *) newcfg;
 }
-
-/*
-static void *modauthopenid_config_merge(apr_pool_t *p, void *basev, void *overridesv) {
-  return overridesv;
-}
-*/
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
@@ -83,12 +81,20 @@ static const char *set_modauthopenid_enabled(cmd_parms *parms, void *mconfig, in
   return NULL;
 }
 
+static const char *add_modauthopenid_trusted(cmd_parms *cmd, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  *(const char **)apr_array_push(s_cfg->trusted) = arg;
+  return NULL;
+}
+
   
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, ACCESS_CONF,
 		"AuthOpenIDDBLocation <string>"),
   AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, ACCESS_CONF,
 	       "AuthOpenIDEnabled <On | Off>"),
+  AP_INIT_ITERATE("AuthOpenIDTrusted", (CMD_HAND_TYPE) add_modauthopenid_trusted, NULL, ACCESS_CONF,
+		  "AuthOpenIDTrusted <a list of trusted identity providers>"),
   {NULL}
 };
 
@@ -169,6 +175,23 @@ static int show_input(request_rec *r, std::string msg) {
   return http_sendstring(r, result);
 }
 
+static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
+  if(apr_is_empty_array(s_cfg->trusted))
+    return true;
+  char **trusted_sites = (char **) s_cfg->trusted->elts;
+  std::string trusted_site;
+  std::string base_url = opkele::get_base_url(url);
+  for (int i = 0; i < s_cfg->trusted->nelts; i++) {
+    trusted_site = std::string(trusted_sites[i]);
+    if(base_url == trusted_site) {
+      modauthopenid::debug(trusted_site + " is a trusted identity provider");
+      return true;
+    }
+  }
+  modauthopenid::debug(base_url + " is not a trusted identity provider");
+  return false;
+}
+
 static int mod_authopenid_method_handler (request_rec *r) {
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
@@ -238,6 +261,8 @@ static int mod_authopenid_method_handler (request_rec *r) {
       return show_input(r, "Could not open \\\""+identity+"\\\" or no identity found there.  Please check the URL.");
     }
     delete consumer;
+    if(!is_trusted_provider(s_cfg , re_direct))
+       return show_input(r, "The identity provider for \\\""+identity+"\\\" is not trusted by this site.");
     return http_redirect(r, re_direct);
   } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
     // make sure nonce is present
@@ -261,7 +286,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
       make_rstring(32, session_id);
       base_dir(std::string(r->uri), path);
       cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
-      debug("setting cookie: " + cookie_value);
+      modauthopenid::debug("setting cookie: " + cookie_value);
       apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
       hostname = std::string(r->hostname);
 
@@ -283,11 +308,13 @@ static int mod_authopenid_method_handler (request_rec *r) {
       // IF THIS IS BECAUSE OF openid.user_setup_url, REDIRECT TO THAT URL
       //
       std::string result = "Error in authentication: " + std::string(e.what());
-      debug(result);
+      modauthopenid::debug(result);
       delete consumer;
       return show_input(r, result);
     }
   } else { //display an input form
+    if(params.has_param("openid.mode") && params.get_param("openid.mode") == "cancel")
+      return show_input(r, "Previous authentication attempt canceled.");
     return show_input(r, "");
   }
 }
