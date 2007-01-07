@@ -20,7 +20,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include <iostream>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "moid.h"
+#include "mod_auth_openid.h"
 
 using namespace opkele;
 using namespace std;

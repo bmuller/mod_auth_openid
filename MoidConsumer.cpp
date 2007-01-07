@@ -156,7 +156,6 @@ namespace opkele {
   };
 
   void MoidConsumer::ween_expired() {
-    debug("weening table associations");
     time_t rawtime;
     time (&rawtime);
     Dbt key, data;

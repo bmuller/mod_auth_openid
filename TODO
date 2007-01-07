@@ -1,3 +1,4 @@
-automatic purge if too many records in db?
-
-http://openid.net/specs/openid-simple-registration-extension-1_0.html
+Potential additions:
+	- automatic purge if too many records in db
+	- http://openid.net/specs/openid-simple-registration-extension-1_0.html
+	- add a "AuthOpenIDCookie Off" option
