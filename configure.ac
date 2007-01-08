@@ -15,39 +15,59 @@ AC_HEADER_STDC
 
 AC_PROG_RANLIB
 
+# macro to test for executable
+AC_DEFUN([AC_ISCMD], [ { 
+  $$1 $2 >/dev/null 2>/dev/null; 
+  __TMP_STATUS="$?"
+
+m4_ifvaln([$3], [ 
+  if test "$__TMP_STATUS" = "0"; then 
+    $3 
+  fi])dnl
+
+m4_ifvaln([$4], [
+  if test "$__TMP_STATUS" != "0"; then 
+    $4 
+  fi])dnl
+} ])
+
 dnl provide flag --enable-debug
-AC_ARG_ENABLE(debug,
-[  --enable-debug          enable debugging output to Apache error log],
+AC_ARG_ENABLE(debug,[  --enable-debug          enable debugging output to Apache error log],
 [if test "$enableval" = "yes"; then
     DEBUG="yes"
     CPPFLAGS="$CPPFLAGS -DDEBUG"
 fi]
 )
 
-# Define a macro that is used to parse a --with-apache parameter
-# The macro is named "APACHE_DIR"
-AC_DEFUN([APACHE_DIR],[
-  AC_ARG_WITH(apache, [  --with-apache[=DIR]       Apache server directory],,[with_apache="no"])
-  AC_MSG_CHECKING(for Apache directory)
-  if test "$with_apache" = "no"; then
-    AC_MSG_ERROR( You need to specify the apache directory using --with-apache)
+# find apache includes 
+AC_ARG_WITH(apache_includes, [  --with-apache-includes[=DIR]     Apache server includes directory],,[with_apache_includes="no"])
+AC_MSG_CHECKING(for Apache includes directory)
+if test "$with_apache_includes" = "no"; then
+  AC_MSG_ERROR( You need to specify the apache includes directory using --with-apache-includes=DIR)
+else
+  # make sure that a well known include file exists
+  if test -e $with_apache_includes/httpd.h; then
+    apache_dir=$with_apache_includes
+    AC_MSG_RESULT(APACHE found!)
   else
-    # make sure that a well known include file exists
-    if test -e $with_apache/include/httpd.h; then
-      apache_dir=$with_apache
-      AC_MSG_RESULT(APACHE found!)
-    else
-      AC_MSG_ERROR( $with_apache not found.  Check the value you specified with --with-apache)
-    fi
+    AC_MSG_ERROR( $with_apache_includes not found.  Check the value you specified with --with-apache-includes)
   fi
-])
-
-# Now call the APACHE_DIR macro that was just specified
-APACHE_DIR
-
+fi
 # Save the location of apache into the "apache_dir" variable.
 # The AC_SUBST macro causes the variable to be saved in config.status
 AC_SUBST(apache_dir)
+
+# find apr-config binary
+AC_ARG_WITH(apr_config, AC_HELP_STRING([[--with-apr-config=FILE]], [Path to apr-config program]),
+			[ apr_config="$withval" ],
+			[ AC_PATH_PROG(apr_config, apr-config, [no], [$PATH:/usr/sbin/:/usr/local/apache2/bin]) ])
+if test "$apr_config" = "no"; then
+   AC_MSG_ERROR(Could not find the apr-config program.  You can specify a location with the --with-apr-config=FILE option.  It may be named apr-0-config or apr-1-config and can be found in your apache2 bin directory.)
+fi
+$apr_config --cppflags &> /dev/null
+if test "$?" != "0"; then
+  AC_MSG_ERROR($apr_config is not a valid apr-config program)
+fi
 
 AC_LANG_PUSH([C++])
  AC_CHECK_LIB([mimetic],[main],[
@@ -58,7 +78,6 @@ AC_LANG_PUSH([C++])
   ]
  )
 AC_LANG_POP([C++])
-
 
 AC_CHECK_LIB(pcre++, pcre_exec,[
   PCREPP_LIBS=-lpcre++
@@ -103,7 +122,7 @@ echo " *** You are now ready to build mod_auth_openid:"
 echo " *** Enter the following commands:"
 echo " ***"
 echo " *** $> make"
-echo " *** $> $apache_dir/bin/apxs -i -a -n 'authopenid' libmodauthopenid.la"
+echo " *** $> apxs -i -a -n 'authopenid' libmodauthopenid.la"
 echo " ***"
 echo " *** Do NOT run \"make install\".  Use apache's apxs for that."
 echo " ***"

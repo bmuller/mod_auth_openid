@@ -72,7 +72,7 @@ namespace opkele {
       if(param_key.substr(0, 7) == "openid.") {
 	params.erase(param_key);
 	// stupid map iterator screws up if we just continue the iteration...
-	// so recusion to the rescue - we'll delete them one at a time
+	// so recursion to the rescue - we'll delete them one at a time
 	return remove_openid_vars(params);
       } 
     }
@@ -102,7 +102,7 @@ namespace opkele {
   string url_decode(const string& str) {
     char * t = curl_unescape(str.c_str(),str.length());
     if(!t)
-      throw failed_conversion(OPKELE_CP_ "failed to curl_escape()");
+      throw failed_conversion(OPKELE_CP_ "failed to curl_unescape()");
     string rv(t);
     curl_free(t);
     return rv;
@@ -114,9 +114,9 @@ namespace opkele {
 
     vector<string> pairs = explode(str, "&");
     for(unsigned int i=0; i < pairs.size(); i++) {
-      //fprintf(stdout, "pair = \"%s\"\n", pairs[i].c_str());
       string::size_type loc = pairs[i].find( "=", 0 );
-      if( loc != string::npos ) {
+      // if loc found and loc isn't last char in string
+      if( loc != string::npos && loc != str.size()-1) {
         string key = url_decode(pairs[i].substr(0, loc));
         string value = url_decode(pairs[i].substr(loc+1));
         p[key] = value;

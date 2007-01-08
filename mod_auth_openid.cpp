@@ -38,6 +38,7 @@ static std::string url_encode(const std::string& str) {
   return rv;
 }
 
+// get the base directory of the url
 static void base_dir(std::string path, std::string& s) {
   // guaranteed that path will at least be "/" - but just to be safe...
   if(path.size() == 0)
@@ -51,6 +52,7 @@ static void base_dir(std::string path, std::string& s) {
   s = path.substr(0, i+1);
 }
 
+// make a random alpha-numeric string size characters long
 static void make_rstring(int size, std::string& s) {
   s = "";
   char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -59,7 +61,6 @@ static void make_rstring(int size, std::string& s) {
     s += cs[rand()%62];
 }
 
-//static void *create_modauthopenid_config(apr_pool_t *p, server_rec *s) {
 static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
@@ -304,9 +305,6 @@ static int mod_authopenid_method_handler (request_rec *r) {
       full_uri(r, redirect_location);
       return http_redirect(r, redirect_location);
     } catch(opkele::exception &e) {
-      // TODO
-      // IF THIS IS BECAUSE OF openid.user_setup_url, REDIRECT TO THAT URL
-      //
       std::string result = "Error in authentication: " + std::string(e.what());
       modauthopenid::debug(result);
       delete consumer;
@@ -327,7 +325,7 @@ static void mod_authopenid_register_hooks (apr_pool_t *p) {
 module AP_MODULE_DECLARE_DATA authopenid_module = {
 	STANDARD20_MODULE_STUFF,
 	create_modauthopenid_config,
-	NULL, // default is to override :modauthopenid_config_merge,
+	NULL, // config merge function - default is to override
 	NULL,
 	NULL,
 	mod_authopenid_cmds,

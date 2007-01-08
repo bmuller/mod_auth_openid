@@ -116,7 +116,16 @@ namespace opkele {
     char c_id[255];
     strcpy(c_id, id.substr(0, 254).c_str());
     Dbt key(c_id, strlen(c_id) + 1);
-    db_.del(NULL, &key, 0);
+    try {
+      // if the key doesn't exist, no exception is raised - it is quite possible that the key doesn't
+      // exist (the ID server could invalidate a handle that has already expired).  If an exception is raised
+      // it will be because the DB screwed up
+      db_.del(NULL, &key, 0);
+    } catch(DbException &e) {
+      db_.err(e.get_errno(), "error while invalidating association");
+    } catch(exception &e) {
+      db_.errx("Error while invalidating association: %s", e.what());
+    }
   };
 
   assoc_t MoidConsumer::find_assoc(const string& server) {

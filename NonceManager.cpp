@@ -20,7 +20,6 @@ Created by bmuller <bmuller@butterfat.net>
 #include "mod_auth_openid.h"
 
 namespace modauthopenid {
-  using namespace modauthopenid;
   using namespace std;
 
   NonceManager::NonceManager(const string& storage_location)  : db_(NULL, 0) {

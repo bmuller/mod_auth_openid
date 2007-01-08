@@ -20,9 +20,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include "mod_auth_openid.h"
 
 namespace modauthopenid {
-
   using namespace std;
-  using namespace modauthopenid;
 
   SessionManager::SessionManager(const string& storage_location)  : db_(NULL, 0) {
     u_int32_t oFlags = DB_CREATE; // Open flags;
