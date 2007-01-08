@@ -1,4 +1,4 @@
-# code taken from mod_python's configure.in
+# code taken from mod_python's (http://www.modpython.org/) configure.in
 
 AC_DEFUN([AX_WITH_APXS],
 [

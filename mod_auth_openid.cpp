@@ -24,6 +24,7 @@ extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 typedef struct {
   char *db_location;
   bool enabled;
+  bool use_cookie;
   apr_array_header_t *trusted;
 } modauthopenid_config;
 
@@ -66,6 +67,7 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
   newcfg->db_location = "/tmp/mod_auth_openid.db";
   newcfg->enabled = false;
+  newcfg->use_cookie = true;
   newcfg->trusted = apr_array_make(p, 5, sizeof(char *));
   return (void *) newcfg;
 }
@@ -82,6 +84,12 @@ static const char *set_modauthopenid_enabled(cmd_parms *parms, void *mconfig, in
   return NULL;
 }
 
+static const char *set_modauthopenid_usecookie(cmd_parms *parms, void *mconfig, int flag) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->use_cookie = (bool) flag;
+  return NULL;
+}
+
 static const char *add_modauthopenid_trusted(cmd_parms *cmd, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   *(const char **)apr_array_push(s_cfg->trusted) = arg;
@@ -94,6 +102,8 @@ static const command_rec mod_authopenid_cmds[] = {
 		"AuthOpenIDDBLocation <string>"),
   AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, ACCESS_CONF,
 	       "AuthOpenIDEnabled <On | Off>"),
+  AP_INIT_FLAG("AuthOpenIDUseCookie", (CMD_HAND_TYPE) set_modauthopenid_usecookie, NULL, ACCESS_CONF,
+	       "AuthOpenIDUseCookie <On | Off> - use session auth?"),
   AP_INIT_ITERATE("AuthOpenIDTrusted", (CMD_HAND_TYPE) add_modauthopenid_trusted, NULL, ACCESS_CONF,
 		  "AuthOpenIDTrusted <a list of trusted identity providers>"),
   {NULL}
@@ -128,10 +138,10 @@ static void full_uri(request_rec *r, std::string& result) {
   std::string hostname(r->hostname);
   std::string protocol(r->protocol);
   std::string uri(r->uri);
-  std::string prefix = (protocol.substr(0, 4) == "HTTP") ? "http://" : "https://";
   apr_port_t i_port = ap_get_server_port(r);
+  std::string prefix = (i_port == 443) ? "https://" : "http://";
   char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
-  std::string s_port = (i_port == 80) ? "" : ":" + std::string(port);
+  std::string s_port = (i_port == 80 || i_port == 443) ? "" : ":" + std::string(port);
   std::string args = (r->args == NULL) ? "" : "?" + std::string(r->args);
   result = prefix + hostname + s_port + uri + args;
 }
@@ -202,13 +212,13 @@ static int mod_authopenid_method_handler (request_rec *r) {
     return DECLINED;
   
   // make a record of our being called
-  modauthopenid::debug("***mod_auth_openid has been called***");
+  modauthopenid::debug("***" + std::string(PACKAGE_STRING) + " module has been called***");
 
   // test for valid session - if so, return DECLINED
   std::string session_id = "";
   get_session_id(r, session_id);
-  if(session_id != "") {
-    modauthopenid::debug("found session_id: " + session_id);
+  if(session_id != "" && s_cfg->use_cookie) {
+    modauthopenid::debug("found session_id in cookie: " + session_id);
     modauthopenid::SESSION session;
     modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
     sm->get_session(session_id, session);
@@ -282,28 +292,34 @@ static int mod_authopenid_method_handler (request_rec *r) {
       }
       delete nm;
 
-      // now set auth cookie
-      std::string session_id, hostname, path, cookie_value, redirect_location;
-      make_rstring(32, session_id);
-      base_dir(std::string(r->uri), path);
-      cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
-      modauthopenid::debug("setting cookie: " + cookie_value);
-      apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
-      hostname = std::string(r->hostname);
+      if(s_cfg->use_cookie) {
+	// now set auth cookie, if we're doing session based auth
+	std::string session_id, hostname, path, cookie_value, redirect_location, args;
+	make_rstring(32, session_id);
+	base_dir(std::string(r->uri), path);
+	cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
+	modauthopenid::debug("setting cookie: " + cookie_value);
+	apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
+	hostname = std::string(r->hostname);
 
-      // save session values
-      modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
-      sm->store_session(session_id, hostname, path, identity);
-      delete sm;
+	// save session values
+	modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
+	sm->store_session(session_id, hostname, path, identity);
+	delete sm;
+
+	params = opkele::remove_openid_vars(params);
+	args = params.append_query("", "").substr(1);
+	if(args.length() == 0)
+	  r->args = NULL;
+	else
+	  apr_cpystrn(r->args, args.c_str(), 1024);
+	full_uri(r, redirect_location);
+	return http_redirect(r, redirect_location);
+      }
       
-      params = opkele::remove_openid_vars(params);
-      std::string args = params.append_query("", "").substr(1);
-      if(args.length() == 0)
-	r->args = NULL;
-      else
-	apr_cpystrn(r->args, args.c_str(), 1024);
-      full_uri(r, redirect_location);
-      return http_redirect(r, redirect_location);
+      // if we're not setting cookie - don't redirect, just show page
+      return DECLINED;
+
     } catch(opkele::exception &e) {
       std::string result = "Error in authentication: " + std::string(e.what());
       modauthopenid::debug(result);

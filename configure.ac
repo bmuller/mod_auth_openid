@@ -16,7 +16,7 @@ AC_HEADER_STDC
 AC_PROG_RANLIB
 
 dnl provide flag --enable-debug
-AC_ARG_ENABLE(debug,[  --enable-debug          enable debugging output to Apache error log],
+AC_ARG_ENABLE(debug, AC_HELP_STRING([[--enable-debug]], [enable debugging output to Apache error log]),
 [if test "$enableval" = "yes"; then
     DEBUG="yes"
     CPPFLAGS="$CPPFLAGS -DDEBUG"

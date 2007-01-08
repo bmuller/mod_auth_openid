@@ -8,7 +8,7 @@ First, you'll need a few prerequisites.
 	Berkeley DB C++ libs (now owned by Oracle)
 
 Next, run:
-$> ./configure --with-apache=/path/to/root/apache2/dir
+$> ./configure
 or 
 $> ./configure --help
 to see additional options that can be specified.
@@ -19,6 +19,8 @@ $> make
 Do NOT run "make install".  You should use Apache 2's apxs program to install 
 the mod_auth_openid module.  Do this by running:
 $> /path/to/root/apache2/bin/apxs -i -a -n 'authopenid' libmodauthopenid.la
+
+You will probably have to be root.
 
 
 Usage
