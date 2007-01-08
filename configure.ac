@@ -15,22 +15,6 @@ AC_HEADER_STDC
 
 AC_PROG_RANLIB
 
-# macro to test for executable
-AC_DEFUN([AC_ISCMD], [ { 
-  $$1 $2 >/dev/null 2>/dev/null; 
-  __TMP_STATUS="$?"
-
-m4_ifvaln([$3], [ 
-  if test "$__TMP_STATUS" = "0"; then 
-    $3 
-  fi])dnl
-
-m4_ifvaln([$4], [
-  if test "$__TMP_STATUS" != "0"; then 
-    $4 
-  fi])dnl
-} ])
-
 dnl provide flag --enable-debug
 AC_ARG_ENABLE(debug,[  --enable-debug          enable debugging output to Apache error log],
 [if test "$enableval" = "yes"; then
@@ -39,23 +23,8 @@ AC_ARG_ENABLE(debug,[  --enable-debug          enable debugging output to Apache
 fi]
 )
 
-# find apache includes 
-AC_ARG_WITH(apache_includes, [  --with-apache-includes[=DIR]     Apache server includes directory],,[with_apache_includes="no"])
-AC_MSG_CHECKING(for Apache includes directory)
-if test "$with_apache_includes" = "no"; then
-  AC_MSG_ERROR( You need to specify the apache includes directory using --with-apache-includes=DIR)
-else
-  # make sure that a well known include file exists
-  if test -e $with_apache_includes/httpd.h; then
-    apache_dir=$with_apache_includes
-    AC_MSG_RESULT(APACHE found!)
-  else
-    AC_MSG_ERROR( $with_apache_includes not found.  Check the value you specified with --with-apache-includes)
-  fi
-fi
-# Save the location of apache into the "apache_dir" variable.
-# The AC_SUBST macro causes the variable to be saved in config.status
-AC_SUBST(apache_dir)
+# this will look for apxs command - put it in $APXS, fail on failure
+AX_WITH_APXS()
 
 # find apr-config binary
 AC_ARG_WITH(apr_config, AC_HELP_STRING([[--with-apr-config=FILE]], [Path to apr-config program]),
@@ -68,6 +37,20 @@ $apr_config --cppflags &> /dev/null
 if test "$?" != "0"; then
   AC_MSG_ERROR($apr_config is not a valid apr-config program)
 fi
+
+
+# find curl-config binary
+AC_ARG_WITH(curl_config, AC_HELP_STRING([[--with-curl-config=FILE]], [Path to curl-config program]),
+			[ curl_config="$withval" ],
+			[ AC_PATH_PROG(curl_config, curl-config, [no], [$PATH:/usr/sbin/:/usr/local/apache2/bin]) ])
+if test "$curl_config" = "no"; then
+   AC_MSG_ERROR(Could not find the curl-config program.  You can specify a location with the --with-curl-config=FILE option.)
+fi
+$curl_config --prefix &> /dev/null
+if test "$?" != "0"; then
+  AC_MSG_ERROR($curl_config is not a valid curl-config program)
+fi
+
 
 AC_LANG_PUSH([C++])
  AC_CHECK_LIB([mimetic],[main],[
@@ -95,13 +78,10 @@ AC_CHECK_LIB(curl, main, [
   ]
 )
 
-AC_CHECK_LIB(db_cxx, main, [
-  BDB_LIBS=-ldb_cxx
-  AC_SUBST([BDB_LIBS])
-  ],[
-   AC_MSG_ERROR([no BDB library found. get one from http://www.oracle.com/database/berkeley-db/db/index.html])
-  ]
-)
+AX_PATH_BDB([3], [],[
+    AC_MSG_ERROR([no BDB library found. get one from http://www.oracle.com/database/berkeley-db/db/index.html])
+  ])
+AC_SUBST([BDB_LIBS])
 
 AC_CHECK_HEADER(opkele/opkele-config.h, [
     OPKELE_LIBS=-lopkele;
@@ -122,7 +102,8 @@ echo " *** You are now ready to build mod_auth_openid:"
 echo " *** Enter the following commands:"
 echo " ***"
 echo " *** $> make"
-echo " *** $> apxs -i -a -n 'authopenid' libmodauthopenid.la"
+echo " *** $> su root"
+echo " *** $> $APXS -i -a -n 'authopenid' libmodauthopenid.la"
 echo " ***"
 echo " *** Do NOT run \"make install\".  Use apache's apxs for that."
 echo " ***"

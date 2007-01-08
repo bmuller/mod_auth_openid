@@ -43,7 +43,7 @@ namespace opkele {
   class MoidConsumer : public opkele::consumer_t {
   public:
     MoidConsumer(const string& storage_location);
-    ~MoidConsumer() { close(); };
+    virtual ~MoidConsumer() { close(); };
     assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
     assoc_t retrieve_assoc(const string& server,const string& handle);
     void invalidate_assoc(const string& server,const string& handle);

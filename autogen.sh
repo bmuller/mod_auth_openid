@@ -1,2 +1,2 @@
 #! /bin/sh
-aclocal && autoheader && automake -a && autoconf && ./configure "$@"
+aclocal  -I ./acinclude.d && autoheader && automake -a && autoconf && ./configure "$@"

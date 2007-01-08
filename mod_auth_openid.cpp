@@ -43,7 +43,7 @@ static void base_dir(std::string path, std::string& s) {
   // guaranteed that path will at least be "/" - but just to be safe...
   if(path.size() == 0)
     return;
-  int q = path.find('?', 0);
+  unsigned int q = path.find('?', 0);
   int i;
   if(q != std::string::npos)
     i = path.find_last_of('/', q);

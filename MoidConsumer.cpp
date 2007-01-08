@@ -172,7 +172,6 @@ namespace opkele {
     db_.cursor(NULL, &cursorp, 0);
     try {
       while (cursorp->get(&key, &data, DB_NEXT) == 0) {
-        char * key_v = (char *) key.get_data();
         BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
 	if(rawtime > data_v->expires_on) {
 	  db_.del(NULL, &key, 0);
@@ -221,25 +220,6 @@ namespace opkele {
     operator const CURL*(void) const { return _c; }
     operator CURL*(void) { return _c; }
   };
-  static CURLcode curl_misc_sets(CURL* c) {
-    CURLcode r;
-    (r=curl_easy_setopt(c,CURLOPT_FOLLOWLOCATION,1))
-      || (r=curl_easy_setopt(c,CURLOPT_MAXREDIRS,5))
-      || (r=curl_easy_setopt(c,CURLOPT_DNS_CACHE_TIMEOUT,120))
-      || (r=curl_easy_setopt(c,CURLOPT_DNS_USE_GLOBAL_CACHE,1))
-      || (r=curl_easy_setopt(c,CURLOPT_USERAGENT,PACKAGE_NAME"/"PACKAGE_VERSION))
-      || (r=curl_easy_setopt(c,CURLOPT_TIMEOUT,20))
-      ;
-    return r;
-  }
-  static size_t _curl_tostring(void *ptr,size_t size,size_t nmemb,void *stream) {
-    string *str = (string*)stream;
-    size_t bytes = size*nmemb;
-    size_t get = min(16384-str->length(),bytes);
-    str->append((const char*)ptr,get);
-    return get;
-  }
-
 }
 
 
