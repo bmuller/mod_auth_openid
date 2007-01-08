@@ -22,6 +22,15 @@ $> /path/to/root/apache2/bin/apxs -i -a -n 'authopenid' libmodauthopenid.la
 
 You will probably have to be root.
 
+Make sure that the file /tmp/mod_auth_openid.db is owned by the user running Apache.
+You can do this by (assuming www-data is the user running apache):
+$> su root
+$> touch /tmp/mod_auth_openid.db
+$> chown www-data /tmp/mod_auth_openid.db
+
+Or you can specify an alternate location that the user running apache has write 
+privieges on (see AuthOpenIDDBLocation below).
+
 
 Usage
 ==================
@@ -34,12 +43,17 @@ There are also two additional, optional directives:
 
 AuthOpenIDDBLocation     /some/location/my_file.db
 AuthOpenIDTrusted        http://myopenid.com http://someprovider.com 
+AuthOpenIDUseCookie      Off
 
 AuthOpenIDDBLocation: This is an optional directive. It specifies the place the BDB file should 
 be stored; it defaults to /tmp/mod_auth_openid.db.
 
 AuthOpenIDTrusted: This is an optional directive. If specified, only users using the providers 
 listed will be allowed to authenticate. There should be no trailing slashes.
+
+AuthOpenIDUseCookie: This is an optional directive. If "Off", then a session cookie will not be 
+set on the client upon successful authentication. The page will load once; if reloaded or if 
+the user visits it again it will ask the user to reauthenticate.
 
 The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
 authentication.
