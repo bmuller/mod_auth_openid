@@ -53,8 +53,8 @@ namespace opkele {
     if(url.size() < 8)
       return "";
     if(url.find("http://",0) != string::npos || url.find("https://",0) != string::npos) {
-      unsigned int last = url.find('/', 8);
-      unsigned int last_q = url.find('?', 8);
+      std::string::size_type last = url.find('/', 8);
+      std::string::size_type last_q = url.find('?', 8);
       if(last==string::npos || (last_q<last && last_q!=string::npos))
 	last = last_q;
       if(last != string::npos)

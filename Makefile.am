@@ -1,14 +1,18 @@
-lib_LTLIBRARIES = libmodauthopenid.la
+noinst_LTLIBRARIES = libmodauthopenid.la
 
-INCLUDES = -I`@APXS@ -q INCLUDEDIR` -I`@curl_config@ --prefix`/include -I`@apr_config@ --includedir`
-libmodauthopenid_la_LDFLAGS = ${LIBCURL} ${PCREPP_LIBS} ${MIMETIC_LIBS} ${BDB_LIBS} ${OPKELE_LIBS}
+INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${CURL_CFLAGS}
+libmodauthopenid_la_LDFLAGS = ${LIBCURL} ${PCREPP_LIBS} ${BDB_LIBS} ${OPKELE_LIBS}
 
 libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cpp NonceManager.cpp SessionManager.cpp
 
 AM_CXXFLAGS=`@apr_config@ --cflags --cppflags` 
 LIBS=`@apr_config@ --libs`
-LDFLAGS= -Wl,--rpath -Wl,/usr/local/lib
+ACLOCAL_AMFLAGS=-I ${top_srcdir}/acinclude.d/
 
-db_info: ${libmodauthopenid_la_OBJECTS}
-	${CXX} db_info.cpp NonceManager.o MoidConsumer.o moid_utils.o SessionManager.o -o $@ ${LDFLAGS} \
-	${libmodauthopenid_la_LDFLAGS} ${INCLUDES}
+noinst_PROGRAMS = db_info
+db_info_SOURCES = db_info.cpp
+db_info_LDFLAGS = ${CURL_CFLAGS} ${OPKELE_LIBS} ${BDB_LIBS} -lmodauthopenid
+
+install-exec-local:
+	cp ${top_builddir}/.libs/libmodauthopenid.la ${top_builddir}/.libs/libmodauthopenid.lai
+	${APXS} -i -a -n 'authopenid' libmodauthopenid.la

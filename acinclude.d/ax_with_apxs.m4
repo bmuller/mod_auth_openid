@@ -1,4 +1,4 @@
-# code taken from mod_python's (http://www.modpython.org/) configure.in
+# some code taken from mod_python's (http://www.modpython.org/) configure.in
 
 AC_DEFUN([AX_WITH_APXS],
 [
@@ -18,40 +18,10 @@ AC_ARG_WITH(apxs, AC_HELP_STRING([--with-apxs=PATH], [Path to apxs]),
 ],
 AC_MSG_RESULT(no))
 
-# if no apxs found yet, check /usr/local/apache/sbin
-# since it's the default Apache location
+# find apxs
 if test -z "$APXS"; then
-  AC_MSG_CHECKING(for apxs in /usr/local/apache/sbin)
-  if test -x /usr/local/apache/sbin/apxs; then
-    APXS=/usr/local/apache/sbin/apxs
-    AC_MSG_RESULT([found, we'll use this. Use --with-apxs to specify another.])
-  else
-    AC_MSG_RESULT(no)
-  fi
-fi
-
-# second last resort
-if test -z "$APXS"; then
-  AC_MSG_CHECKING(for apxs in your PATH)
-  AC_PATH_PROG(APXS, apxs)
-  if test -n "$APXS"; then
-    AC_MSG_RESULT([found $APXS, we'll use this. Use --with-apxs to specify another.])
-  fi
-fi
-
-# last resort
-# some linux distributions use apxs2 for apache2 installations,
-# so check for apxs2 before we give up.
-if test -z "$APXS"; then
-  AC_MSG_CHECKING(for apxs2 in your PATH)
-  AC_PATH_PROG(APXS, apxs2)
-  if test -n "$APXS"; then
-    AC_MSG_RESULT([found $APXS, we'll use this. Use --with-apxs to specify another.])
-  fi
-fi
-
-if test -z "$APXS"; then
-  AC_MSG_ERROR([The apxs binary was not found.  Use --with-apxs to specify its location.])
+  AC_PATH_PROGS([APXS],[apxs2 apxs],[false],[${PATH}:/usr/local/bin:/usr/local/sbin:/usr/sbin:/sbin])
+  test "${APXS}" = "false" && AC_MSG_ERROR([failed to find apxs. Try using --with-apxs])
 fi
 
   # check Apache version
