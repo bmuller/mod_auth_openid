@@ -97,11 +97,7 @@ namespace opkele {
     data.set_flags(DB_DBT_USERMEM);
     if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
       debug("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
-#ifdef OPKELE_HAVE_KONFORKA
-      throw failed_lookup(OPKELE_CP_, "Could not find association.");
-#else
-      throw failed_lookup("Could not find association.");
-#endif
+      throw failed_lookup(OPKELE_CP_ "Could not find association.");
     }
 
     time_t rawtime;
@@ -164,11 +160,7 @@ namespace opkele {
     }
     if (cursorp != NULL)
       cursorp->close();
-#ifdef OPKELE_HAVE_KONFORKA
-    throw failed_lookup(OPKELE_CP_, "Could not find a valid handle."); 
-#else
-    throw failed_lookup("Could not find association.");
-#endif
+    throw failed_lookup(OPKELE_CP_ "Could not find a valid handle."); 
   };
 
   void MoidConsumer::ween_expired() {
