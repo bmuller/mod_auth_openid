@@ -29,8 +29,8 @@
 #undef PACKAGE_VERSION
 #include "config.h"
 
-namespace opkele {
-
+namespace modauthopenid {
+  using namespace opkele;
   using namespace std;
 
   typedef struct bdb_association {
@@ -39,6 +39,18 @@ namespace opkele {
     char secret[30];
     int expires_on; // exact moment it expires
   } BDB_ASSOC;
+  
+  typedef struct nonce {
+    int expires_on; // exact moment it expires
+  } NONCE;
+  
+  typedef struct session {
+    char session_id[33];
+    char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
+    char path[255];
+    char identity[255];
+    int expires_on; // exact moment it expires
+  } SESSION;
 
   class MoidConsumer : public opkele::consumer_t {
   public:
@@ -55,32 +67,7 @@ namespace opkele {
     void close();    
     void ween_expired();
   };
-
-  // in moid_utils.cpp
-  params_t parse_query_string(const string& str);
-  vector<string> explode(string s, string e);
-  bool is_valid_url(string url);
-  string url_decode(const string& str);
-  params_t remove_openid_vars(params_t params);
-  string get_base_url(string url);
-}
-
-namespace modauthopenid {
-
-  using namespace std;
-
-  typedef struct nonce {
-    int expires_on; // exact moment it expires
-  } NONCE;
-
-  typedef struct session {
-    char session_id[33];
-    char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
-    char path[255];
-    char identity[255];
-    int expires_on; // exact moment it expires
-  } SESSION;
- 
+  
   class SessionManager {
   public:
     SessionManager(const string& storage_location);
@@ -89,28 +76,35 @@ namespace modauthopenid {
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
   private:
-   Db db_;
-   void close();
-   void ween_expired();
- };
+    Db db_;
+    void close();
+    void ween_expired();
+  };
+  
+  class NonceManager {
+  public:
+    NonceManager(const string& storage_location);
+    ~NonceManager() { close(); };
+    bool is_valid(const string& nonce, bool delete_on_find = true);
+    void add(const string& nonce);
+    int num_records();
+  private:
+    Db db_;
+    void close();
+    void ween_expired();
+  };
 
- class NonceManager {
- public:
-   NonceManager(const string& storage_location);
-   ~NonceManager() { close(); };
-   bool is_valid(const string& nonce, bool delete_on_find = true);
-   void add(const string& nonce);
-   int num_records();
- private:
-   Db db_;
-   void close();
-   void ween_expired();
- };
-
- /* Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
-  * gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
-  * apache redirects stderr to the error log anyway.
-  */
- void debug(string s);
+  // in moid_utils.cpp
+  string canonicalize(const string& url);
+  params_t parse_query_string(const string& str);
+  vector<string> explode(string s, string e);
+  bool is_valid_url(string url);
+  string url_decode(const string& str);
+  params_t remove_openid_vars(params_t params);
+  string get_base_url(string url);
+  // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
+  // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
+  // apache redirects stderr to the error log anyway.
+  void debug(string s);
 }
 

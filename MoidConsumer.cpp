@@ -19,9 +19,9 @@ Created by bmuller <bmuller@butterfat.net>
 
 #include "mod_auth_openid.h"
 
-namespace opkele {
+namespace modauthopenid {
   using namespace std;
-  using namespace modauthopenid;
+  using namespace opkele;
  
   MoidConsumer::MoidConsumer(const string& storage_location) : db_(NULL, 0) {
     u_int32_t oFlags = DB_CREATE; // Open flags;
@@ -36,7 +36,7 @@ namespace opkele {
       db_.set_error_stream(&cerr); //this is apache's log
     } catch(DbException &e) {
       db_.err(e.get_errno(), "Database open failed %s", storage_location.c_str());
-    } catch(exception &e) {
+    } catch(std::exception &e) {
       db_.errx("Error opening database: %s", e.what());
     }
   };
@@ -78,8 +78,7 @@ namespace opkele {
 
     debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
 
-    auto_ptr<association_t> a(new association(server, handle, "assoc type", secret, expires_in, false));
-    return a;
+    return assoc_t(new association(server, handle, "assoc type", secret, expires_in, false));
   };
 
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle) {
@@ -107,8 +106,7 @@ namespace opkele {
     secret_t secret;
     secret.from_base64(bassoc.secret);
 
-    auto_ptr<association_t> a(new association(bassoc.server, bassoc.handle, "assoc type", secret, expires_in, false));
-    return a;    
+    return assoc_t(new association(bassoc.server, bassoc.handle, "assoc type", secret, expires_in, false));
   };
   void MoidConsumer::invalidate_assoc(const string& server,const string& handle) {
     debug("invalidating association: server = " + server + " handle = " + handle);
@@ -123,7 +121,7 @@ namespace opkele {
       db_.del(NULL, &key, 0);
     } catch(DbException &e) {
       db_.err(e.get_errno(), "error while invalidating association");
-    } catch(exception &e) {
+    } catch(std::exception &e) {
       db_.errx("Error while invalidating association: %s", e.what());
     }
   };

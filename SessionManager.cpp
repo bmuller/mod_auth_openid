@@ -35,7 +35,7 @@ namespace modauthopenid {
       db_.set_error_stream(&cerr); //this is apache's log
     } catch(DbException &e) {
       db_.err(e.get_errno(), "Database open failed %s", storage_location.c_str());
-    } catch(exception &e) {
+    } catch(std::exception &e) {
       db_.errx("Error opening database: %s", e.what());
     }
   };

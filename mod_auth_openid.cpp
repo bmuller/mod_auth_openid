@@ -156,9 +156,9 @@ static void get_session_id(request_rec *r, std::string& session_id) {
   if(cookies_c == NULL) 
     return;
   std::string cookies(cookies_c);
-  std::vector<std::string> pairs = opkele::explode(cookies, ";");
+  std::vector<std::string> pairs = modauthopenid::explode(cookies, ";");
   for(std::string::size_type i = 0; i < pairs.size(); i++) {
-    std::vector<std::string> pair = opkele::explode(pairs[i], "=");
+    std::vector<std::string> pair = modauthopenid::explode(pairs[i], "=");
     if(pair.size() == 2) {
       std::string key = pair[0];
       strip(key);
@@ -191,7 +191,7 @@ static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
     return true;
   char **trusted_sites = (char **) s_cfg->trusted->elts;
   std::string trusted_site;
-  std::string base_url = opkele::get_base_url(url);
+  std::string base_url = modauthopenid::get_base_url(url);
   for (int i = 0; i < s_cfg->trusted->nelts; i++) {
     trusted_site = std::string(trusted_sites[i]);
     if(base_url == trusted_site) {
@@ -220,9 +220,8 @@ static int mod_authopenid_method_handler (request_rec *r) {
   if(session_id != "" && s_cfg->use_cookie) {
     modauthopenid::debug("found session_id in cookie: " + session_id);
     modauthopenid::SESSION session;
-    modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
-    sm->get_session(session_id, session);
-    delete sm;
+    modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
+    sm.get_session(session_id, session);
 
     // if session found 
     if(std::string(session.identity) != "") {
@@ -241,37 +240,34 @@ static int mod_authopenid_method_handler (request_rec *r) {
 
   // parse the get params
   opkele::params_t params;
-  if(r->args != NULL) params = opkele::parse_query_string(std::string(r->args));
-  std::string identity = (params.has_param("openid.identity")) ? params.get_param("openid.identity") : "unknown";
+  if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
+  std::string identity = (params.has_param("openid.identity")) ? modauthopenid::canonicalize(params.get_param("openid.identity")) : "unknown";
 
   // if user is posting id (only openid.identity will contain a value)
   if(params.has_param("openid.identity") && !params.has_param("openid.assoc_handle")) {
     // remove all openid GET query params (openid.*) - we don't want that maintained through
     // the redirection process.  We do, however, want to keep all aother GET params.
     // also, add a nonce for security
-    params = opkele::remove_openid_vars(params);
-    modauthopenid::NonceManager *nm = new modauthopenid::NonceManager(std::string(s_cfg->db_location));
+    params = modauthopenid::remove_openid_vars(params);
+    modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
     std::string nonce;
     make_rstring(10, nonce);
-    nm->add(nonce);
-    delete nm;
+    nm.add(nonce);
     params["openid.nonce"] = nonce;
     //remove first char - ? to fit r->args standard
     std::string args = params.append_query("", "").substr(1); 
     apr_cpystrn(r->args, args.c_str(), 1024);
-    if(!opkele::is_valid_url(identity))
+    if(!modauthopenid::is_valid_url(identity))
       return show_input(r, "You must give a valid URL for your identity.");
-    opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));     
+    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));     
     std::string return_to, trust_root, re_direct;
     full_uri(r, return_to);
     base_dir(return_to, trust_root);
     try {
-      re_direct = consumer->checkid_setup(identity, return_to, trust_root);
+      re_direct = consumer.checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
-      delete consumer;
       return show_input(r, "Could not open \\\""+identity+"\\\" or no identity found there.  Please check the URL.");
     }
-    delete consumer;
     if(!is_trusted_provider(s_cfg , re_direct))
        return show_input(r, "The identity provider for \\\""+identity+"\\\" is not trusted by this site.");
     return http_redirect(r, re_direct);
@@ -279,18 +275,15 @@ static int mod_authopenid_method_handler (request_rec *r) {
     // make sure nonce is present
     if(!params.has_param("openid.nonce"))
       return show_input(r, "Error in authentication.  Nonce not found.");
-    opkele::MoidConsumer *consumer = new opkele::MoidConsumer(std::string(s_cfg->db_location));
+    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));
     try {
-      consumer->id_res(params);
-      delete consumer;
+      consumer.id_res(params);
 
       // if no exception raised, check nonce
-      modauthopenid::NonceManager *nm = new modauthopenid::NonceManager(std::string(s_cfg->db_location));
-      if(!nm->is_valid(params.get_param("openid.nonce"))) {
-	delete nm;
+      modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
+      if(!nm.is_valid(params.get_param("openid.nonce"))) {
 	return show_input(r, "Error in authentication.  Nonce invalid."); 
       }
-      delete nm;
 
       if(s_cfg->use_cookie) {
 	// now set auth cookie, if we're doing session based auth
@@ -303,11 +296,10 @@ static int mod_authopenid_method_handler (request_rec *r) {
 	hostname = std::string(r->hostname);
 
 	// save session values
-	modauthopenid::SessionManager *sm = new modauthopenid::SessionManager(std::string(s_cfg->db_location));
-	sm->store_session(session_id, hostname, path, identity);
-	delete sm;
+	modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
+	sm.store_session(session_id, hostname, path, identity);
 
-	params = opkele::remove_openid_vars(params);
+	params = modauthopenid::remove_openid_vars(params);
 	args = params.append_query("", "").substr(1);
 	if(args.length() == 0)
 	  r->args = NULL;
@@ -323,7 +315,6 @@ static int mod_authopenid_method_handler (request_rec *r) {
     } catch(opkele::exception &e) {
       std::string result = "Error in authentication: " + std::string(e.what());
       modauthopenid::debug(result);
-      delete consumer;
       return show_input(r, result);
     }
   } else { //display an input form

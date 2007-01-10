@@ -33,7 +33,7 @@ namespace modauthopenid {
     s = time_s + "[" + string(PACKAGE_NAME) + "] " + s + "\n";
     // escape %'s
     string cleaned_s = "";
-    vector<string> parts = opkele::explode(s, "%");
+    vector<string> parts = explode(s, "%");
     for(unsigned int i=0; i<parts.size()-1; i++)
       cleaned_s += parts[i] + "%%";
     cleaned_s += parts[parts.size()-1];
@@ -43,10 +43,39 @@ namespace modauthopenid {
 #endif
   };
 
-}
-
-namespace opkele {
-  using namespace std;
+  // taken from libopkele consumer_t code
+  string canonicalize(const string& url) {
+    string rv = url;
+    // strip leading and trailing spaces
+    string::size_type i = rv.find_first_not_of(" \t\r\n");
+    if(i==string::npos)
+      throw bad_input(OPKELE_CP_ "empty URL");
+    if(i)
+      rv.erase(0,i);
+    i = rv.find_last_not_of(" \t\r\n");
+    if(i==string::npos) 
+      return url;
+    if(i<(rv.length()-1))
+      rv.erase(i+1);
+    // add missing http://
+    i = rv.find("://");
+    if(i==string::npos) { // primitive. but do we need more?
+      rv.insert(0,"http://");
+      i = sizeof("http://")-1;
+    }else{
+      i += sizeof("://")-1;
+    }
+    string::size_type qm = rv.find('?',i);
+    string::size_type sl = rv.find('/',i);
+    if(qm!=string::npos) {
+      if(sl==string::npos || sl>qm)
+        rv.insert(qm,1,'/');
+    }else{
+      if(sl==string::npos)
+        rv += '/';
+    }
+    return rv;
+  }
 
   // assuming the url given will begin with http(s):// - worst case, return blank string
   string get_base_url(string url) {
@@ -63,7 +92,6 @@ namespace opkele {
     }
     return "";
   }
-
 
   params_t remove_openid_vars(params_t params) {
     map<string,string>::iterator iter;

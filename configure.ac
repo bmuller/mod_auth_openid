@@ -43,6 +43,7 @@ AX_PATH_BDB([3], [],[
     AC_MSG_ERROR([no C++ BDB library found. get one from http://www.oracle.com/database/berkeley-db/db/index.html])
   ])
 AC_SUBST([BDB_LIBS])
+AC_SUBST([BDB_CPPFLAGS])
 
 APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)
@@ -50,8 +51,6 @@ AC_SUBST(APACHE_CFLAGS)
 PKG_CHECK_MODULES([OPKELE],[libopkele],,[
  AC_MSG_ERROR([no libopkele library found. get one from http://kin.klever.net/libopkele/])
 ])
-AC_SUBST(OPKELE_CFLAGS)
-AC_SUBST(OPKELE_LIBS)
 
 AC_CONFIG_FILES([
  Makefile

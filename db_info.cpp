@@ -27,17 +27,14 @@ using namespace std;
 using namespace modauthopenid;
 
 void num_records(string db_location) {
-  SessionManager *s = new SessionManager(db_location);
-  cout << "There are " << s->num_records() << " records in the sessions table.\n";
-  delete s;
+  SessionManager s(db_location);
+  cout << "There are " << s.num_records() << " records in the sessions table.\n";
 
-  MoidConsumer *c = new MoidConsumer(db_location);
-  cout << "There are " << c->num_records() << " records in the associations table.\n";
-  delete c;
+  MoidConsumer c(db_location);
+  cout << "There are " << c.num_records() << " records in the associations table.\n";
 
-  NonceManager *n = new NonceManager(db_location);
-  cout << "There are " << n->num_records() << " records in the nonces table.\n";
-  delete n;
+  NonceManager n(db_location);
+  cout << "There are " << n.num_records() << " records in the nonces table.\n";
 };
 
 int main(int argc, char **argv) { 
