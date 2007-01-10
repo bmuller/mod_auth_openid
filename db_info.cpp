@@ -29,12 +29,15 @@ using namespace modauthopenid;
 void num_records(string db_location) {
   SessionManager s(db_location);
   cout << "There are " << s.num_records() << " records in the sessions table.\n";
+  s.close();
 
   MoidConsumer c(db_location);
   cout << "There are " << c.num_records() << " records in the associations table.\n";
+  c.close();
 
   NonceManager n(db_location);
   cout << "There are " << n.num_records() << " records in the nonces table.\n";
+  n.close();
 };
 
 int main(int argc, char **argv) { 

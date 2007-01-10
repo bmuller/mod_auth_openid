@@ -62,10 +62,11 @@ namespace modauthopenid {
     assoc_t find_assoc(const string& server);
     void print_db();
     int num_records();
+    void close();    
   private:
     Db db_;
-    void close();    
     void ween_expired();
+    bool is_closed;
   };
   
   class SessionManager {
@@ -75,10 +76,11 @@ namespace modauthopenid {
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
+    void close();
   private:
     Db db_;
-    void close();
     void ween_expired();
+    bool is_closed;
   };
   
   class NonceManager {
@@ -88,10 +90,11 @@ namespace modauthopenid {
     bool is_valid(const string& nonce, bool delete_on_find = true);
     void add(const string& nonce);
     int num_records();
+    void close();
   private:
     Db db_;
-    void close();
     void ween_expired();
+    bool is_closed;
   };
 
   // in moid_utils.cpp

@@ -23,6 +23,7 @@ namespace modauthopenid {
   using namespace std;
 
   NonceManager::NonceManager(const string& storage_location)  : db_(NULL, 0) {
+    is_closed = false;
     u_int32_t oFlags = DB_CREATE; // Open flags;
     try {
       db_.open(NULL,                // Transaction pointer
@@ -120,6 +121,9 @@ namespace modauthopenid {
   };
 
   void NonceManager::close() {
+    if(is_closed)
+      return;
+    is_closed = true;
     try {
       db_.close(0);
     } catch(DbException &e) {

@@ -23,9 +23,12 @@ extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
   char *db_location;
+  char *trust_root;
+  char *cookie_name;
   bool enabled;
   bool use_cookie;
   apr_array_header_t *trusted;
+  apr_array_header_t *distrusted;
 } modauthopenid_config;
 
 typedef const char *(*CMD_HAND_TYPE) ();
@@ -68,13 +71,28 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->db_location = "/tmp/mod_auth_openid.db";
   newcfg->enabled = false;
   newcfg->use_cookie = true;
+  newcfg->cookie_name = "open_id_session_id";
   newcfg->trusted = apr_array_make(p, 5, sizeof(char *));
+  newcfg->distrusted = apr_array_make(p, 5, sizeof(char *));
+  newcfg->trust_root = NULL;
   return (void *) newcfg;
 }
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->db_location = (char *) arg;
+  return NULL;
+}
+
+static const char *set_modauthopenid_trust_root(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->trust_root = (char *) arg;
+  return NULL;
+}
+
+static const char *set_modauthopenid_cookie_name(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->cookie_name = (char *) arg;
   return NULL;
 }
 
@@ -96,16 +114,27 @@ static const char *add_modauthopenid_trusted(cmd_parms *cmd, void *mconfig, cons
   return NULL;
 }
 
+static const char *add_modauthopenid_distrusted(cmd_parms *cmd, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  *(const char **)apr_array_push(s_cfg->distrusted) = arg;
+  return NULL;
+}
   
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, ACCESS_CONF,
 		"AuthOpenIDDBLocation <string>"),
+  AP_INIT_TAKE1("AuthOpenIDTrustRoot", (CMD_HAND_TYPE) set_modauthopenid_trust_root, NULL, ACCESS_CONF,
+		"AuthOpenIDTrustRoot <trust root to use>"),
+  AP_INIT_TAKE1("AuthOpenIDCookieName", (CMD_HAND_TYPE) set_modauthopenid_cookie_name, NULL, ACCESS_CONF,
+		"AuthOpenIDCookieName <name of cookie to use>"),
   AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, ACCESS_CONF,
 	       "AuthOpenIDEnabled <On | Off>"),
   AP_INIT_FLAG("AuthOpenIDUseCookie", (CMD_HAND_TYPE) set_modauthopenid_usecookie, NULL, ACCESS_CONF,
 	       "AuthOpenIDUseCookie <On | Off> - use session auth?"),
   AP_INIT_ITERATE("AuthOpenIDTrusted", (CMD_HAND_TYPE) add_modauthopenid_trusted, NULL, ACCESS_CONF,
 		  "AuthOpenIDTrusted <a list of trusted identity providers>"),
+  AP_INIT_ITERATE("AuthOpenIDDistrusted", (CMD_HAND_TYPE) add_modauthopenid_distrusted, NULL, ACCESS_CONF,
+		  "AuthOpenIDDistrusted <a blacklist list of identity providers>"),
   {NULL}
 };
 
@@ -151,7 +180,7 @@ static void strip(std::string& s) {
   while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
 }
 
-static void get_session_id(request_rec *r, std::string& session_id) {
+static void get_session_id(request_rec *r, std::string cookie_name, std::string& session_id) {
   const char * cookies_c = apr_table_get(r->headers_in, "Cookie");
   if(cookies_c == NULL) 
     return;
@@ -165,7 +194,7 @@ static void get_session_id(request_rec *r, std::string& session_id) {
       std::string value = pair[1];
       strip(value);
       modauthopenid::debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
-      if(key == "open_id_session_id") {
+      if(key == cookie_name) {
 	session_id = pair[1];
 	return;
       }
@@ -203,6 +232,23 @@ static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
   return false;
 }
 
+static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url) {
+  if(apr_is_empty_array(s_cfg->distrusted))
+    return false;
+  char **distrusted_sites = (char **) s_cfg->distrusted->elts;
+  std::string distrusted_site;
+  std::string base_url = modauthopenid::get_base_url(url);
+  for (int i = 0; i < s_cfg->distrusted->nelts; i++) {
+    distrusted_site = std::string(distrusted_sites[i]);
+    if(base_url == distrusted_site) {
+      modauthopenid::debug(distrusted_site + " is a distrusted (on black list) identity provider");
+      return true;
+    }
+  }
+  modauthopenid::debug(base_url + " is not a distrusted identity provider (not blacklisted)");
+  return false;
+}
+
 static int mod_authopenid_method_handler (request_rec *r) {
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
@@ -216,12 +262,13 @@ static int mod_authopenid_method_handler (request_rec *r) {
 
   // test for valid session - if so, return DECLINED
   std::string session_id = "";
-  get_session_id(r, session_id);
+  get_session_id(r, std::string(s_cfg->cookie_name), session_id);
   if(session_id != "" && s_cfg->use_cookie) {
     modauthopenid::debug("found session_id in cookie: " + session_id);
     modauthopenid::SESSION session;
     modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
     sm.get_session(session_id, session);
+    sm.close();
 
     // if session found 
     if(std::string(session.identity) != "") {
@@ -253,6 +300,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
     std::string nonce;
     make_rstring(10, nonce);
     nm.add(nonce);
+    nm.close();
     params["openid.nonce"] = nonce;
     //remove first char - ? to fit r->args standard
     std::string args = params.append_query("", "").substr(1); 
@@ -262,13 +310,18 @@ static int mod_authopenid_method_handler (request_rec *r) {
     modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));     
     std::string return_to, trust_root, re_direct;
     full_uri(r, return_to);
-    base_dir(return_to, trust_root);
+    if(s_cfg->trust_root == NULL)
+      base_dir(return_to, trust_root);
+    else
+      trust_root = std::string(s_cfg->trust_root);
     try {
       re_direct = consumer.checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
+      consumer.close();
       return show_input(r, "Could not open \\\""+identity+"\\\" or no identity found there.  Please check the URL.");
     }
-    if(!is_trusted_provider(s_cfg , re_direct))
+    consumer.close();
+    if(!is_trusted_provider(s_cfg , re_direct) || is_distrusted_provider(s_cfg, re_direct))
        return show_input(r, "The identity provider for \\\""+identity+"\\\" is not trusted by this site.");
     return http_redirect(r, re_direct);
   } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
@@ -278,19 +331,22 @@ static int mod_authopenid_method_handler (request_rec *r) {
     modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));
     try {
       consumer.id_res(params);
+      consumer.close();
 
       // if no exception raised, check nonce
       modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
       if(!nm.is_valid(params.get_param("openid.nonce"))) {
+	nm.close();
 	return show_input(r, "Error in authentication.  Nonce invalid."); 
       }
+      nm.close();
 
       if(s_cfg->use_cookie) {
 	// now set auth cookie, if we're doing session based auth
 	std::string session_id, hostname, path, cookie_value, redirect_location, args;
 	make_rstring(32, session_id);
 	base_dir(std::string(r->uri), path);
-	cookie_value = "open_id_session_id=" + session_id + "; path=" + path;
+	cookie_value = std::string(s_cfg->cookie_name) + "=" + session_id + "; path=" + path;
 	modauthopenid::debug("setting cookie: " + cookie_value);
 	apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
 	hostname = std::string(r->hostname);
@@ -298,6 +354,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
 	// save session values
 	modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
 	sm.store_session(session_id, hostname, path, identity);
+	sm.close();
 
 	params = modauthopenid::remove_openid_vars(params);
 	args = params.append_query("", "").substr(1);
@@ -315,6 +372,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
     } catch(opkele::exception &e) {
       std::string result = "Error in authentication: " + std::string(e.what());
       modauthopenid::debug(result);
+      consumer.close();
       return show_input(r, result);
     }
   } else { //display an input form
