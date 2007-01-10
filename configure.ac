@@ -22,7 +22,6 @@ fi]
 # this will look for apxs command - put it in $APXS, fail on failure
 AX_WITH_APXS()
 # find apr-config binary
-AC_MSG_CHECKING(for apr-config)
 AC_ARG_WITH(apr_config, AC_HELP_STRING([[--with-apr-config=FILE]], [Path to apr-config program]),
 			[ apr_config="$withval" ],
 			[AC_PATH_PROGS(apr_config,
@@ -38,8 +37,6 @@ fi
 $apr_config --cppflags &> /dev/null
 if test "$?" != "0"; then
   AC_MSG_ERROR($apr_config is not a valid apr-config program)
-else
-  AC_MSG_RESULT($apr_config found)
 fi
 
 AX_PATH_BDB([3], [],[

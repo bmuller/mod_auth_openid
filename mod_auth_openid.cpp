@@ -203,15 +203,25 @@ static void get_session_id(request_rec *r, std::string cookie_name, std::string&
 }
 
 static int show_input(request_rec *r, std::string msg) {
-  std::string result = "<html><head><script type=\"text/javascript\">function s() { ";
-  if(msg != "")
-    result+="alert(\"" + msg + "\");";
-  result += " var qstring = ''; var parts = window.location.search.substring(1, window.location.search.length).split('&');";
-  result += " if(parts.length>1) for(var i=0; i<parts.length; i++) if(parts[i].split('=')[0].substr(0,7)!='openid.') qstring+='&'+parts[i];";
-  result += " var p = prompt(\"Enter your identity url.\"); if(!p) { document.getElementById(\"msg\").innerHTML=";
-  result += "\"Authentication required!\"; return;} document.getElementById(\"msg\").innerHTML=\"Loading...\";";
-  result += " window.location='?openid.identity='+p+qstring; }</script><body onload=\"s();\">";
-  result += " <h1><div id=\"msg\"></div></h1></body></html>";
+  std::string result =
+    "<html><head><script type=\"text/javascript\">"
+    "function s() {"
+      +(msg.empty()?"":"alert('"+msg+"');")+
+      "var qstring='';"
+      "var parts=window.location.search.substring(1,window.location.search.length).split('&');"
+      "for(var i=0;i<parts.length;++i)"
+        "if(parts[i].split('=')[0].substr(0,7)!='openid.')"
+          "qstring+='&'+parts[i];"
+      "var p = prompt('Enter your identity url.');"
+      "var m=document.getElementById('msg');"
+      "if(!p) {"
+        "m.innerHTML='Authentication required!';"
+        "return;"
+      "}"
+      "m.innerHTML='Loading...';"
+      "window.location='?openid.identity='+p+qstring;"
+    "}"
+    "</script></head><body onload=\"s();\"><h1 id=\"msg\"></h1></body></html>";
   return http_sendstring(r, result);
 }
 
