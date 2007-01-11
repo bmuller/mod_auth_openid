@@ -43,6 +43,42 @@ namespace modauthopenid {
 #endif
   };
 
+  // get a descriptive string for an error; a short string is used as a GET param
+  // value in the style of OpenID get params - short, no space, ...
+  string error_to_string(IdResult e, bool use_short_string) {
+    string short_string, long_string;
+    switch(e) {
+    case no_idp_found:
+      short_string = "no_idp_found";
+      long_string = "There was not an identity provider found at the identity URL given.";
+      break;
+    case invalid_id_url:
+      short_string = "invalid_id_url";
+      long_string = "The identity URL given is not a valid URL.";
+      break;
+    case idp_not_trusted:
+      short_string = "idp_not_trusted";
+      long_string = "The identity provider for the identity URL given is not trusted.";
+      break;
+    case invalid_nonce:
+      short_string = "invalid_nonce";
+      long_string = "Invalid nonce; error while authenticating.";
+      break;
+    case canceled:
+      short_string = "canceled";
+      long_string = "Identification process has been canceled.";
+      break;
+    case success:
+      short_string = "success";
+      long_string = "Identitfication process successful.";
+    default: // unspecified
+      short_string = "unspecified";
+      long_string = "There has been an error while attempting to authenticate.";
+      break;
+    }
+    return (use_short_string) ? short_string : long_string;
+  }
+
   // taken from libopkele consumer_t code
   string canonicalize(const string& url) {
     string rv = url;

@@ -25,6 +25,7 @@ typedef struct {
   char *db_location;
   char *trust_root;
   char *cookie_name;
+  char *login_page;
   bool enabled;
   bool use_cookie;
   apr_array_header_t *trusted;
@@ -90,6 +91,12 @@ static const char *set_modauthopenid_trust_root(cmd_parms *parms, void *mconfig,
   return NULL;
 }
 
+static const char *set_modauthopenid_login_page(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->login_page = (char *) arg;
+  return NULL;
+}
+
 static const char *set_modauthopenid_cookie_name(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->cookie_name = (char *) arg;
@@ -123,6 +130,8 @@ static const char *add_modauthopenid_distrusted(cmd_parms *cmd, void *mconfig, c
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, ACCESS_CONF,
 		"AuthOpenIDDBLocation <string>"),
+  AP_INIT_TAKE1("AuthOpenIDLoginPage", (CMD_HAND_TYPE) set_modauthopenid_login_page, NULL, ACCESS_CONF,
+		"AuthOpenIDLoginPage <url string>"),
   AP_INIT_TAKE1("AuthOpenIDTrustRoot", (CMD_HAND_TYPE) set_modauthopenid_trust_root, NULL, ACCESS_CONF,
 		"AuthOpenIDTrustRoot <trust root to use>"),
   AP_INIT_TAKE1("AuthOpenIDCookieName", (CMD_HAND_TYPE) set_modauthopenid_cookie_name, NULL, ACCESS_CONF,
@@ -202,7 +211,8 @@ static void get_session_id(request_rec *r, std::string cookie_name, std::string&
   }
 }
 
-static int show_input(request_rec *r, std::string msg) {
+
+static int show_html_input(request_rec *r, std::string msg) {
   opkele::params_t params;
   if(r->args != NULL) 
     params = modauthopenid::parse_query_string(std::string(r->args));
@@ -223,7 +233,7 @@ static int show_input(request_rec *r, std::string msg) {
     "a:hover { text-decoration: underline; }\n"
     "</style></head><body>"
     "<h1>Protected Location</h1>"
-    "<p>This site is protected and requires that you identity yourself with an "
+    "<p>This site is protected and requires that you identify yourself with an "
     "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it<br />works, see "
     "<a href=\"http://openid.net/about.bml\">http://openid.net/about.bml</a>.  You can sign up for "
     "an identity on one of the sites listed <a href=\"http://iwantmyopenid.org/about/openid\">here</a>.</p>"
@@ -234,6 +244,14 @@ static int show_input(request_rec *r, std::string msg) {
     "</form></p>"
     "<body></html>";
   return http_sendstring(r, result);
+}
+
+static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::IdResult e = modauthopenid::success) {
+  if(s_cfg->login_page == NULL) {
+    std::string msg = (e == modauthopenid::success) ? "" : modauthopenid::error_to_string(e, false);
+    return show_html_input(r, msg);
+  }
+  return http_sendstring(r, "hello");
 }
 
 static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
@@ -327,7 +345,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
     std::string args = params.append_query("", "").substr(1); 
     apr_cpystrn(r->args, args.c_str(), 1024);
     if(!modauthopenid::is_valid_url(identity))
-      return show_input(r, "You must give a valid URL for your identity.");
+      return show_input(r, s_cfg, modauthopenid::invalid_id_url);
     modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));     
     std::string return_to, trust_root, re_direct;
     full_uri(r, return_to);
@@ -339,16 +357,16 @@ static int mod_authopenid_method_handler (request_rec *r) {
       re_direct = consumer.checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
       consumer.close();
-      return show_input(r, "Could not open \\\""+identity+"\\\" or no identity found there.  Please check the URL.");
+      return show_input(r, s_cfg, modauthopenid::no_idp_found);
     }
     consumer.close();
     if(!is_trusted_provider(s_cfg , re_direct) || is_distrusted_provider(s_cfg, re_direct))
-       return show_input(r, "The identity provider for \\\""+identity+"\\\" is not trusted by this site.");
+       return show_input(r, s_cfg, modauthopenid::idp_not_trusted);
     return http_redirect(r, re_direct);
   } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
     // make sure nonce is present
     if(!params.has_param("openid.nonce"))
-      return show_input(r, "Error in authentication.  Nonce not found.");
+      return show_input(r, s_cfg, modauthopenid::invalid_nonce);
     modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));
     try {
       consumer.id_res(params);
@@ -358,7 +376,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
       modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
       if(!nm.is_valid(params.get_param("openid.nonce"))) {
 	nm.close();
-	return show_input(r, "Error in authentication.  Nonce invalid."); 
+	return show_input(r, s_cfg, modauthopenid::invalid_nonce); 
       }
       nm.close();
 
@@ -391,15 +409,14 @@ static int mod_authopenid_method_handler (request_rec *r) {
       return DECLINED;
 
     } catch(opkele::exception &e) {
-      std::string result = "Error in authentication: " + std::string(e.what());
-      modauthopenid::debug(result);
+      modauthopenid::debug("Error in authentication: " + std::string(e.what()));
       consumer.close();
-      return show_input(r, result);
+      return show_input(r, s_cfg, modauthopenid::unspecified);
     }
   } else { //display an input form
     if(params.has_param("openid.mode") && params.get_param("openid.mode") == "cancel")
-      return show_input(r, "Previous authentication attempt canceled.");
-    return show_input(r, "");
+      return show_input(r, s_cfg, modauthopenid::canceled);
+    return show_input(r, s_cfg);
   }
 }
 
