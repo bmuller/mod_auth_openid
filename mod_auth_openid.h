@@ -101,6 +101,8 @@ namespace modauthopenid {
   string canonicalize(const string& url);
   params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
+  string str_replace(string needle, string replacement, string haystack);
+  string html_escape(string s);
   bool is_valid_url(string url);
   string url_decode(const string& str);
   params_t remove_openid_vars(params_t params);

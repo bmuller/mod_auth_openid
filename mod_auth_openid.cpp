@@ -203,25 +203,36 @@ static void get_session_id(request_rec *r, std::string cookie_name, std::string&
 }
 
 static int show_input(request_rec *r, std::string msg) {
-  std::string result =
-    "<html><head><script type=\"text/javascript\">"
-    "function s() {"
-      +(msg.empty()?"":"alert('"+msg+"');")+
-      "var qstring='';"
-      "var parts=window.location.search.substring(1,window.location.search.length).split('&');"
-      "for(var i=0;i<parts.length;++i)"
-        "if(parts[i].split('=')[0].substr(0,7)!='openid.')"
-          "qstring+='&'+parts[i];"
-      "var p = prompt('Enter your identity url.');"
-      "var m=document.getElementById('msg');"
-      "if(!p) {"
-        "m.innerHTML='Authentication required!';"
-        "return;"
-      "}"
-      "m.innerHTML='Loading...';"
-      "window.location='?openid.identity='+p+qstring;"
-    "}"
-    "</script></head><body onload=\"s();\"><h1 id=\"msg\"></h1></body></html>";
+  opkele::params_t params;
+  if(r->args != NULL) 
+    params = modauthopenid::parse_query_string(std::string(r->args));
+  std::string identity = (params.has_param("openid.identity")?params.get_param("openid.identity"):"");
+  params = modauthopenid::remove_openid_vars(params);
+  std::map<std::string,std::string>::iterator iter;
+  std::string args = "";
+  std::string key, value;
+  for(iter = params.begin(); iter != params.end(); iter++) {
+    key = modauthopenid::html_escape(iter->first);
+    value = modauthopenid::html_escape(iter->second);
+    args += "<input type=\"hidden\" name=\"" + key + "\" value = \"" + value + "\" />";
+  }
+  std::string result = 
+    "<html><head><title>Protected Location</title><style type=\"text/css\">"
+    "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 5px; }\n"
+    "a { text-decoration: none; }\n"
+    "a:hover { text-decoration: underline; }\n"
+    "</style></head><body>"
+    "<h1>Protected Location</h1>"
+    "<p>This site is protected and requires that you identity yourself with an "
+    "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it<br />works, see "
+    "<a href=\"http://openid.net/about.bml\">http://openid.net/about.bml</a>.  You can sign up for "
+    "an identity on one of the sites listed <a href=\"http://iwantmyopenid.org/about/openid\">here</a>.</p>"
+    + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
+    "<p><form action=\"\" method=\"get\">"
+    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" />"
+    "<input type=\"submit\" value=\"Log In\" />" + args +
+    "</form></p>"
+    "<body></html>";
   return http_sendstring(r, result);
 }
 

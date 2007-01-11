@@ -112,6 +112,24 @@ namespace modauthopenid {
     return reg.search(url);
   }
 
+  // This isn't a true html_escape function, but rather escapes just enough to get by for
+  // quoted values - <blah name="stuff to be escaped">
+  string html_escape(string s) {
+    s = str_replace("\"", "&quot;", s);
+    s = str_replace("<", "&lt;", s);
+    s = str_replace(">", "&gt;", s);
+    return s;
+  }
+
+  string str_replace(string needle, string replacement, string haystack) {
+    vector<string> v = explode(haystack, needle);
+    string r = "";
+    for(vector<string>::size_type i=0; i < v.size()-1; i++)
+      r += v[i] + replacement;
+    r += v[v.size()-1];
+    return r;
+  }
+
   vector<string> explode(string s, string e) {
     vector<string> ret;
     int iPos = s.find(e, 0);
