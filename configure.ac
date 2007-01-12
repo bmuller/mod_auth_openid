@@ -1,4 +1,5 @@
 AC_INIT([mod_auth_openid], [0.0], [bmuller@butterfat.net])
+AC_DEFINE([PACKAGE_URL],["http://www.butterfat.net/wiki/Projects/ModAuthOpenID"],[project url])
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])
 
@@ -48,7 +49,7 @@ AC_SUBST([BDB_CPPFLAGS])
 APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)
 
-PKG_CHECK_MODULES([OPKELE],[libopkele],,[
+PKG_CHECK_MODULES([OPKELE],[libopkele >= 0.1],,[
  AC_MSG_ERROR([no libopkele library found. get one from http://kin.klever.net/libopkele/])
 ])
 

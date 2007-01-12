@@ -28,7 +28,6 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include "config.h"
-#define PACKAGE_URL "http://www.butterfat.net/wiki/Projects/ModAuthOpenID"
 
 namespace modauthopenid {
   using namespace opkele;
