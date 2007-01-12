@@ -45,7 +45,7 @@ namespace modauthopenid {
 
   // get a descriptive string for an error; a short string is used as a GET param
   // value in the style of OpenID get params - short, no space, ...
-  string error_to_string(IdResult e, bool use_short_string) {
+  string error_to_string(ErrorResult e, bool use_short_string) {
     string short_string, long_string;
     switch(e) {
     case no_idp_found:
@@ -68,9 +68,6 @@ namespace modauthopenid {
       short_string = "canceled";
       long_string = "Identification process has been canceled.";
       break;
-    case success:
-      short_string = "success";
-      long_string = "Identitfication process successful.";
     default: // unspecified
       short_string = "unspecified";
       long_string = "There has been an error while attempting to authenticate.";
@@ -144,7 +141,17 @@ namespace modauthopenid {
   }
 
   bool is_valid_url(string url) {
-    pcrepp::Pcre reg("^https?://([-\\w\\.]+)+(:\\d+)?(/([\\w/_\\.]*(\\?\\S+)?)?)?");
+    // taken from http://www.osix.net/modules/article/?id=586
+    string regex = "^(https?://)"
+      "(([0-9]{1,3}\\.){3}[0-9]{1,3}" // IP- 199.194.52.184
+      "|" // allows either IP or domain
+      "([0-9a-z_!~*'()-]+\\.)*" // tertiary domain(s)- www.
+      "([0-9a-z][0-9a-z-]{0,61})?[0-9a-z]\\." // second level domain
+      "[a-z]{2,6})" // first level domain- .com or .museum
+      "(:[0-9]{1,4})?" // port number- :80
+      "((/?)|" // a slash isn't required if there is no file name
+      "(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)$";
+    pcrepp::Pcre reg(regex);
     return reg.search(url);
   }
 

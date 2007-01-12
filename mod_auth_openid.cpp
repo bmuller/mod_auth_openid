@@ -231,10 +231,11 @@ static int show_html_input(request_rec *r, std::string msg) {
     "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 5px; }\n"
     "a { text-decoration: none; }\n"
     "a:hover { text-decoration: underline; }\n"
+    "#desc { border: 1px solid #000; background: #ccc; }\n"
     "</style></head><body>"
     "<h1>Protected Location</h1>"
-    "<p>This site is protected and requires that you identify yourself with an "
-    "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it<br />works, see "
+    "<p id=\"desc\">This site is protected and requires that you identify yourself with an "
+    "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it works, see "
     "<a href=\"http://openid.net/about.bml\">http://openid.net/about.bml</a>.  You can sign up for "
     "an identity on one of the sites listed <a href=\"http://iwantmyopenid.org/about/openid\">here</a>.</p>"
     + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
@@ -246,12 +247,27 @@ static int show_html_input(request_rec *r, std::string msg) {
   return http_sendstring(r, result);
 }
 
-static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::IdResult e = modauthopenid::success) {
+static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::ErrorResult e) {
   if(s_cfg->login_page == NULL) {
-    std::string msg = (e == modauthopenid::success) ? "" : modauthopenid::error_to_string(e, false);
+    std::string msg = modauthopenid::error_to_string(e, false);
     return show_html_input(r, msg);
   }
-  return http_sendstring(r, "hello");
+  opkele::params_t params;
+  if(r->args != NULL) 
+    params = modauthopenid::parse_query_string(std::string(r->args));
+  params = modauthopenid::remove_openid_vars(params);  
+  params["modauthopenid.error"] = modauthopenid::error_to_string(e, true);
+  return http_redirect(r, params.append_query(s_cfg->login_page, ""));
+}
+
+static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
+  if(s_cfg->login_page == NULL) 
+    return show_html_input(r, "");
+  opkele::params_t params;
+  if(r->args != NULL) 
+    params = modauthopenid::parse_query_string(std::string(r->args));
+  params = modauthopenid::remove_openid_vars(params);  
+  return http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
 
 static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
