@@ -232,6 +232,7 @@ static int show_html_input(request_rec *r, std::string msg) {
     "a { text-decoration: none; }\n"
     "a:hover { text-decoration: underline; }\n"
     "#desc { border: 1px solid #000; background: #ccc; }\n"
+    "#sig { text-align: center; font-style: italic; margin-top: 50px; word-spacing: .3em; color: #777; }\n"
     "</style></head><body>"
     "<h1>Protected Location</h1>"
     "<p id=\"desc\">This site is protected and requires that you identify yourself with an "
@@ -243,6 +244,7 @@ static int show_html_input(request_rec *r, std::string msg) {
     "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
     "</form></p>"
+    "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
     "<body></html>";
   return http_sendstring(r, result);
 }
