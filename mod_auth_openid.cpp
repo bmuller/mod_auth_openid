@@ -249,7 +249,7 @@ static int show_html_input(request_rec *r, std::string msg) {
   return http_sendstring(r, result);
 }
 
-static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::ErrorResult e) {
+static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::error_result_t e) {
   if(s_cfg->login_page == NULL) {
     std::string msg = modauthopenid::error_to_string(e, false);
     return show_html_input(r, msg);

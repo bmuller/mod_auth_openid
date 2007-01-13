@@ -45,7 +45,7 @@ namespace modauthopenid {
 
   // get a descriptive string for an error; a short string is used as a GET param
   // value in the style of OpenID get params - short, no space, ...
-  string error_to_string(ErrorResult e, bool use_short_string) {
+  string error_to_string(error_result_t e, bool use_short_string) {
     string short_string, long_string;
     switch(e) {
     case no_idp_found:

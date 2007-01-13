@@ -33,7 +33,7 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  enum ErrorResult { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
+  enum error_result_t { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
 
   typedef struct bdb_association {
     char server[255];
@@ -100,7 +100,7 @@ namespace modauthopenid {
   };
 
   // in moid_utils.cpp
-  string error_to_string(ErrorResult e, bool use_short_string);
+  string error_to_string(error_result_t e, bool use_short_string);
   string canonicalize(const string& url);
   params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
