@@ -50,7 +50,8 @@ namespace modauthopenid {
     switch(e) {
     case no_idp_found:
       short_string = "no_idp_found";
-      long_string = "There was not an identity provider found at the identity URL given.";
+      long_string = "There was either no identity provider found at the identity URL given"
+	" or there was trouble connecting to it.";
       break;
     case invalid_id_url:
       short_string = "invalid_id_url";
@@ -76,38 +77,17 @@ namespace modauthopenid {
     return (use_short_string) ? short_string : long_string;
   }
 
-  // taken from libopkele consumer_t code
-  string canonicalize(const string& url) {
-    string rv = url;
-    // strip leading and trailing spaces
-    string::size_type i = rv.find_first_not_of(" \t\r\n");
-    if(i==string::npos)
-      throw bad_input(OPKELE_CP_ "empty URL");
-    if(i)
-      rv.erase(0,i);
-    i = rv.find_last_not_of(" \t\r\n");
-    if(i==string::npos) 
+  // assuming the url given will begin with http(s):// - worst case, return blank string
+  string get_queryless_url(string url) {
+    if(url.size() < 8)
+      return "";
+    if(url.find("http://",0) != string::npos || url.find("https://",0) != string::npos) {
+      string::size_type last = url.find('?', 8);
+      if(last != string::npos)
+	return url.substr(0, last);
       return url;
-    if(i<(rv.length()-1))
-      rv.erase(i+1);
-    // add missing http://
-    i = rv.find("://");
-    if(i==string::npos) { // primitive. but do we need more?
-      rv.insert(0,"http://");
-      i = sizeof("http://")-1;
-    }else{
-      i += sizeof("://")-1;
     }
-    string::size_type qm = rv.find('?',i);
-    string::size_type sl = rv.find('/',i);
-    if(qm!=string::npos) {
-      if(sl==string::npos || sl>qm)
-        rv.insert(qm,1,'/');
-    }else{
-      if(sl==string::npos)
-        rv += '/';
-    }
-    return rv;
+    return "";
   }
 
   // assuming the url given will begin with http(s):// - worst case, return blank string

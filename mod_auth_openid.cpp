@@ -233,6 +233,7 @@ static int show_html_input(request_rec *r, std::string msg) {
     "a:hover { text-decoration: underline; }\n"
     "#desc { border: 1px solid #000; background: #ccc; }\n"
     "#sig { text-align: center; font-style: italic; margin-top: 50px; word-spacing: .3em; color: #777; }\n"
+    "form { margin: 15px; }\n"
     "</style></head><body>"
     "<h1>Protected Location</h1>"
     "<p id=\"desc\">This site is protected and requires that you identify yourself with an "
@@ -240,10 +241,10 @@ static int show_html_input(request_rec *r, std::string msg) {
     "<a href=\"http://openid.net/about.bml\">http://openid.net/about.bml</a>.  You can sign up for "
     "an identity on one of the sites listed <a href=\"http://iwantmyopenid.org/about/openid\">here</a>.</p>"
     + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
-    "<p><form action=\"\" method=\"get\">"
+    "<form action=\"\" method=\"get\">"
     "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
-    "</form></p>"
+    "</form>"
     "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
     "<body></html>";
   return http_sendstring(r, result);
@@ -276,16 +277,16 @@ static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
   if(apr_is_empty_array(s_cfg->trusted))
     return true;
   char **trusted_sites = (char **) s_cfg->trusted->elts;
-  std::string trusted_site;
-  std::string base_url = modauthopenid::get_base_url(url);
+  pcrepp::Pcre reg;
+  std::string base_url = modauthopenid::get_queryless_url(url);
   for (int i = 0; i < s_cfg->trusted->nelts; i++) {
-    trusted_site = std::string(trusted_sites[i]);
-    if(base_url == trusted_site) {
-      modauthopenid::debug(trusted_site + " is a trusted identity provider");
+    pcrepp::Pcre reg(trusted_sites[i]);
+    if(reg.search(base_url)) {
+      modauthopenid::debug(base_url + " is a trusted identity provider");
       return true;
     }
   }
-  modauthopenid::debug(base_url + " is not a trusted identity provider");
+  modauthopenid::debug(base_url + " is NOT a trusted identity provider");
   return false;
 }
 
@@ -293,16 +294,15 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url)
   if(apr_is_empty_array(s_cfg->distrusted))
     return false;
   char **distrusted_sites = (char **) s_cfg->distrusted->elts;
-  std::string distrusted_site;
-  std::string base_url = modauthopenid::get_base_url(url);
+  std::string base_url = modauthopenid::get_queryless_url(url);
   for (int i = 0; i < s_cfg->distrusted->nelts; i++) {
-    distrusted_site = std::string(distrusted_sites[i]);
-    if(base_url == distrusted_site) {
-      modauthopenid::debug(distrusted_site + " is a distrusted (on black list) identity provider");
+    pcrepp::Pcre reg(distrusted_sites[i]);
+    if(reg.search(base_url)) {
+      modauthopenid::debug(base_url + " is a distrusted (on black list) identity provider");
       return true;
     }
   }
-  modauthopenid::debug(base_url + " is not a distrusted identity provider (not blacklisted)");
+  modauthopenid::debug(base_url + " is NOT a distrusted identity provider (not blacklisted)");
   return false;
 }
 
@@ -345,7 +345,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
   // parse the get params
   opkele::params_t params;
   if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
-  std::string identity = (params.has_param("openid.identity")) ? modauthopenid::canonicalize(params.get_param("openid.identity")) : "unknown";
+  std::string identity = (params.has_param("openid.identity")) ? opkele::consumer_t::canonicalize(params.get_param("openid.identity")) : "unknown";
 
   // if user is posting id (only openid.identity will contain a value)
   if(params.has_param("openid.identity") && !params.has_param("openid.assoc_handle")) {
@@ -375,6 +375,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
       re_direct = consumer.checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
       consumer.close();
+      modauthopenid::debug("Error while fetching idP location: " + std::string(e.what()));
       return show_input(r, s_cfg, modauthopenid::no_idp_found);
     }
     consumer.close();

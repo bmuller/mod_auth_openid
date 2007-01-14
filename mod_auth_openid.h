@@ -101,7 +101,7 @@ namespace modauthopenid {
 
   // in moid_utils.cpp
   string error_to_string(error_result_t e, bool use_short_string);
-  string canonicalize(const string& url);
+  string get_queryless_url(string url);
   params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
   string str_replace(string needle, string replacement, string haystack);
