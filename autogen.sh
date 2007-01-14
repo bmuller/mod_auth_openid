@@ -1,2 +1,2 @@
 #! /bin/sh
-libtoolize -f && aclocal  -I ./acinclude.d && autoheader && automake -a && autoconf && ./configure "$@"
+libtoolize -f -c && aclocal  -I ./acinclude.d && autoheader && automake -a --copy && autoconf && ./configure "$@"
