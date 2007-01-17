@@ -25,7 +25,7 @@ $> touch /tmp/mod_auth_openid.db
 $> chown www-data /tmp/mod_auth_openid.db
 
 Or you can specify an alternate location that the user running apache has write 
-privieges on (see AuthOpenIDDBLocation below).
+privieges on (see the docs for the AuthOpenIDDBLocation directive on the homepage).
 
 
 Usage
@@ -35,23 +35,10 @@ In either a Directory, Location, or File directive in httpd.conf, place the foll
 
 AuthOpenIDEnabled        On
 
-There are also two additional, optional directives:
-
-AuthOpenIDDBLocation     /some/location/my_file.db
-AuthOpenIDTrusted        http://myopenid.com http://someprovider.com 
-AuthOpenIDUseCookie      Off
-
-AuthOpenIDDBLocation: This is an optional directive. It specifies the place the BDB file should 
-be stored; it defaults to /tmp/mod_auth_openid.db.
-
-AuthOpenIDTrusted: This is an optional directive. If specified, only users using the providers 
-listed will be allowed to authenticate. There should be no trailing slashes.
-
-AuthOpenIDUseCookie: This is an optional directive. If "Off", then a session cookie will not be 
-set on the client upon successful authentication. The page will load once; if reloaded or if 
-the user visits it again it will ask the user to reauthenticate.
+There are also additional, optional directives.  See the homepage for a list and docs.
 
 The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
 authentication.
 
 See http://www.butterfat.net/wiki/Projects/ModAuthOpenID for more information.
+
