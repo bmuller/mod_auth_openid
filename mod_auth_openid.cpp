@@ -429,6 +429,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
       }
       
       // if we're not setting cookie - don't redirect, just show page
+      apr_table_setn(r->subprocess_env, "REMOTE_USER", identity.c_str());
       return DECLINED;
 
     } catch(opkele::exception &e) {
