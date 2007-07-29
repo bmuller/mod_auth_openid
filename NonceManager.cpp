@@ -63,20 +63,47 @@ namespace modauthopenid {
     return true;
   };
   
+  void NonceManager::delete_nonce(const string& nonce) {
+    ween_expired();
+    is_valid(nonce, true);
+  };
 
-  void NonceManager::add(const string& nonce) {
+  void NonceManager::get_identity(const string& nonce, string& identity) {
+    ween_expired();
+    Dbt data;
+    NONCE n;
+    char id[255];
+    strcpy(id, nonce.substr(0, 254).c_str());
+    Dbt key(id, strlen(id) + 1);
+
+    data.set_data(&n);
+    data.set_ulen(sizeof(NONCE));
+    data.set_flags(DB_DBT_USERMEM);
+    if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
+      debug("failed to get identity: could not find nonce \"" + nonce + "\" in nonce db.");
+    } else {
+      identity = string(n.identity);
+    }
+  };
+  
+  // The reason we need to store the identity for the case of delgation - we need
+  // to keep track of the original identity used by the user.  The identity stored
+  // with this nonce will be used later if auth succeeds to create the session
+  // for the original identity.
+  void NonceManager::add(const string& nonce, const string& identity) {
     ween_expired();
     time_t rawtime;
     time (&rawtime);
     NONCE n;
     n.expires_on = rawtime + 3600; // allow nonce to exist for one hour
+    strcpy(n.identity, identity.substr(0, 254).c_str());
     
     char id[255];
     strcpy(id, nonce.substr(0, 254).c_str());
     Dbt key(id, strlen(id) + 1);
     Dbt data(&n, sizeof(NONCE));
     db_.put(NULL, &key, &data, 0);
-    debug("added nonce to nonces table: " + nonce);
+    debug("added nonce to nonces table: " + nonce + " for identity: " + identity);
   };
 
   void NonceManager::ween_expired() {

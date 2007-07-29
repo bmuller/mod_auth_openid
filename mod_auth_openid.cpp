@@ -356,7 +356,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
     modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
     std::string nonce;
     make_rstring(10, nonce);
-    nm.add(nonce);
+    nm.add(nonce, identity);
     nm.close();
     params["openid.nonce"] = nonce;
     //remove first char - ? to fit r->args standard
@@ -397,6 +397,10 @@ static int mod_authopenid_method_handler (request_rec *r) {
 	nm.close();
 	return show_input(r, s_cfg, modauthopenid::invalid_nonce); 
       }
+      // Make sure that identity is set to the original one given by the user (in case of delegation
+      // this will be different than openid.identity GET param
+      nm.get_identity(params.get_param("openid.nonce"), identity);
+      nm.delete_nonce(params.get_param("openid.nonce"));
       nm.close();
 
       if(s_cfg->use_cookie) {

@@ -44,6 +44,7 @@ namespace modauthopenid {
   
   typedef struct nonce {
     int expires_on; // exact moment it expires
+    char identity[255]; // identity nonce is good for
   } NONCE;
   
   typedef struct session {
@@ -89,8 +90,10 @@ namespace modauthopenid {
   public:
     NonceManager(const string& storage_location);
     ~NonceManager() { close(); };
-    bool is_valid(const string& nonce, bool delete_on_find = true);
-    void add(const string& nonce);
+    bool is_valid(const string& nonce, bool delete_on_find = false);
+    void add(const string& nonce, const string& identity);
+    void delete_nonce(const string& nonce);
+    void get_identity(const string& nonce, string& identity);
     int num_records();
     void close();
   private:
