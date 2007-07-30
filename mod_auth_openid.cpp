@@ -315,7 +315,7 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url)
   return false;
 }
 
-static int mod_authopenid_method_handler (request_rec *r) {
+static int mod_authopenid_method_handler(request_rec *r) {
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
