@@ -30,6 +30,7 @@ typedef struct {
   bool use_cookie;
   apr_array_header_t *trusted;
   apr_array_header_t *distrusted;
+  int cookie_lifespan;
 } modauthopenid_config;
 
 typedef const char *(*CMD_HAND_TYPE) ();
@@ -76,6 +77,7 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->trusted = apr_array_make(p, 5, sizeof(char *));
   newcfg->distrusted = apr_array_make(p, 5, sizeof(char *));
   newcfg->trust_root = NULL;
+  newcfg->cookie_lifespan = 0;
   return (void *) newcfg;
 }
 
@@ -115,6 +117,12 @@ static const char *set_modauthopenid_usecookie(cmd_parms *parms, void *mconfig, 
   return NULL;
 }
 
+static const char *set_modauthopenid_cookie_lifespan(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->cookie_lifespan = atoi(arg);
+  return NULL;
+}
+
 static const char *add_modauthopenid_trusted(cmd_parms *cmd, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   *(const char **)apr_array_push(s_cfg->trusted) = arg;
@@ -128,6 +136,8 @@ static const char *add_modauthopenid_distrusted(cmd_parms *cmd, void *mconfig, c
 }
   
 static const command_rec mod_authopenid_cmds[] = {
+  AP_INIT_TAKE1("AuthOpenIDCookieLifespan", (CMD_HAND_TYPE) set_modauthopenid_cookie_lifespan, NULL, ACCESS_CONF,
+		"AuthOpenIDCookieLifespan <number seconds>"),
   AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, ACCESS_CONF,
 		"AuthOpenIDDBLocation <string>"),
   AP_INIT_TAKE1("AuthOpenIDLoginPage", (CMD_HAND_TYPE) set_modauthopenid_login_page, NULL, ACCESS_CONF,
@@ -210,7 +220,6 @@ static void get_session_id(request_rec *r, std::string cookie_name, std::string&
     }
   }
 }
-
 
 static int show_html_input(request_rec *r, std::string msg) {
   opkele::params_t params;
@@ -408,7 +417,7 @@ static int mod_authopenid_method_handler (request_rec *r) {
 	std::string session_id, hostname, path, cookie_value, redirect_location, args;
 	make_rstring(32, session_id);
 	base_dir(std::string(r->uri), path);
-	cookie_value = std::string(s_cfg->cookie_name) + "=" + session_id + "; path=" + path;
+	modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan); 
 	modauthopenid::debug("setting cookie: " + cookie_value);
 	apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
 	hostname = std::string(r->hostname);

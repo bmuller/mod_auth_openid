@@ -113,6 +113,7 @@ namespace modauthopenid {
   string url_decode(const string& str);
   params_t remove_openid_vars(params_t params);
   string get_base_url(string url);
+  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan);
   // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
   // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
   // apache redirects stderr to the error log anyway.
