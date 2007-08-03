@@ -343,7 +343,8 @@ static int mod_authopenid_method_handler(request_rec *r) {
       std::string valid_path(session.path);
       // if found session has a valid path
       if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname, r->hostname)==0) {
-	apr_table_setn(r->subprocess_env, "REMOTE_USER", session.identity);
+	modauthopenid::debug("setting REMOTE_USER to \"" + std::string(session.identity) + "\"");
+	apr_table_setn(r->subprocess_env, "REMOTE_USER", std::string(session.identity).c_str());
 	return DECLINED;
       } else {
 	modauthopenid::debug("session found for different path or hostname");
