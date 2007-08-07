@@ -344,7 +344,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
       // if found session has a valid path
       if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname, r->hostname)==0) {
 	modauthopenid::debug("setting REMOTE_USER to \"" + std::string(session.identity) + "\"");
-	apr_table_setn(r->subprocess_env, "REMOTE_USER", std::string(session.identity).c_str());
+	r->user =  apr_pstrdup(r->pool, std::string(session.identity).c_str());
 	return DECLINED;
       } else {
 	modauthopenid::debug("session found for different path or hostname");
@@ -439,7 +439,8 @@ static int mod_authopenid_method_handler(request_rec *r) {
       }
       
       // if we're not setting cookie - don't redirect, just show page
-      apr_table_setn(r->subprocess_env, "REMOTE_USER", identity.c_str());
+      modauthopenid::debug("setting REMOTE_USER to \"" + identity + "\"");
+      r->user = apr_pstrdup(r->pool, identity.c_str());
       return DECLINED;
 
     } catch(opkele::exception &e) {
