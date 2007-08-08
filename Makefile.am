@@ -7,7 +7,8 @@ noinst_DATA = mod_auth_openid.la
 INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${BDB_CPPFLAGS}
 AM_LDFLAGS = ${OPKELE_LIBS} ${BDB_LIBS}
 
-libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cpp NonceManager.cpp SessionManager.cpp
+libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cpp NonceManager.cpp SessionManager.cpp \
+	storage/SessionManagerSQLite.cpp storage/SessionManagerBDB.cpp
 
 db_info_SOURCES = db_info.cpp
 db_info_LDFLAGS = -lmodauthopenid

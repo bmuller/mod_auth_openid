@@ -20,6 +20,18 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([[--enable-debug]], [enable debugging output
 fi]
 )
 
+# use sqlite
+AC_ARG_ENABLE(sqlite, AC_HELP_STRING([[--enable-sqlite]], [force use of SQLite instead of BDB]),
+[if test "$sqlite" = "yes"; then
+    AX_LIB_SQLITE3([3.3.0])
+    if test "$SQLITE3_VERSION" != ""; then
+       CPPFLAGS="$CPPFLAGS -DSQLITE"
+    else
+       AC_MSG_ERROR([Could not find sqlite3 library as requested - see http://www.sqlite.org]) 
+    fi
+fi]
+)
+
 # this will look for apxs command - put it in $APXS, fail on failure
 AX_WITH_APXS()
 # find apr-config binary
@@ -40,8 +52,13 @@ if test "$?" != "0"; then
   AC_MSG_ERROR($apr_config is not a valid apr-config program)
 fi
 
-AX_PATH_BDB([3], [],[
-    AC_MSG_ERROR([no C++ BDB library found. get one from http://www.oracle.com/database/berkeley-db/db/index.html])
+AX_PATH_BDB([3], [], [
+    AX_LIB_SQLITE3([3.3.0])
+#    if test "$SQLITE3_VERSION" != ""; then
+#        CPPFLAGS="$CPPFLAGS -DSQLITE"
+#    else
+	AC_MSG_ERROR([No C++ BDB library found (http://www.oracle.com/database/berkeley-db/db/index.html).  You can alternatively install sqlite 3 (http://www.sqlite.org)])
+#    fi
   ])
 AC_SUBST([BDB_LIBS])
 AC_SUBST([BDB_CPPFLAGS])

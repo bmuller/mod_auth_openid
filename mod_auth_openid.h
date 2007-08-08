@@ -48,6 +48,7 @@ Created by bmuller <bmuller@butterfat.net>
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include "config.h"
+#include "storage/storage.h"
 
 namespace modauthopenid {
   using namespace opkele;
@@ -66,14 +67,6 @@ namespace modauthopenid {
     int expires_on; // exact moment it expires
     char identity[255]; // identity nonce is good for
   } NONCE;
-  
-  typedef struct session {
-    char session_id[33];
-    char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
-    char path[255];
-    char identity[255];
-    int expires_on; // exact moment it expires
-  } SESSION;
 
   class MoidConsumer : public opkele::consumer_t {
   public:
@@ -91,21 +84,22 @@ namespace modauthopenid {
     void ween_expired();
     bool is_closed;
   };
-  
+
   class SessionManager {
   public:
-    SessionManager(const string& storage_location);
-    ~SessionManager() { close(); };
+    SessionManager(const string& storage_location) : sm(storage_location) {};
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
     void close();
   private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
+#ifdef SQLITE
+    SessionManagerSQLite sm;
+#else
+    SessionManagerBDB sm;
+#endif
   };
-  
+
   class NonceManager {
   public:
     NonceManager(const string& storage_location);
