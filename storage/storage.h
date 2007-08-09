@@ -17,6 +17,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 Created by bmuller <bmuller@butterfat.net>
 */
 
+#include <sqlite3.h>
+
 namespace modauthopenid {
   using namespace opkele;
   using namespace std;

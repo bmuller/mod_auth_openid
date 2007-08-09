@@ -132,5 +132,6 @@ namespace modauthopenid {
   // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
   // apache redirects stderr to the error log anyway.
   void debug(string s);
+  void int_to_string(int i, string& s);
 }
 

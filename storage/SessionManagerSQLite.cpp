@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+2Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -24,11 +24,13 @@ namespace modauthopenid {
 
   SessionManagerSQLite::SessionManagerSQLite(const string& storage_location) {
     is_closed = false;
-    int rc = sqlite3_open(storage_location, &db);
+    int rc = sqlite3_open(storage_location.c_str(), &db);
     char *errMsg;
     if(!test_result(rc, "problem opening database"))
       return;
-    rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS sessionmanager (session_id INT, hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)", NULL, 0, &errMsg);
+    string query = "CREATE TABLE IF NOT EXISTS sessionmanager "
+      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)";
+    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
     test_result(rc, "problem creating table if it didn't exist already");
   };
 
@@ -36,36 +38,28 @@ namespace modauthopenid {
     ween_expired();
     sqlite3_stmt *pSelect;
     string query = "SELECT * FROM sessionmanager WHERE session_id = " + session_id;
-    rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
     if( rc!=SQLITE_OK || !pSelect ){
-      return rc;
+      debug("error preparing sql query: " + query);
+      return;
     }
     rc = sqlite3_step(pSelect);
-    while( rc==SQLITE_ROW ){
-      fprintf(stdout, "%s;\n", sqlite3_column_text(pSelect, 0));
-      fprintf(stdout, "%s;\n", sqlite3_column_text(pSelect, 1));
-      rc = sqlite3_step(pSelect);
-    }
-    rc = sqlite3_finalize(pSelect);
-
-
-
-    Dbt data;
-    char id[255];
-    strcpy(id, session_id.substr(0, 254).c_str());
-    Dbt key(id, strlen(id) + 1);
-    data.set_data(&session);
-    data.set_ulen(sizeof(SESSION));
-    data.set_flags(DB_DBT_USERMEM);
-    if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
+    if(rc == SQLITE_ROW){
+      snprintf(session.identity, 33, "%s", sqlite3_column_text(pSelect, 0));
+      snprintf(session.hostname, 255, "%s", sqlite3_column_text(pSelect, 1));
+      snprintf(session.path, 255, "%s", sqlite3_column_text(pSelect, 2));
+      snprintf(session.identity, 255, "%s", sqlite3_column_text(pSelect, 3));
+      session.expires_on = sqlite3_column_int(pSelect, 4);
+    } else {
       strcpy(session.identity, "");
       debug("could not find session id " + session_id + " in db: session probably just expired");
     }
+    rc = sqlite3_finalize(pSelect);
   };
 
   bool SessionManagerSQLite::test_result(int result, const string& context) {
     if(result != SQLITE_OK){
-      string msg = "SQLite Error in Session Manager - " + context + ": %s\n"
+      string msg = "SQLite Error in Session Manager - " + context + ": %s\n";
       fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
       sqlite3_close(db);
       is_closed = true;
@@ -78,51 +72,50 @@ namespace modauthopenid {
     ween_expired();
     time_t rawtime;
     time (&rawtime);
-    
-    SESSION s;
-    // session_id is char[33], path, identity and hostname are char[255]
-    strcpy(s.session_id, session_id.substr(0, 32).c_str());
-    strcpy(s.path, path.substr(0, 254).c_str());
-    strcpy(s.identity, identity.substr(0, 254).c_str());
-    strcpy(s.hostname, hostname.substr(0, 254).c_str());
-
-    // sessions last for a day becore being automatically invalidated
-    s.expires_on = rawtime + 86400; 
-    
-    char id[255];
-    strcpy(id, session_id.substr(0, 32).c_str()); // safety first!  id is char[33]
-    Dbt key(id, strlen(id) + 1);
-    Dbt data(&s, sizeof(SESSION));
-    db_.put(NULL, &key, &data, 0);
+    string s_expires_on;
+    char *errMsg;
+    int_to_string((rawtime + 86400), s_expires_on);
+    string query = "INSERT INTO sessionmanager (session_id, hostname, path, identity, expires_on) VALUES("
+      "\"" + session_id + "\""
+      "\"" + hostname + "\""
+      "\"" + path + "\""
+      "\"" + identity + "\""
+      "\"" + s_expires_on + "\")";
     debug("storing session " + session_id + " for path " + path + " and id " + identity);
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem inserting session into db");    
   };
 
   void SessionManagerSQLite::ween_expired() {
     time_t rawtime;
     time (&rawtime);
     char *errMsg;
-    string query = "DELETE FROM sessionmanager WHERE " + string(itoa(time)) + " > expires_on";
-    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    string s_time;
+    int_to_string(rawtime, s_time);
+    string query = "DELETE FROM sessionmanager WHERE " + s_time + " > expires_on";
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
     test_result(rc, "problem weening expired sessions from table");
   };
 
   int SessionManagerSQLite::num_records() {
     ween_expired();
-    Dbt key, data;
-    Dbc *cursorp;
-    db_.cursor(NULL, &cursorp, 0);
-    int count = 0;
-    try {
-      while (cursorp->get(&key, &data, DB_NEXT) == 0)
-        count++;
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error while reading sessions db");
-    } catch(std::exception &e) {
-      db_.errx("Error while reading sessions db! %s", e.what());
+    int number = 0;
+    sqlite3_stmt *pSelect;
+    string query = "SELECT COUNT(*) AS count FROM sessionmanager";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      return number;
     }
-    if (cursorp != NULL)
-      cursorp->close();
-    return count;
+    rc = sqlite3_step(pSelect);
+    test_result(rc, "problem getting num records from sessionmanager");
+    if(rc == SQLITE_ROW){
+       number = sqlite3_column_int(pSelect, 0);
+    } else {
+      debug("Problem fetching num records from sessionmanager table");
+    }
+    rc = sqlite3_finalize(pSelect);    
+    return number;
   };
 
   void SessionManagerSQLite::close() {

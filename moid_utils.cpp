@@ -207,4 +207,10 @@ namespace modauthopenid {
       cookie_value = name + "=" + session_id + "; expires=" + string(expires) + "; path=" + path;
     }
   }
+
+  void int_to_string(int i, string& s) {
+    char c_int[100];
+    sprintf(c_int, "%ld", i);
+    s = string(c_int);
+  }
 }
