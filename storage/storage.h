@@ -41,6 +41,7 @@ namespace modauthopenid {
     sqlite3 *db;
     void ween_expired();
     bool is_closed;
+    bool test_result(int result, const string& context);
   };
 
   class SessionManagerBDB {

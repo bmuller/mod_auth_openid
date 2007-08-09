@@ -25,16 +25,28 @@ namespace modauthopenid {
   SessionManagerSQLite::SessionManagerSQLite(const string& storage_location) {
     is_closed = false;
     int rc = sqlite3_open(storage_location, &db);
-    if( rc ){
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-      sqlite3_close(db);
-    }
-    sqlite3_exec(db, "create tabase
+    char *errMsg;
+    if(!test_result(rc, "problem opening database"))
+      return;
+    rc = sqlite3_exec(db, "CREATE TABLE IF NOT EXISTS sessionmanager (session_id INT, hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)", NULL, 0, &errMsg);
+    test_result(rc, "problem creating table if it didn't exist already");
   };
 
   void SessionManagerSQLite::get_session(const string& session_id, SESSION& session) {
     ween_expired();
-    
+    sqlite3_stmt *pSelect;
+    string query = "SELECT * FROM sessionmanager WHERE session_id = " + session_id;
+    rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      return rc;
+    }
+    rc = sqlite3_step(pSelect);
+    while( rc==SQLITE_ROW ){
+      fprintf(stdout, "%s;\n", sqlite3_column_text(pSelect, 0));
+      fprintf(stdout, "%s;\n", sqlite3_column_text(pSelect, 1));
+      rc = sqlite3_step(pSelect);
+    }
+    rc = sqlite3_finalize(pSelect);
 
 
 
@@ -49,6 +61,17 @@ namespace modauthopenid {
       strcpy(session.identity, "");
       debug("could not find session id " + session_id + " in db: session probably just expired");
     }
+  };
+
+  bool SessionManagerSQLite::test_result(int result, const string& context) {
+    if(result != SQLITE_OK){
+      string msg = "SQLite Error in Session Manager - " + context + ": %s\n"
+      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
+      sqlite3_close(db);
+      is_closed = true;
+      return false;
+    }
+    return true;
   };
 
   void SessionManagerSQLite::store_session(const string& session_id, const string& hostname, const string& path, const string& identity) {
@@ -77,22 +100,10 @@ namespace modauthopenid {
   void SessionManagerSQLite::ween_expired() {
     time_t rawtime;
     time (&rawtime);
-    Dbt key, data;
-    Dbc *cursorp;
-    db_.cursor(NULL, &cursorp, 0);
-    try {
-      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
-        SESSION *n = (SESSION *) data.get_data();
-        if(rawtime > n->expires_on) 
-          db_.del(NULL, &key, 0);
-      }
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error while weening sessions db");
-    } catch(std::exception &e) {
-      db_.errx("Error while weening sessions db! %s", e.what());
-    }
-    if (cursorp != NULL)
-      cursorp->close();
+    char *errMsg;
+    string query = "DELETE FROM sessionmanager WHERE " + string(itoa(time)) + " > expires_on";
+    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem weening expired sessions from table");
   };
 
   int SessionManagerSQLite::num_records() {
@@ -118,8 +129,6 @@ namespace modauthopenid {
     if(is_closed)
       return;
     is_closed = true;
-    int rc = sqlite3_close(db);
-    if( rc )
-      fprintf(stderr, "Can't close database: %s\n", sqlite3_errmsg(db));
+    test_result(sqlite3_close(db), "problem closing database");
   };
 }
