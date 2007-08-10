@@ -59,5 +59,37 @@ namespace modauthopenid {
     void ween_expired();
     bool is_closed;
   };  
+
+  class NonceManagerSQLite {
+  public:
+    NonceManagerSQLite(const string& storage_location);
+    ~NonceManagerSQLite() { close(); };
+    bool is_valid(const string& nonce, bool delete_on_find = false);
+    void add(const string& nonce, const string& identity);
+    void delete_nonce(const string& nonce);
+    void get_identity(const string& nonce, string& identity);
+    int num_records();
+    void close();
+  private:
+    sqlite3 *db;
+    void ween_expired();
+    bool is_closed;
+  };
+
+  class NonceManagerBDB {
+  public:
+    NonceManagerBDB(const string& storage_location);
+    ~NonceManagerBDB() { close(); };
+    bool is_valid(const string& nonce, bool delete_on_find = false);
+    void add(const string& nonce, const string& identity);
+    void delete_nonce(const string& nonce);
+    void get_identity(const string& nonce, string& identity);
+    int num_records();
+    void close();
+  private:
+    Db db_;
+    void ween_expired();
+    bool is_closed;
+  };
 }
 

@@ -22,12 +22,12 @@ fi]
 
 # use sqlite
 AC_ARG_ENABLE(sqlite, AC_HELP_STRING([[--enable-sqlite]], [force use of SQLite instead of BDB]),
-[if test "$sqlite" = "yes"; then
+[if test "$enableval" = "yes"; then
     AX_LIB_SQLITE3([3.3.0])
     if test "$SQLITE3_VERSION" != ""; then
        CPPFLAGS="$CPPFLAGS -DSQLITE"
     else
-       AC_MSG_ERROR([Could not find sqlite3 library as requested - see http://www.sqlite.org]) 
+       AC_MSG_ERROR([Could not find sqlite3 library as requested - get a copy from http://www.sqlite.org]) 
     fi
 fi]
 )
@@ -54,11 +54,11 @@ fi
 
 AX_PATH_BDB([3], [], [
     AX_LIB_SQLITE3([3.3.0])
-#    if test "$SQLITE3_VERSION" != ""; then
-#        CPPFLAGS="$CPPFLAGS -DSQLITE"
-#    else
+    if test "$SQLITE3_VERSION" != ""; then
+        CPPFLAGS="$CPPFLAGS -DSQLITE"
+    else
 	AC_MSG_ERROR([No C++ BDB library found (http://www.oracle.com/database/berkeley-db/db/index.html).  You can alternatively install sqlite 3 (http://www.sqlite.org)])
-#    fi
+    fi
   ])
 AC_SUBST([BDB_LIBS])
 AC_SUBST([BDB_CPPFLAGS])
@@ -76,6 +76,12 @@ AC_CONFIG_FILES([
 AC_OUTPUT
 
 echo
+echo " ***"
+if test "$SQLITE3_VERSION" != ""; then
+   echo " *** Using sqlite3 storage backend."
+else
+   echo " *** Using BDB storage backend."
+fi
 echo " ***"
 echo " *** You are now ready to build mod_auth_openid:"
 echo " *** Enter the following commands:"

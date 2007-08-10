@@ -87,7 +87,7 @@ namespace modauthopenid {
 
   class SessionManager {
   public:
-    SessionManager(const string& storage_location) : sm(storage_location) {};
+    SessionManager(const string& storage_location) : sm("/tmp/mod_auth_openid.sqlite3.db") {};
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
@@ -102,18 +102,19 @@ namespace modauthopenid {
 
   class NonceManager {
   public:
-    NonceManager(const string& storage_location);
-    ~NonceManager() { close(); };
-    bool is_valid(const string& nonce, bool delete_on_find = false);
+    NonceManager(const string& storage_location) : nm("/tmp/mod_auth_openid.sqlite3.db") {};
+    bool is_valid(const string& nonce, bool delete_on_find);
     void add(const string& nonce, const string& identity);
     void delete_nonce(const string& nonce);
     void get_identity(const string& nonce, string& identity);
     int num_records();
     void close();
   private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
+#ifdef SQLITE
+    NonceManagerSQLite nm;
+#else
+    NonceManagerBDB nm;
+#endif   
   };
 
   // in moid_utils.cpp

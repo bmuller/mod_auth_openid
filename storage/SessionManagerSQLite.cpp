@@ -37,7 +37,7 @@ namespace modauthopenid {
   void SessionManagerSQLite::get_session(const string& session_id, SESSION& session) {
     ween_expired();
     sqlite3_stmt *pSelect;
-    string query = "SELECT * FROM sessionmanager WHERE session_id = " + session_id;
+    string query = "SELECT * FROM sessionmanager WHERE session_id = \"" + session_id + "\"";
     int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
     if( rc!=SQLITE_OK || !pSelect ){
       debug("error preparing sql query: " + query);
@@ -55,6 +55,7 @@ namespace modauthopenid {
       debug("could not find session id " + session_id + " in db: session probably just expired");
     }
     rc = sqlite3_finalize(pSelect);
+    debug("your momma: " + string(session.identity));
   };
 
   bool SessionManagerSQLite::test_result(int result, const string& context) {
@@ -76,10 +77,10 @@ namespace modauthopenid {
     char *errMsg;
     int_to_string((rawtime + 86400), s_expires_on);
     string query = "INSERT INTO sessionmanager (session_id, hostname, path, identity, expires_on) VALUES("
-      "\"" + session_id + "\""
-      "\"" + hostname + "\""
-      "\"" + path + "\""
-      "\"" + identity + "\""
+      "\"" + session_id + "\", "
+      "\"" + hostname + "\", "
+      "\"" + path + "\", "
+      "\"" + identity + "\", "
       "\"" + s_expires_on + "\")";
     debug("storing session " + session_id + " for path " + path + " and id " + identity);
     int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);

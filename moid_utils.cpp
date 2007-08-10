@@ -124,7 +124,9 @@ namespace modauthopenid {
     // taken from http://www.osix.net/modules/article/?id=586
     string regex = "^(https?://)"
       "(([0-9]{1,3}\\.){3}[0-9]{1,3}" // IP- 199.194.52.184
-      "|" // allows either IP or domain
+      "|" // allows either IP or domain or "localhost"
+      "localhost"
+      "|"
       "([0-9a-z_!~*'()-]+\\.)*" // tertiary domain(s)- www.
       "([0-9a-z][0-9a-z-]{0,61})?[0-9a-z]\\." // second level domain
       "[a-z]{2,6})" // first level domain- .com or .museum
