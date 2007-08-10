@@ -111,8 +111,7 @@ namespace modauthopenid {
     int_to_string((rawtime + 3600), s_expires_on); // allow nonce to exist for one hour
     string query = "INSERT INTO noncemanager (nonce, identity, expires_on) VALUES("
       "\"" + nonce + "\", "
-      "\"" + identity + "\", "
-      "\"" + s_expires_on + "\")";
+      "\"" + identity + "\", " + s_expires_on + ")";
     int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
     test_result(rc, "problem inserting nonce " + nonce + " for identity " + identity);
   };

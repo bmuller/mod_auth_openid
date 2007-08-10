@@ -24,39 +24,32 @@ namespace modauthopenid {
   using namespace opkele;
  
   MoidConsumerSQLite::MoidConsumerSQLite(const string& storage_location) {
-
+    is_closed = false;
+    int rc = sqlite3_open(storage_location.c_str(), &db);
+    char *errMsg;
+    if(!test_result(rc, "problem opening database"))
+      return;
+    string query = "CREATE TABLE IF NOT EXISTS associations "
+      "(id VARCHAR(255), server VARCHAR(255), handle VARCHAR(100), secret VARCHAR(30), expires_on INT)";
+    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem creating associations table if it didn't exist already");
   };
 
   assoc_t MoidConsumerSQLite::store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in) {
-    /*
+    debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
     ween_expired();
     string secret_b64;
     secret.to_base64(secret_b64);
     time_t rawtime;
     time (&rawtime);
-
-    BDB_ASSOC bassoc;
-    // server is char[255], handle is char[100], and secret is char[30]
-    strcpy(bassoc.secret, secret_b64.substr(0, 29).c_str());
-    strcpy(bassoc.server, server.substr(0, 254).c_str());
-    strcpy(bassoc.handle, handle.substr(0, 99).c_str());
-    bassoc.expires_on = rawtime + expires_in;
-
-    // We want to store with unique key on server and handle, but want to be able to search by server.
-    // If the server+" "+handle string is greater than 254 chars it will be truncated.  This should
-    // be ok....
     string id = server + " " + handle;
-    char c_id[255]; 
-    strcpy(c_id, id.substr(0, 254).c_str()); // safety first!
-
-    Dbt key(c_id, strlen(c_id) + 1);
-    Dbt data(&bassoc, sizeof(BDB_ASSOC));
-    db_.put(NULL, &key, &data, 0);
-
-    debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
-
-    return assoc_t(new association(server, handle, "assoc type", secret, expires_in, false));
-    */
+    string s_expires_on;
+    int_to_string((rawtime + expires_in), s_expires_on);
+    string query = "INSERT INTO associations (id, server, handle, secret, expires_on) VALUES("
+      "\"" + id.substr(0, 254) + "\", "
+      "\"" + server + "\", "
+      "\"" + handle + "\", "
+      "\"" + secret_b64 + "\", " + s_expires_on + ")"; 
     return assoc_t(new association(server, handle, "assoc type", secret, expires_in, false));
   };
 
@@ -95,78 +88,106 @@ namespace modauthopenid {
   };
 
   void MoidConsumerSQLite::invalidate_assoc(const string& server,const string& handle) {
-    /*
     debug("invalidating association: server = " + server + " handle = " + handle);
+    char *errMsg;
     string id = server + " " + handle;
-    char c_id[255];
-    strcpy(c_id, id.substr(0, 254).c_str());
-    Dbt key(c_id, strlen(c_id) + 1);
-    try {
-      // if the key doesn't exist, no exception is raised - it is quite possible that the key doesn't
-      // exist (the ID server could invalidate a handle that has already expired).  If an exception is raised
-      // it will be because the DB screwed up
-      db_.del(NULL, &key, 0);
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "error while invalidating association");
-    } catch(std::exception &e) {
-      db_.errx("Error while invalidating association: %s", e.what());
-    }
-    */
+    string query = "DELETE FROM associations WHERE id = \"" + id + "\"";
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem invalidating assocation for server \"" + server + "\" and handle \"" + handle + "\"");
   };
 
   assoc_t MoidConsumerSQLite::find_assoc(const string& server) {
-    /*
     ween_expired();
-    debug("looking for any association with server = "+server);
+    debug("looking for any association with server = " + server);
     time_t rawtime;
     time (&rawtime);
-    Dbt key, data;
-    Dbc *cursorp;
-    db_.cursor(NULL, &cursorp, 0);
-    try {
-      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
-        char * key_v = (char *) key.get_data();
-        BDB_ASSOC * data_v = (BDB_ASSOC *) data.get_data();
-	string key_s(key_v);
-	vector<string> parts = explode(key_s, " ");
-	// If server url we were given matches the current record, and it still has
-	// at least five minutes until it expires (to give the user time to be redirected -> there -> back)
-        if(parts.size()==2 && parts[0] == server && rawtime < (data_v->expires_on + 18000)) {
-	  debug("....found one");
-	  int expires_in = data_v->expires_on - rawtime;
-	  secret_t secret;
-	  secret.from_base64(data_v->secret);
-	  auto_ptr<association_t> a(new association(data_v->server, data_v->handle, "assoc type", secret, expires_in, false));
-	  return a;
-        }
-      }
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error while looking for an assocation!");
-    } catch(std::exception &e) {
-      db_.errx("Error while looking for an association! %s", e.what());
+    sqlite3_stmt *pSelect;
+    string query = "SELECT * FROM associations";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      throw failed_lookup(OPKELE_CP_ "Could not find a valid handle due to db error."); 
     }
-    if (cursorp != NULL)
-      cursorp->close();
+    char c_key[255];
+    char c_server[255];
+    char c_handle[100];
+    char c_secret[30];
+    int expires_on;
+    vector<string> parts;
+    rc = sqlite3_step(pSelect);
+    while(rc == SQLITE_ROW){
+      snprintf(c_key, 255, "%s", sqlite3_column_text(pSelect, 0));
+      snprintf(c_server, 255, "%s", sqlite3_column_text(pSelect, 1));
+      snprintf(c_handle, 100, "%s", sqlite3_column_text(pSelect, 2));
+      snprintf(c_secret, 30, "%s", sqlite3_column_text(pSelect, 3));
+      expires_on = sqlite3_column_int(pSelect, 4);
+      parts = explode(string(c_key), " ");
+      // If server url we were given matches the current record, and it still has
+      // at least five minutes until it expires (to give the user time to be redirected -> there -> back)
+      if(parts.size()==2 && parts[0] == server && rawtime < (expires_on + 18000)) {
+	debug("....found one");
+	rc = sqlite3_finalize(pSelect);
+	int expires_in = expires_on - rawtime;
+	secret_t secret;
+	secret.from_base64(c_secret);
+	auto_ptr<association_t> a(new association(c_server, c_handle, "assoc type", secret, expires_in, false));
+	return a;
+      }    
+      rc = sqlite3_step(pSelect);
+    } 
+    rc = sqlite3_finalize(pSelect);
     throw failed_lookup(OPKELE_CP_ "Could not find a valid handle."); 
-    */
-    time_t rawtime;
-    time (&rawtime);
-    secret_t secret;
-    auto_ptr<association_t> a(new association(server, server, "assoc type", secret, rawtime, false));
-    return a;
+  };
+
+  bool MoidConsumerSQLite::test_result(int result, const string& context) {
+    if(result != SQLITE_OK){
+      string msg = "SQLite Error in MoidConsumer - " + context + ": %s\n";
+      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
+      sqlite3_close(db);
+      is_closed = true;
+      return false;
+    }
+    return true;
   };
 
   void MoidConsumerSQLite::ween_expired() {
-
+    time_t rawtime;
+    time (&rawtime);
+    char *errMsg;
+    string s_time;
+    int_to_string(rawtime, s_time);
+    string query = "DELETE FROM associations WHERE " + s_time + " > expires_on";
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem weening expired sessions from table");
   };
 
   // This is a method to be used by a utility program, never the apache module
   int MoidConsumerSQLite::num_records() {
-    return 0;
+    ween_expired();
+    int number = 0;
+    sqlite3_stmt *pSelect;
+    string query = "SELECT COUNT(*) AS count FROM associations";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      return number;
+    }
+    rc = sqlite3_step(pSelect);
+    test_result(rc, "problem getting num records from associations");
+    if(rc == SQLITE_ROW){
+      number = sqlite3_column_int(pSelect, 0);
+    } else {
+      debug("Problem fetching num records from associations table");
+    }
+    rc = sqlite3_finalize(pSelect);
+    return number;
   };
 
   void MoidConsumerSQLite::close() {
-
+    if(is_closed)
+      return;
+    is_closed = true;
+    test_result(sqlite3_close(db), "problem closing database");
   };
 }
 

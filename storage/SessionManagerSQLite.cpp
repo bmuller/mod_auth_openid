@@ -80,8 +80,7 @@ namespace modauthopenid {
       "\"" + session_id + "\", "
       "\"" + hostname + "\", "
       "\"" + path + "\", "
-      "\"" + identity + "\", "
-      "\"" + s_expires_on + "\")";
+      "\"" + identity + "\", " + s_expires_on + ")";
     debug("storing session " + session_id + " for path " + path + " and id " + identity);
     int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
     test_result(rc, "problem inserting session into db");    
