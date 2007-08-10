@@ -36,7 +36,6 @@ Created by bmuller <bmuller@butterfat.net>
 #include <opkele/consumer.h>
 #include <opkele/association.h>
 #include <opkele/exception.h>
-#include <db_cxx.h>
 #include <time.h>
 #include <string>
 #include <vector>
@@ -56,38 +55,29 @@ namespace modauthopenid {
 
   enum error_result_t { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
 
-  typedef struct bdb_association {
-    char server[255];
-    char handle[100];
-    char secret[30];
-    int expires_on; // exact moment it expires
-  } BDB_ASSOC;
-  
-  typedef struct nonce {
-    int expires_on; // exact moment it expires
-    char identity[255]; // identity nonce is good for
-  } NONCE;
-
-  class MoidConsumer : public opkele::consumer_t {
+  class MoidConsumer {
   public:
-    MoidConsumer(const string& storage_location);
-    virtual ~MoidConsumer() { close(); };
+    MoidConsumer(const string& storage_location) : mc(storage_location) {};
     assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
     assoc_t retrieve_assoc(const string& server,const string& handle);
     void invalidate_assoc(const string& server,const string& handle);
     assoc_t find_assoc(const string& server);
     void print_db();
     int num_records();
-    void close();    
+    void close();
+    string checkid_setup(const string& identity,const string& return_to,const string& trust_root,extension_t *ext=0);
+    void id_res(const params_t& pin,const string& identity="",extension_t *ext=0);
   private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
+#ifdef SQLITE
+    MoidConsumerSQLite mc;
+#else
+    MoidConsumerBDB mc;
+#endif
   };
 
   class SessionManager {
   public:
-    SessionManager(const string& storage_location) : sm("/tmp/mod_auth_openid.sqlite3.db") {};
+    SessionManager(const string& storage_location) : sm(storage_location) {};
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
@@ -102,8 +92,8 @@ namespace modauthopenid {
 
   class NonceManager {
   public:
-    NonceManager(const string& storage_location) : nm("/tmp/mod_auth_openid.sqlite3.db") {};
-    bool is_valid(const string& nonce, bool delete_on_find);
+    NonceManager(const string& storage_location) : nm(storage_location) {};
+    bool is_valid(const string& nonce, bool delete_on_find = false);
     void add(const string& nonce, const string& identity);
     void delete_nonce(const string& nonce);
     void get_identity(const string& nonce, string& identity);

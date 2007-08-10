@@ -22,142 +22,138 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  NonceManager::NonceManager(const string& storage_location)  : db_(NULL, 0) {
+  NonceManagerSQLite::NonceManagerSQLite(const string& storage_location) {
     is_closed = false;
-    u_int32_t oFlags = DB_CREATE; // Open flags;
-    try {
-      db_.open(NULL,                // Transaction pointer
-	       storage_location.c_str(),          // Database file name
-	       "nonces",                // Optional logical database name
-	       DB_BTREE,            // Database access method
-	       oFlags,              // Open flags
-	       0);                  // File mode (using defaults)
-      db_.set_errpfx("mod_auth_openid BDB error: ");
-      db_.set_error_stream(&cerr); //this is apache's log
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Database open failed %s", storage_location.c_str());
-    } catch(std::exception &e) {
-      db_.errx("Error opening database: %s", e.what());
-    }
+    int rc = sqlite3_open(storage_location.c_str(), &db);
+    char *errMsg;
+    if(!test_result(rc, "problem opening database"))
+      return;
+    string query = "CREATE TABLE IF NOT EXISTS noncemanager (identity VARCHAR(255), nonce VARCHAR(255), expires_on INT)";
+    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem creating table if it didn't exist already");
   };
-  
-  bool NonceManager::is_valid(const string& nonce, bool delete_on_find) {
-    ween_expired();
-    Dbt data;
-    NONCE n;
-    char id[255];
-    strcpy(id, nonce.substr(0, 254).c_str());
-    Dbt key(id, strlen(id) + 1);
 
-    data.set_data(&n);
-    data.set_ulen(sizeof(NONCE));
-    data.set_flags(DB_DBT_USERMEM);
-    if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
-      debug("failed auth attempt: could not find nonce \"" + nonce + "\" in nonce db.");
+  bool NonceManagerSQLite::test_result(int result, const string& context) {
+    if(result != SQLITE_OK){
+      string msg = "SQLite Error in Session Manager - " + context + ": %s\n";
+      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
+      sqlite3_close(db);
+      is_closed = true;
       return false;
-    }
-    if(delete_on_find) {
-      db_.del(NULL, &key, 0);
-      debug("deleting nonce " + nonce + " from nonces table in db");
     }
     return true;
   };
   
-  void NonceManager::delete_nonce(const string& nonce) {
+  bool NonceManagerSQLite::is_valid(const string& nonce, bool delete_on_find) {
+    ween_expired();
+    bool found;
+    char *errMsg;
+    sqlite3_stmt *pSelect;
+    string query = "SELECT * FROM noncemanager WHERE nonce = \"" + nonce + "\"";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      return false;
+    }
+    rc = sqlite3_step(pSelect);
+    found = (rc == SQLITE_ROW);
+    rc = sqlite3_finalize(pSelect);
+    if(!found) {
+      debug("failed auth attempt: could not find nonce \"" + nonce + "\" in nonce db.");
+      return false;
+    }
+    if(delete_on_find) {
+      debug("deleting nonce " + nonce + " from nonces table in db");     
+      query = "DELETE FROM noncemanager WHERE nonce = \"" + nonce + "\"";
+      rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+      test_result(rc, "problem deleting nonce " + nonce + " from noncemanager");      
+    }
+    return true;
+  };
+  
+  void NonceManagerSQLite::delete_nonce(const string& nonce) {
     ween_expired();
     is_valid(nonce, true);
   };
 
-  void NonceManager::get_identity(const string& nonce, string& identity) {
+  void NonceManagerSQLite::get_identity(const string& nonce, string& identity) {
     ween_expired();
-    Dbt data;
-    NONCE n;
-    char id[255];
-    strcpy(id, nonce.substr(0, 254).c_str());
-    Dbt key(id, strlen(id) + 1);
-
-    data.set_data(&n);
-    data.set_ulen(sizeof(NONCE));
-    data.set_flags(DB_DBT_USERMEM);
-    if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
-      debug("failed to get identity: could not find nonce \"" + nonce + "\" in nonce db.");
-    } else {
-      identity = string(n.identity);
+    sqlite3_stmt *pSelect;
+    char c_identity[255];
+    string query = "SELECT identity FROM noncemanager WHERE nonce = \"" + nonce + "\"";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      return;
     }
+    rc = sqlite3_step(pSelect);
+    if(rc == SQLITE_ROW){
+      snprintf(c_identity, 255, "%s", sqlite3_column_text(pSelect, 0));
+      identity = string(c_identity);
+    } else {
+      identity = "";
+      debug("failed to get identity: could not find nonce \"" + nonce + "\" in nonce db.");
+    }
+    rc = sqlite3_finalize(pSelect);
   };
   
   // The reason we need to store the identity for the case of delgation - we need
   // to keep track of the original identity used by the user.  The identity stored
   // with this nonce will be used later if auth succeeds to create the session
   // for the original identity.
-  void NonceManager::add(const string& nonce, const string& identity) {
+  void NonceManagerSQLite::add(const string& nonce, const string& identity) {
     ween_expired();
+    char *errMsg;
+    debug("adding nonce to nonces table: " + nonce + " for identity: " + identity);
     time_t rawtime;
     time (&rawtime);
-    NONCE n;
-    n.expires_on = rawtime + 3600; // allow nonce to exist for one hour
-    strcpy(n.identity, identity.substr(0, 254).c_str());
-    
-    char id[255];
-    strcpy(id, nonce.substr(0, 254).c_str());
-    Dbt key(id, strlen(id) + 1);
-    Dbt data(&n, sizeof(NONCE));
-    db_.put(NULL, &key, &data, 0);
-    debug("added nonce to nonces table: " + nonce + " for identity: " + identity);
+    string s_expires_on;
+    int_to_string((rawtime + 3600), s_expires_on); // allow nonce to exist for one hour
+    string query = "INSERT INTO noncemanager (nonce, identity, expires_on) VALUES("
+      "\"" + nonce + "\", "
+      "\"" + identity + "\", "
+      "\"" + s_expires_on + "\")";
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem inserting nonce " + nonce + " for identity " + identity);
   };
 
-  void NonceManager::ween_expired() {
+  void NonceManagerSQLite::ween_expired() {
     time_t rawtime;
     time (&rawtime);
-    Dbt key, data;
-    Dbc *cursorp;
-    db_.cursor(NULL, &cursorp, 0);
-    try {
-      while (cursorp->get(&key, &data, DB_NEXT) == 0) {
-	NONCE *n = (NONCE *) data.get_data();
-        if(rawtime > n->expires_on) {
-          db_.del(NULL, &key, 0);
-        }
-      }
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error while weening nonce table!");
-    } catch(std::exception &e) {
-      db_.errx("Error while weening nonce table! %s", e.what());
-    }
-    if (cursorp != NULL)
-      cursorp->close();
+    char *errMsg;
+    string s_time;
+    int_to_string(rawtime, s_time);
+    string query = "DELETE FROM noncemanager WHERE " + s_time + " > expires_on";
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem weening expired nonces from table");
   };
 
-  int NonceManager::num_records() {
+  int NonceManagerSQLite::num_records() {
     ween_expired();
-    Dbt key, data;
-    Dbc *cursorp;
-    db_.cursor(NULL, &cursorp, 0);
-    int count = 0;
-    try {
-      while (cursorp->get(&key, &data, DB_NEXT) == 0)
-        count++;
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Error while counting nonce table records!");
-    } catch(std::exception &e) {
-      db_.errx("Error while counting nonce table records! %s", e.what());
+    int number = 0;
+    sqlite3_stmt *pSelect;
+    string query = "SELECT COUNT(*) AS count FROM noncemanager";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      return number;
     }
-    if (cursorp != NULL)
-      cursorp->close();
-    return count;
+    rc = sqlite3_step(pSelect);
+    test_result(rc, "problem getting num records from noncemanager");
+    if(rc == SQLITE_ROW){
+      number = sqlite3_column_int(pSelect, 0);
+    } else {
+      debug("Problem fetching num records from noncemanager table");
+    }
+    rc = sqlite3_finalize(pSelect);
+    return number;
   };
 
-  void NonceManager::close() {
+  void NonceManagerSQLite::close() {
     if(is_closed)
       return;
     is_closed = true;
-    try {
-      db_.close(0);
-    } catch(DbException &e) {
-      db_.err(e.get_errno(), "Database close failed");
-    } catch(std::exception &e) {
-      db_.errx("Error closing database: %s", e.what());
-    }
+    test_result(sqlite3_close(db), "problem closing database");
   };
   
 }
