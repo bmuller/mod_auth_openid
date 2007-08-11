@@ -1,18 +1,26 @@
 /*
 Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
 
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation, version 2.
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
 
 Created by bmuller <bmuller@butterfat.net>
 */
@@ -36,7 +44,6 @@ Created by bmuller <bmuller@butterfat.net>
 #include <opkele/consumer.h>
 #include <opkele/association.h>
 #include <opkele/exception.h>
-#include <db_cxx.h>
 #include <time.h>
 #include <string>
 #include <vector>
@@ -48,6 +55,7 @@ Created by bmuller <bmuller@butterfat.net>
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include "config.h"
+#include "storage/storage.h"
 
 namespace modauthopenid {
   using namespace opkele;
@@ -55,61 +63,44 @@ namespace modauthopenid {
 
   enum error_result_t { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
 
-  typedef struct bdb_association {
-    char server[255];
-    char handle[100];
-    char secret[30];
-    int expires_on; // exact moment it expires
-  } BDB_ASSOC;
-  
-  typedef struct nonce {
-    int expires_on; // exact moment it expires
-    char identity[255]; // identity nonce is good for
-  } NONCE;
-  
-  typedef struct session {
-    char session_id[33];
-    char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
-    char path[255];
-    char identity[255];
-    int expires_on; // exact moment it expires
-  } SESSION;
-
-  class MoidConsumer : public opkele::consumer_t {
+  class MoidConsumer {
   public:
-    MoidConsumer(const string& storage_location);
-    virtual ~MoidConsumer() { close(); };
+    MoidConsumer(const string& storage_location) : mc(storage_location) {};
     assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
     assoc_t retrieve_assoc(const string& server,const string& handle);
     void invalidate_assoc(const string& server,const string& handle);
     assoc_t find_assoc(const string& server);
     void print_db();
     int num_records();
-    void close();    
+    void close();
+    string checkid_setup(const string& identity,const string& return_to,const string& trust_root,extension_t *ext=0);
+    void id_res(const params_t& pin,const string& identity="",extension_t *ext=0);
   private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
+#ifdef SQLITE
+    MoidConsumerSQLite mc;
+#else
+    MoidConsumerBDB mc;
+#endif
   };
-  
+
   class SessionManager {
   public:
-    SessionManager(const string& storage_location);
-    ~SessionManager() { close(); };
+    SessionManager(const string& storage_location) : sm(storage_location) {};
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
     void close();
   private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
+#ifdef SQLITE
+    SessionManagerSQLite sm;
+#else
+    SessionManagerBDB sm;
+#endif
   };
-  
+
   class NonceManager {
   public:
-    NonceManager(const string& storage_location);
-    ~NonceManager() { close(); };
+    NonceManager(const string& storage_location) : nm(storage_location) {};
     bool is_valid(const string& nonce, bool delete_on_find = false);
     void add(const string& nonce, const string& identity);
     void delete_nonce(const string& nonce);
@@ -117,9 +108,11 @@ namespace modauthopenid {
     int num_records();
     void close();
   private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
+#ifdef SQLITE
+    NonceManagerSQLite nm;
+#else
+    NonceManagerBDB nm;
+#endif   
   };
 
   // in moid_utils.cpp
@@ -138,5 +131,6 @@ namespace modauthopenid {
   // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
   // apache redirects stderr to the error log anyway.
   void debug(string s);
+  void int_to_string(int i, string& s);
 }
 

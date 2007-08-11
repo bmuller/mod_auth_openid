@@ -4,4 +4,4 @@ Potential additions:
 	  though...)
 	- http://openid.net/specs/openid-simple-registration-extension-1_0.html
 	- granular user/group access control
-	- improve BDB find in configure, look into using sqlite
+
