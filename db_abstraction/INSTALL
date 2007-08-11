@@ -1,0 +1,44 @@
+Basic Installation
+==================
+
+First, you'll need a few prerequisites.
+ - libopkele from http://kin.klever.net/libopkele/
+	It's a C++ implementation of important OpenID functions.
+ - libdb_cxx from http://www.oracle.com/database/berkeley-db/db
+	Berkeley DB C++ libs (now owned by Oracle)
+
+Next, run:
+$> ./configure
+or 
+$> ./configure --help
+to see additional options that can be specified.
+
+Next, run:
+$> make
+$> su root
+$> make install
+
+Make sure that the file /tmp/mod_auth_openid.db is owned by the user running Apache.
+You can do this by (assuming www-data is the user running apache):
+$> su root
+$> touch /tmp/mod_auth_openid.db
+$> chown www-data /tmp/mod_auth_openid.db
+
+Or you can specify an alternate location that the user running apache has write 
+privieges on (see the docs for the AuthOpenIDDBLocation directive on the homepage).
+
+
+Usage
+==================
+
+In either a Directory, Location, or File directive in httpd.conf, place the following directive:
+
+AuthOpenIDEnabled        On
+
+There are also additional, optional directives.  See the homepage for a list and docs.
+
+The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
+authentication.
+
+See http://www.butterfat.net/wiki/Projects/ModAuthOpenID for more information.
+
