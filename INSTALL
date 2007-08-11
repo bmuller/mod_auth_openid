@@ -4,8 +4,12 @@ Basic Installation
 First, you'll need a few prerequisites.
  - libopkele from http://kin.klever.net/libopkele/
 	It's a C++ implementation of important OpenID functions.
+
  - libdb_cxx from http://www.oracle.com/database/berkeley-db/db
 	Berkeley DB C++ libs (now owned by Oracle)
+		-- OR --
+ - libsqlite from http://www.sqlite.org
+	SQLite C libs
 
 Next, run:
 $> ./configure
