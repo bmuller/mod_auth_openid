@@ -93,6 +93,6 @@ echo " *** $> su root"
 echo " *** $> make install"
 echo " ***"
 echo " *** Report bugs at https://www.butterfat.net/tracker/butterfat/index"
-echo " *** Thanks for using GNU software."
+echo " *** Thanks for using free (as in speech, not beer) software."
 echo " ***"
 echo

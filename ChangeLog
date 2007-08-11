@@ -2,6 +2,8 @@ See http://butterfat.net/wiki/Projects/ModAuthOpenID for
 instructions on SVN access for a full ChangeLog history.
 	
 Version 0.1
+	Changed license to less restrictive MIT license to avoid legal nasties in the future.
+        Added sqlite support as an alternative to bdb.
 	Added AuthOpenIDCookieLifespan option.
 	Fixed bug where REMOTE_USER CGI environment variable was not being set correctly when ID was delegated.
 	Fixed bug where REMOTE_USER CGI environment variable was not being set if the session cookie wasn't enabled.
