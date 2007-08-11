@@ -138,7 +138,6 @@ namespace modauthopenid {
       return number;
     }
     rc = sqlite3_step(pSelect);
-    test_result(rc, "problem getting num records from noncemanager");
     if(rc == SQLITE_ROW){
       number = sqlite3_column_int(pSelect, 0);
     } else {

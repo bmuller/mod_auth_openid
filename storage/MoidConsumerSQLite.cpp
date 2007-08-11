@@ -38,6 +38,7 @@ namespace modauthopenid {
   assoc_t MoidConsumerSQLite::store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in) {
     debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
     ween_expired();
+    char *errMsg;
     string secret_b64;
     secret.to_base64(secret_b64);
     time_t rawtime;
@@ -50,41 +51,45 @@ namespace modauthopenid {
       "\"" + server + "\", "
       "\"" + handle + "\", "
       "\"" + secret_b64 + "\", " + s_expires_on + ")"; 
+    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    test_result(rc, "problem storing association in associations table");
     return assoc_t(new association(server, handle, "assoc type", secret, expires_in, false));
   };
 
   assoc_t MoidConsumerSQLite::retrieve_assoc(const string& server, const string& handle) {
-    /*
     ween_expired();
-    debug("looking up association: server = "+server+" handle = "+handle);
-    Dbt data;
-    BDB_ASSOC bassoc;
+    debug("looking up association: server = " + server + " handle = " + handle);
+    sqlite3_stmt *pSelect;
     string id = server + " " + handle;
-    char c_id[255];
-    strcpy(c_id, id.substr(0, 254).c_str());
-
-    Dbt key(c_id, strlen(c_id) + 1);
-    data.set_data(&bassoc);
-    data.set_ulen(sizeof(BDB_ASSOC));
-    data.set_flags(DB_DBT_USERMEM);
-    if(db_.get(NULL, &key, &data, 0) == DB_NOTFOUND) {
+    string query = "SELECT * FROM associations WHERE id = \"" + id + "\"";
+    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
+    if( rc!=SQLITE_OK || !pSelect ){
+      debug("error preparing sql query: " + query);
+      throw failed_lookup(OPKELE_CP_ "Could not find association due to db error.");
+    }
+    rc = sqlite3_step(pSelect);
+    if(rc != SQLITE_ROW){
       debug("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
+      rc = sqlite3_finalize(pSelect);
       throw failed_lookup(OPKELE_CP_ "Could not find association.");
     }
 
+    char c_key[255];
+    char c_server[255];
+    char c_handle[100];
+    char c_secret[30];
+    snprintf(c_key, 255, "%s", sqlite3_column_text(pSelect, 0));
+    snprintf(c_server, 255, "%s", sqlite3_column_text(pSelect, 1));
+    snprintf(c_handle, 100, "%s", sqlite3_column_text(pSelect, 2));
+    snprintf(c_secret, 30, "%s", sqlite3_column_text(pSelect, 3));
+    int expires_on = sqlite3_column_int(pSelect, 4);
     time_t rawtime;
     time (&rawtime);
-    int expires_in = bassoc.expires_on - rawtime;
-
+    int expires_in = expires_on - rawtime;
     secret_t secret;
-    secret.from_base64(bassoc.secret);
-
-    return assoc_t(new association(bassoc.server, bassoc.handle, "assoc type", secret, expires_in, false));
-    */
-    time_t rawtime;
-    time (&rawtime);
-    secret_t secret;
-    return assoc_t(new association(server, handle, "assoc type", secret, rawtime, false));
+    secret.from_base64(c_secret);
+    rc = sqlite3_finalize(pSelect);
+    return assoc_t(new association(c_server, c_handle, "assoc type", secret, expires_in, false));
   };
 
   void MoidConsumerSQLite::invalidate_assoc(const string& server,const string& handle) {
@@ -173,7 +178,6 @@ namespace modauthopenid {
       return number;
     }
     rc = sqlite3_step(pSelect);
-    test_result(rc, "problem getting num records from associations");
     if(rc == SQLITE_ROW){
       number = sqlite3_column_int(pSelect, 0);
     } else {
