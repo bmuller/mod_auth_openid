@@ -190,6 +190,7 @@ static int http_redirect(request_rec *r, std::string location) {
   return HTTP_MOVED_TEMPORARILY;
 }
 
+/* Get the full URI of the request_rec's request location */
 static void full_uri(request_rec *r, std::string& result) {
   std::string hostname(r->hostname);
   std::string protocol(r->protocol);
@@ -286,7 +287,10 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
   opkele::params_t params;
   if(r->args != NULL) 
     params = modauthopenid::parse_query_string(std::string(r->args));
-  params = modauthopenid::remove_openid_vars(params);  
+  params = modauthopenid::remove_openid_vars(params);
+  std::string uri_location;
+  full_uri(r, uri_location);
+  params["modauthopenid.referrer"] = uri_location;
   return http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
 
