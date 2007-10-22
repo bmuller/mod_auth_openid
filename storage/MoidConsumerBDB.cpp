@@ -90,7 +90,7 @@ namespace modauthopenid {
 
     debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
 
-    return assoc_t(new association(server, handle, "assoc type", secret, expires_in, false));
+    return assoc_t(new association(server, handle, "assoc type", secret, bassoc.expires_on, false));
   };
 
   assoc_t MoidConsumerBDB::retrieve_assoc(const string& server, const string& handle) {
@@ -113,12 +113,11 @@ namespace modauthopenid {
 
     time_t rawtime;
     time (&rawtime);
-    int expires_in = bassoc.expires_on - rawtime;
 
     secret_t secret;
     secret.from_base64(bassoc.secret);
 
-    return assoc_t(new association(bassoc.server, bassoc.handle, "assoc type", secret, expires_in, false));
+    return assoc_t(new association(bassoc.server, bassoc.handle, "assoc type", secret, bassoc.expires_on, false));
   };
 
   void MoidConsumerBDB::invalidate_assoc(const string& server,const string& handle) {
@@ -157,10 +156,9 @@ namespace modauthopenid {
 	// at least five minutes until it expires (to give the user time to be redirected -> there -> back)
         if(parts.size()==2 && parts[0] == server && rawtime < (data_v->expires_on + 18000)) {
 	  debug("....found one");
-	  int expires_in = data_v->expires_on - rawtime;
 	  secret_t secret;
 	  secret.from_base64(data_v->secret);
-	  auto_ptr<association_t> a(new association(data_v->server, data_v->handle, "assoc type", secret, expires_in, false));
+	  auto_ptr<association_t> a(new association(data_v->server, data_v->handle, "assoc type", secret, data_v->expires_on, false));
 	  return a;
         }
       }

@@ -61,7 +61,8 @@ namespace modauthopenid {
       "\"" + secret_b64 + "\", " + s_expires_on + ")"; 
     int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
     test_result(rc, "problem storing association in associations table");
-    return assoc_t(new association(server, handle, "assoc type", secret, expires_in, false));
+    int expires_on = rawtime + expires_in;
+    return assoc_t(new association(server, handle, "assoc type", secret, expires_on, false));
   };
 
   assoc_t MoidConsumerSQLite::retrieve_assoc(const string& server, const string& handle) {
@@ -93,11 +94,10 @@ namespace modauthopenid {
     int expires_on = sqlite3_column_int(pSelect, 4);
     time_t rawtime;
     time (&rawtime);
-    int expires_in = expires_on - rawtime;
     secret_t secret;
     secret.from_base64(c_secret);
     rc = sqlite3_finalize(pSelect);
-    return assoc_t(new association(c_server, c_handle, "assoc type", secret, expires_in, false));
+    return assoc_t(new association(c_server, c_handle, "assoc type", secret, expires_on, false));
   };
 
   void MoidConsumerSQLite::invalidate_assoc(const string& server,const string& handle) {
@@ -140,10 +140,9 @@ namespace modauthopenid {
       if(parts.size()==2 && parts[0] == server && rawtime < (expires_on + 18000)) {
 	debug("....found one");
 	rc = sqlite3_finalize(pSelect);
-	int expires_in = expires_on - rawtime;
 	secret_t secret;
 	secret.from_base64(c_secret);
-	auto_ptr<association_t> a(new association(c_server, c_handle, "assoc type", secret, expires_in, false));
+	auto_ptr<association_t> a(new association(c_server, c_handle, "assoc type", secret, expires_on, false));
 	return a;
       }    
       rc = sqlite3_step(pSelect);

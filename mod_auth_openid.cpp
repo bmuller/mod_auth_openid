@@ -363,7 +363,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
   // parse the get params
   opkele::params_t params;
   if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
-  std::string identity = (params.has_param("openid.identity")) ? opkele::consumer_t::canonicalize(params.get_param("openid.identity")) : "unknown";
+  std::string identity = (params.has_param("openid.identity")) ? opkele::consumer_t::normalize(params.get_param("openid.identity")) : "unknown";
 
   // if user is posting id (only openid.identity will contain a value)
   if(params.has_param("openid.identity") && !params.has_param("openid.assoc_handle")) {
