@@ -32,6 +32,11 @@ namespace modauthopenid {
 
   void debug(string s) {
 #ifdef DEBUG
+    print_to_error_log(s);
+#endif
+  };
+
+  void print_to_error_log(string s) {
     string time_s = "";
     time_t rawtime = time(NULL);
     tm *tm_t = localtime(&rawtime);
@@ -48,7 +53,6 @@ namespace modauthopenid {
     // stderr is redirected by apache to apache's error log
     fprintf(stderr, cleaned_s.c_str());
     fflush(stderr);
-#endif
   };
 
   // get a descriptive string for an error; a short string is used as a GET param
@@ -141,8 +145,7 @@ namespace modauthopenid {
       "(:[0-9]{1,4})?" // port number- :80
       "((/?)|" // a slash isn't required if there is no file name
       "(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)$";
-    pcrepp::Pcre reg(regex);
-    return reg.search(url);
+    return regex_match(url, regex);
   }
 
   // This isn't a true html_escape function, but rather escapes just enough to get by for
@@ -223,4 +226,15 @@ namespace modauthopenid {
     sprintf(c_int, "%ld", i);
     s = string(c_int);
   }
+
+  bool regex_match(string subject, string pattern) {
+    const char * error;
+    int erroffset;
+    pcre * re = pcre_compile(pattern.c_str(), 0, &error, &erroffset, NULL);
+    if (re == NULL) {
+      print_to_error_log("regex compilation failed for regex \"" + pattern + "\": " + error);
+      return false;
+    }
+    return (pcre_exec(re, NULL, subject.c_str(), subject.size(), 0, 0, NULL, 0) >= 0);
+  };
 }

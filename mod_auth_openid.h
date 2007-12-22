@@ -39,7 +39,7 @@ Created by bmuller <bmuller@butterfat.net>
 
 /* other includes */
 #include <curl/curl.h>
-#include <pcre++.h>
+#include <pcre.h>
 #include <algorithm>
 #include <opkele/consumer.h>
 #include <opkele/association.h>
@@ -132,5 +132,7 @@ namespace modauthopenid {
   // apache redirects stderr to the error log anyway.
   void debug(string s);
   void int_to_string(int i, string& s);
+  bool regex_match(string subject, string pattern);
+  void print_to_error_log(string s);
 }
 

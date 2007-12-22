@@ -298,11 +298,9 @@ static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
   if(apr_is_empty_array(s_cfg->trusted))
     return true;
   char **trusted_sites = (char **) s_cfg->trusted->elts;
-  pcrepp::Pcre reg;
   std::string base_url = modauthopenid::get_queryless_url(url);
   for (int i = 0; i < s_cfg->trusted->nelts; i++) {
-    pcrepp::Pcre reg(trusted_sites[i]);
-    if(reg.search(base_url)) {
+    if(modauthopenid::regex_match(base_url, trusted_sites[i])) {
       modauthopenid::debug(base_url + " is a trusted identity provider");
       return true;
     }
@@ -317,8 +315,7 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url)
   char **distrusted_sites = (char **) s_cfg->distrusted->elts;
   std::string base_url = modauthopenid::get_queryless_url(url);
   for (int i = 0; i < s_cfg->distrusted->nelts; i++) {
-    pcrepp::Pcre reg(distrusted_sites[i]);
-    if(reg.search(base_url)) {
+    if(modauthopenid::regex_match(base_url, distrusted_sites[i])) {
       modauthopenid::debug(base_url + " is a distrusted (on black list) identity provider");
       return true;
     }
