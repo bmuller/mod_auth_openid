@@ -30,9 +30,9 @@ Created by bmuller <bmuller@butterfat.net>
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
-  char *db_location;
+  const char *db_location;
   char *trust_root;
-  char *cookie_name;
+  const char *cookie_name;
   char *login_page;
   bool enabled;
   bool use_cookie;
@@ -69,7 +69,7 @@ static void base_dir(std::string path, std::string& s) {
 // make a random alpha-numeric string size characters long
 static void make_rstring(int size, std::string& s) {
   s = "";
-  char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   srand((unsigned) time(0));
   for(int index=0; index<size; index++)
     s += cs[rand()%62];

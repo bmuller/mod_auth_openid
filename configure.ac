@@ -1,4 +1,4 @@
-AC_INIT([mod_auth_openid], [0.1], [bmuller@butterfat.net])
+AC_INIT([mod_auth_openid], [0.2], [bmuller@butterfat.net])
 AC_DEFINE([PACKAGE_URL],["http://www.butterfat.net/wiki/Projects/ModAuthOpenID"],[project url])
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])
@@ -71,6 +71,17 @@ AC_SUBST(APACHE_CFLAGS)
 PKG_CHECK_MODULES([OPKELE],[libopkele >= 0.1.1],,[
  AC_MSG_ERROR([no libopkele library found. get one from http://kin.klever.net/libopkele/])
 ])
+
+# These next few are prerequisites for libopekele, but it's possible they've been removed since that install....
+# Check for pcre
+AX_PATH_LIB_PCRE([], [ AC_MSG_ERROR([No pcre library found.  You can get it at http://www.pcre.org]) ])
+AC_SUBST(PCRE_LIBS)
+AC_SUBST(PCRE_CFLAGS)
+
+# Check for curl
+AC_CHECK_CURL([7], [], [ AC_MSG_ERROR([No curl library found.  You can get it at http://curl.haxx.se]) ]) 
+AC_SUBST(CURL_CFLAGS)
+AC_SUBST(CURL_LIBS)
 
 AC_CONFIG_FILES([
  Makefile
