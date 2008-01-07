@@ -39,6 +39,7 @@ typedef struct {
   apr_array_header_t *trusted;
   apr_array_header_t *distrusted;
   int cookie_lifespan;
+  char *server_name;
 } modauthopenid_config;
 
 typedef const char *(*CMD_HAND_TYPE) ();
@@ -86,6 +87,7 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->distrusted = apr_array_make(p, 5, sizeof(char *));
   newcfg->trust_root = NULL;
   newcfg->cookie_lifespan = 0;
+  newcfg->server_name = NULL;
   return (void *) newcfg;
 }
 
@@ -142,7 +144,13 @@ static const char *add_modauthopenid_distrusted(cmd_parms *cmd, void *mconfig, c
   *(const char **)apr_array_push(s_cfg->distrusted) = arg;
   return NULL;
 }
-  
+
+static const char *set_modauthopenid_server_name(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->server_name = (char *) arg;
+  return NULL;
+} 
+ 
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDCookieLifespan", (CMD_HAND_TYPE) set_modauthopenid_cookie_lifespan, NULL, ACCESS_CONF,
 		"AuthOpenIDCookieLifespan <number seconds>"),
@@ -162,6 +170,8 @@ static const command_rec mod_authopenid_cmds[] = {
 		  "AuthOpenIDTrusted <a list of trusted identity providers>"),
   AP_INIT_ITERATE("AuthOpenIDDistrusted", (CMD_HAND_TYPE) add_modauthopenid_distrusted, NULL, ACCESS_CONF,
 		  "AuthOpenIDDistrusted <a blacklist list of identity providers>"),
+  AP_INIT_TAKE1("AuthOpenIDServerName", (CMD_HAND_TYPE) set_modauthopenid_server_name, NULL, ACCESS_CONF,
+		"AuthOpenIDServerName <server name and port prefix>"),
   {NULL}
 };
 
@@ -191,7 +201,7 @@ static int http_redirect(request_rec *r, std::string location) {
 }
 
 /* Get the full URI of the request_rec's request location */
-static void full_uri(request_rec *r, std::string& result) {
+static void full_uri(request_rec *r, std::string& result, modauthopenid_config *s_cfg) {
   std::string hostname(r->hostname);
   std::string protocol(r->protocol);
   std::string uri(r->uri);
@@ -200,7 +210,10 @@ static void full_uri(request_rec *r, std::string& result) {
   char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
   std::string s_port = (i_port == 80 || i_port == 443) ? "" : ":" + std::string(port);
   std::string args = (r->args == NULL) ? "" : "?" + std::string(r->args);
-  result = prefix + hostname + s_port + uri + args;
+  if(s_cfg->server_name == NULL)
+    result = prefix + hostname + s_port + uri + args;
+  else
+    result = std::string(s_cfg->server_name) + uri + args;
 }
 
 static void strip(std::string& s) {
@@ -289,7 +302,7 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
     params = modauthopenid::parse_query_string(std::string(r->args));
   params = modauthopenid::remove_openid_vars(params);
   std::string uri_location;
-  full_uri(r, uri_location);
+  full_uri(r, uri_location, s_cfg);
   params["modauthopenid.referrer"] = uri_location;
   return http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
@@ -385,7 +398,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
       return show_input(r, s_cfg, modauthopenid::invalid_id_url);
     modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));     
     std::string return_to, trust_root, re_direct;
-    full_uri(r, return_to);
+    full_uri(r, return_to, s_cfg);
     if(s_cfg->trust_root == NULL)
       base_dir(return_to, trust_root);
     else
@@ -443,7 +456,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
 	  r->args = NULL;
 	else
 	  apr_cpystrn(r->args, args.c_str(), 1024);
-	full_uri(r, redirect_location);
+	full_uri(r, redirect_location, s_cfg);
 	return http_redirect(r, redirect_location);
       }
       
