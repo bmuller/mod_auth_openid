@@ -122,7 +122,9 @@ namespace modauthopenid {
     map<string,string>::iterator iter;
     for(iter = params.begin(); iter != params.end(); iter++) {
       string param_key(iter->first);
-      if(param_key.substr(0, 7) == "openid.") {
+      if(param_key.substr(0, 7) == "openid."
+	 && param_key.substr(0, 10) != "openid.ax."
+	 && param_key.substr(0, 12) != "openid.sreg.") {
 	params.erase(param_key);
 	// stupid map iterator screws up if we just continue the iteration...
 	// so recursion to the rescue - we'll delete them one at a time
