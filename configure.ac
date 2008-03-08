@@ -1,5 +1,5 @@
 AC_INIT([mod_auth_openid], [0.2], [bmuller@butterfat.net])
-AC_DEFINE([PACKAGE_URL],["http://www.butterfat.net/wiki/Projects/ModAuthOpenID"],[project url])
+AC_DEFINE([PACKAGE_URL],["http://trac.butterfat.net/public/mod_auth_openid"],[project url])
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])
 
@@ -103,7 +103,7 @@ echo " *** $> make"
 echo " *** $> su root"
 echo " *** $> make install"
 echo " ***"
-echo " *** Report bugs at https://www.butterfat.net/tracker/butterfat/index"
+echo " *** Report bugs at http://trac.butterfat.net/public/mod_auth_openid"
 echo " *** Thanks for using free (as in speech, not beer) software."
 echo " ***"
 echo
