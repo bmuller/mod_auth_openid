@@ -69,7 +69,7 @@ APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)
 
 PKG_CHECK_MODULES([OPKELE],[libopkele >= 0.3.2],,[
- AC_MSG_ERROR([no libopkele library found. get one from http://kin.klever.net/libopkele/])
+ AC_MSG_ERROR([no libopkele library found (version 0.3.2 or higher). get one from http://kin.klever.net/libopkele/])
 ])
 
 # These next few are prerequisites for libopekele, but it's possible they've been removed since that install....

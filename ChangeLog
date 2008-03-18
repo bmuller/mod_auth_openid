@@ -1,13 +1,14 @@
-See http://butterfat.net/wiki/Projects/ModAuthOpenID for 
-instructions on SVN access for a full ChangeLog history.
+# See http://trac.butterfat.net/public/mod_auth_openid for 
+# instructions on SVN access for a full ChangeLog history.
 
-All references to issues/bugs can be found at:
-https://tracker.butterfat.net/tracker/butterfat/issue<issue number>
+# All references to issues/bugs can be found at:
+# http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
 	
 Version 0.2
-	Added AuthOpenIDServerName configuration option (issue 43)
-	Removed dependency on libpcre++ (libpcre still required) (issue 38)
-	Added a modauthopenid.referrer parameter that is passed on to login pages (issue 39) 
+	openid.ax and openid.sreg parameters are no longer cleansed from URL (issue 1)
+	Added AuthOpenIDServerName configuration option (issue 3)
+	Removed dependency on libpcre++ (libpcre still required)
+	Added a modauthopenid.referrer parameter that is passed on to login pages (issue 4) 
 	Updated code to work with libopkele version 3 API
 	
 Version 0.1

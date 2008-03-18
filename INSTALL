@@ -44,5 +44,5 @@ There are also additional, optional directives.  See the homepage for a list and
 The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
 authentication.
 
-See http://www.butterfat.net/wiki/Projects/ModAuthOpenID for more information.
+See http://trac.butterfat.net/public/mod_auth_openid for more information.
 
