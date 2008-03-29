@@ -194,7 +194,7 @@ static int http_sendstring(request_rec *r, std::string s) {
 }
 
 static int http_redirect(request_rec *r, std::string location) {
-  apr_table_setn(r->headers_out, "Location", location.c_str());
+  apr_table_set(r->headers_out, "Location", location.c_str());
   apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
   modauthopenid::debug("redirecting client to: " + location);
   return HTTP_MOVED_TEMPORARILY;
