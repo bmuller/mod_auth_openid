@@ -348,6 +348,12 @@ static int mod_authopenid_method_handler(request_rec *r) {
   // make a record of our being called
   modauthopenid::debug("***" + std::string(PACKAGE_STRING) + " module has been called***");
 
+  // parse the get params
+  opkele::params_t params;
+  if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
+  if(params["ignore"] == "1")
+    return DECLINED;
+
   // test for valid session - if so, return DECLINED
   std::string session_id = "";
   get_session_id(r, std::string(s_cfg->cookie_name), session_id);
@@ -374,9 +380,6 @@ static int mod_authopenid_method_handler(request_rec *r) {
     }
   }
 
-  // parse the get params
-  opkele::params_t params;
-  if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
   std::string identity = (params.has_param("openid.identity")) ? opkele::consumer_t::normalize(params.get_param("openid.identity")) : "unknown";
 
   // if user is posting id (only openid.identity will contain a value)
