@@ -1,4 +1,4 @@
-AC_INIT([mod_auth_openid], [0.2], [bmuller@butterfat.net])
+AC_INIT([mod_auth_openid], [0.2.1], [bmuller@butterfat.net])
 AC_DEFINE([PACKAGE_URL],["http://trac.butterfat.net/public/mod_auth_openid"],[project url])
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])
@@ -104,6 +104,6 @@ echo " *** $> su root"
 echo " *** $> make install"
 echo " ***"
 echo " *** Report bugs at http://trac.butterfat.net/public/mod_auth_openid"
-echo " *** Thanks for using free (as in speech, not beer) software."
+echo " *** Thanks for using free (as in speech and beer) software."
 echo " ***"
 echo

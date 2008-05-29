@@ -264,16 +264,18 @@ static int show_html_input(request_rec *r, std::string msg) {
     "a:hover { text-decoration: underline; }\n"
     "#desc { border: 1px solid #000; background: #ccc; }\n"
     "#sig { text-align: center; font-style: italic; margin-top: 50px; word-spacing: .3em; color: #777; }\n"
+    ".loginbox { background: url(http://www.openid.net/login-bg.gif) no-repeat; background-color: #fff; " // logo location is in 1.1 spec, should stay same
+    " background-position: 0 50%; color: #000; padding-left: 18px; }\n"
     "form { margin: 15px; }\n"
     "</style></head><body>"
     "<h1>Protected Location</h1>"
     "<p id=\"desc\">This site is protected and requires that you identify yourself with an "
     "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it works, see "
-    "<a href=\"http://openid.net/about.bml\">http://openid.net/about.bml</a>.  You can sign up for "
-    "an identity on one of the sites listed <a href=\"http://iwantmyopenid.org/about/openid\">here</a>.</p>"
+    "<a href=\"http://openid.net/what/\">http://openid.net/what/</a>.  You can sign up for "
+    "an identity on one of the sites listed <a href=\"http://openid.net/get/\">here</a>.</p>"
     + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
     "<form action=\"\" method=\"get\">"
-    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" />"
+    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
     "</form>"
     "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"

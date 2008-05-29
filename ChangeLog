@@ -3,6 +3,11 @@
 
 # All references to issues/bugs can be found at:
 # http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
+
+Version 0.2.1
+	302 Redirect issue fixed - nasty, reason for 0.2.1 release (issue 6)
+	AuthOpenIDEnabled now allowed in .htaccess files (issue 9)
+	Fixed links on default login page (issue 12)
 	
 Version 0.2
 	openid.ax and openid.sreg parameters are no longer cleansed from URL (issue 1)
