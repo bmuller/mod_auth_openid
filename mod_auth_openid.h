@@ -134,5 +134,13 @@ namespace modauthopenid {
   void int_to_string(int i, string& s);
   bool regex_match(string subject, string pattern);
   void print_to_error_log(string s);
+  void strip(string& s);
+
+  // in http_helpers.cpp
+  int http_sendstring(request_rec *r, string s);
+  int http_redirect(request_rec *r, string location);
+  int show_html_input(request_rec *r, string msg);
+  void get_session_id(request_rec *r, string cookie_name, string& session_id);
 }
+
 

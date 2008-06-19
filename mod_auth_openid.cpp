@@ -175,31 +175,6 @@ static const command_rec mod_authopenid_cmds[] = {
   {NULL}
 };
 
-static int http_sendstring(request_rec *r, std::string s) {
-  // no idea why the following line only sometimes worked.....
-  //apr_table_setn(r->headers_out, "Content-Type", "text/html");
-  ap_set_content_type(r, "text/html");
-  const char *c_s = s.c_str();
-  conn_rec *c = r->connection;
-  apr_bucket *b;
-  apr_bucket_brigade *bb = apr_brigade_create(r->pool, c->bucket_alloc);
-  b = apr_bucket_transient_create(c_s, strlen(c_s), c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(bb, b);
-  b = apr_bucket_eos_create(c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(bb, b);
-  
-  if (ap_pass_brigade(r->output_filters, bb) != APR_SUCCESS)
-    return HTTP_INTERNAL_SERVER_ERROR;
-  return OK;
-}
-
-static int http_redirect(request_rec *r, std::string location) {
-  apr_table_set(r->headers_out, "Location", location.c_str());
-  apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
-  modauthopenid::debug("redirecting client to: " + location);
-  return HTTP_MOVED_TEMPORARILY;
-}
-
 /* Get the full URI of the request_rec's request location */
 static void full_uri(request_rec *r, std::string& result, modauthopenid_config *s_cfg) {
   std::string hostname(r->hostname);
@@ -216,89 +191,22 @@ static void full_uri(request_rec *r, std::string& result, modauthopenid_config *
     result = std::string(s_cfg->server_name) + uri + args;
 }
 
-static void strip(std::string& s) {
-  while(!s.empty() && s.substr(0,1) == " ") s.erase(0,1);
-  while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
-}
-
-static void get_session_id(request_rec *r, std::string cookie_name, std::string& session_id) {
-  const char * cookies_c = apr_table_get(r->headers_in, "Cookie");
-  if(cookies_c == NULL) 
-    return;
-  std::string cookies(cookies_c);
-  std::vector<std::string> pairs = modauthopenid::explode(cookies, ";");
-  for(std::string::size_type i = 0; i < pairs.size(); i++) {
-    std::vector<std::string> pair = modauthopenid::explode(pairs[i], "=");
-    if(pair.size() == 2) {
-      std::string key = pair[0];
-      strip(key);
-      std::string value = pair[1];
-      strip(value);
-      modauthopenid::debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
-      if(key == cookie_name) {
-	session_id = pair[1];
-	return;
-      }
-    }
-  }
-}
-
-static int show_html_input(request_rec *r, std::string msg) {
-  opkele::params_t params;
-  if(r->args != NULL) 
-    params = modauthopenid::parse_query_string(std::string(r->args));
-  std::string identity = (params.has_param("openid.identity")?params.get_param("openid.identity"):"");
-  params = modauthopenid::remove_openid_vars(params);
-  std::map<std::string,std::string>::iterator iter;
-  std::string args = "";
-  std::string key, value;
-  for(iter = params.begin(); iter != params.end(); iter++) {
-    key = modauthopenid::html_escape(iter->first);
-    value = modauthopenid::html_escape(iter->second);
-    args += "<input type=\"hidden\" name=\"" + key + "\" value = \"" + value + "\" />";
-  }
-  std::string result = 
-    "<html><head><title>Protected Location</title><style type=\"text/css\">"
-    "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 5px; }\n"
-    "a { text-decoration: none; }\n"
-    "a:hover { text-decoration: underline; }\n"
-    "#desc { border: 1px solid #000; background: #ccc; }\n"
-    "#sig { text-align: center; font-style: italic; margin-top: 50px; word-spacing: .3em; color: #777; }\n"
-    ".loginbox { background: url(http://www.openid.net/login-bg.gif) no-repeat; background-color: #fff; " // logo location is in 1.1 spec, should stay same
-    " background-position: 0 50%; color: #000; padding-left: 18px; }\n"
-    "form { margin: 15px; }\n"
-    "</style></head><body>"
-    "<h1>Protected Location</h1>"
-    "<p id=\"desc\">This site is protected and requires that you identify yourself with an "
-    "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it works, see "
-    "<a href=\"http://openid.net/what/\">http://openid.net/what/</a>.  You can sign up for "
-    "an identity on one of the sites listed <a href=\"http://openid.net/get/\">here</a>.</p>"
-    + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
-    "<form action=\"\" method=\"get\">"
-    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
-    "<input type=\"submit\" value=\"Log In\" />" + args +
-    "</form>"
-    "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
-    "<body></html>";
-  return http_sendstring(r, result);
-}
-
 static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::error_result_t e) {
   if(s_cfg->login_page == NULL) {
     std::string msg = modauthopenid::error_to_string(e, false);
-    return show_html_input(r, msg);
+    return modauthopenid::show_html_input(r, msg);
   }
   opkele::params_t params;
   if(r->args != NULL) 
     params = modauthopenid::parse_query_string(std::string(r->args));
   params = modauthopenid::remove_openid_vars(params);  
   params["modauthopenid.error"] = modauthopenid::error_to_string(e, true);
-  return http_redirect(r, params.append_query(s_cfg->login_page, ""));
+  return modauthopenid::http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
 
 static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
   if(s_cfg->login_page == NULL) 
-    return show_html_input(r, "");
+    return modauthopenid::show_html_input(r, "");
   opkele::params_t params;
   if(r->args != NULL) 
     params = modauthopenid::parse_query_string(std::string(r->args));
@@ -306,7 +214,7 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
   std::string uri_location;
   full_uri(r, uri_location, s_cfg);
   params["modauthopenid.referrer"] = uri_location;
-  return http_redirect(r, params.append_query(s_cfg->login_page, ""));
+  return modauthopenid::http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
 
 static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
@@ -352,7 +260,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
 
   // test for valid session - if so, return DECLINED
   std::string session_id = "";
-  get_session_id(r, std::string(s_cfg->cookie_name), session_id);
+  modauthopenid::get_session_id(r, std::string(s_cfg->cookie_name), session_id);
   if(session_id != "" && s_cfg->use_cookie) {
     modauthopenid::debug("found session_id in cookie: " + session_id);
     modauthopenid::SESSION session;
@@ -415,7 +323,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
     consumer.close();
     if(!is_trusted_provider(s_cfg , re_direct) || is_distrusted_provider(s_cfg, re_direct))
        return show_input(r, s_cfg, modauthopenid::idp_not_trusted);
-    return http_redirect(r, re_direct);
+    return modauthopenid::http_redirect(r, re_direct);
   } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
     // make sure nonce is present
     if(!params.has_param("openid.nonce"))
@@ -459,7 +367,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
 	else
 	  apr_cpystrn(r->args, args.c_str(), 1024);
 	full_uri(r, redirect_location, s_cfg);
-	return http_redirect(r, redirect_location);
+	return modauthopenid::http_redirect(r, redirect_location);
       }
       
       // if we're not setting cookie - don't redirect, just show page

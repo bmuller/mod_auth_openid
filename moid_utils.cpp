@@ -239,4 +239,10 @@ namespace modauthopenid {
     }
     return (pcre_exec(re, NULL, subject.c_str(), subject.size(), 0, 0, NULL, 0) >= 0);
   };
+
+  void strip(std::string& s) {
+    while(!s.empty() && s.substr(0,1) == " ") s.erase(0,1);
+    while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
+  };
+
 }
