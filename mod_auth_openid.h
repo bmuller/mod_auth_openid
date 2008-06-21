@@ -47,6 +47,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include <time.h>
 #include <string>
 #include <vector>
+#include <sqlite3.h>
 
 /* overwrite package vars set by apache */
 #undef PACKAGE_BUGREPORT
@@ -55,7 +56,6 @@ Created by bmuller <bmuller@butterfat.net>
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include "config.h"
-#include "storage/storage.h"
 
 namespace modauthopenid {
   using namespace opkele;
@@ -63,37 +63,38 @@ namespace modauthopenid {
 
   enum error_result_t { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
 
-  class MoidConsumer {
-  public:
-    MoidConsumer(const string& storage_location) : mc(storage_location) {};
-    assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
-    assoc_t retrieve_assoc(const string& server,const string& handle);
-    void invalidate_assoc(const string& server,const string& handle);
-    assoc_t find_assoc(const string& server);
-    void print_db();
-    int num_records();
-    void close();
-    string checkid_setup(const string& identity,const string& return_to,const string& trust_root,extension_t *ext=0);
-    void id_res(const params_t& pin,const string& identity="",extension_t *ext=0);
-  private:
-  MoidConsumerSQLite mc;
-  string url, asnonceid;
-  };
+  typedef struct session {
+    char session_id[33];
+    char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
+    char path[255];
+    char identity[255];
+    int expires_on; // exact moment it expires
+  } SESSION;
+
+  typedef struct nonce {
+    int expires_on; // exact moment it expires
+    char identity[255]; // identity nonce is good for
+  } NONCE;
 
   class SessionManager {
   public:
-    SessionManager(const string& storage_location) : sm(storage_location) {};
+    SessionManager(const string& storage_location);
+    ~SessionManager() { close(); };
     void get_session(const string& session_id, SESSION& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
     int num_records();
     void close();
   private:
-  SessionManagerSQLite sm;
+    sqlite3 *db;
+    void ween_expired();
+    bool is_closed;
+    bool test_result(int result, const string& context);
   };
 
   class NonceManager {
   public:
-    NonceManager(const string& storage_location) : nm(storage_location) {};
+    NonceManager(const string& storage_location);
+    ~NonceManager() { close(); };
     bool is_valid(const string& nonce, bool delete_on_find = false);
     void add(const string& nonce, const string& identity);
     void delete_nonce(const string& nonce);
@@ -101,8 +102,30 @@ namespace modauthopenid {
     int num_records();
     void close();
   private:
-  NonceManagerSQLite nm;
+    sqlite3 *db;
+    void ween_expired();
+    bool test_result(int result, const string& context);
+    bool is_closed;
   };
+
+  class MoidConsumer : public opkele::consumer_t {
+  public:
+    MoidConsumer(const string& storage_location);
+    virtual ~MoidConsumer() { close(); };
+    assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
+    assoc_t retrieve_assoc(const string& server,const string& handle);
+    void invalidate_assoc(const string& server,const string& handle);
+    assoc_t find_assoc(const string& server);
+    void print_db();
+    int num_records();
+    void close();
+  private:
+    sqlite3 *db;
+    void ween_expired();
+    bool test_result(int result, const string& context);
+    bool is_closed;
+  };
+
 
   // in moid_utils.cpp
   string error_to_string(error_result_t e, bool use_short_string);
