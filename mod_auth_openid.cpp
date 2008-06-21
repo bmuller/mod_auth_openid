@@ -297,13 +297,13 @@ static int mod_authopenid_method_handler(request_rec *r) {
     apr_cpystrn(r->args, args.c_str(), 1024);
     if(!modauthopenid::is_valid_url(identity))
       return show_input(r, s_cfg, modauthopenid::invalid_id_url);
-    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));     
     std::string return_to, trust_root, re_direct;
     full_uri(r, return_to, s_cfg);
     if(s_cfg->trust_root == NULL)
       base_dir(return_to, trust_root);
     else
       trust_root = std::string(s_cfg->trust_root);
+    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), std::string("blah"), return_to);
     try {
       re_direct = consumer.checkid_setup(identity, return_to, trust_root);
     } catch (opkele::exception &e) {
@@ -319,7 +319,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
     // make sure nonce is present
     if(!params.has_param("openid.nonce"))
       return show_input(r, s_cfg, modauthopenid::invalid_nonce);
-    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location));
+    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), std::string("blah"), std::string("blah"));
     try {
       consumer.id_res(params);
       consumer.close();

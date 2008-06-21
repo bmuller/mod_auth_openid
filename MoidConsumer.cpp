@@ -31,125 +31,106 @@ namespace modauthopenid {
   using namespace std;
   using namespace opkele;
  
-  MoidConsumer::MoidConsumer(const string& storage_location) { //, 
-			     //const string& _url, const string& _asnonceid) : url(_url), asnonceid(_asnonceid) {
-    is_closed = false;
+  MoidConsumer::MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl) :
+                             asnonceid(_asnonceid), is_closed(false), serverurl(_serverurl) {
     int rc = sqlite3_open(storage_location.c_str(), &db);
-    char *errMsg;
     if(!test_result(rc, "problem opening database"))
       return;
+
     string query = "CREATE TABLE IF NOT EXISTS authentication_sessions "
       "(nonce VARCHAR(255), server VARCHAR(255), handle VARCHAR(100), secret VARCHAR(30), expires_on INT, identity VARCHAR(255))";
-    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
+    test_result(rc, "problem creating sessions table if it didn't exist already");
+
+    query = "CREATE TABLE IF NOT EXISTS associations "
+      "(server VARCHAR(255), handle VARCHAR(100), encryption_type VARCHAR(50), secret VARCHAR(30), expires_on INT)";
+    rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
     test_result(rc, "problem creating associations table if it didn't exist already");
   };
 
-  assoc_t MoidConsumer::store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in) {
-    debug("Storing server \"" + server + "\" and handle \"" + handle + "\" in db");
+
+  assoc_t MoidConsumer::store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in) {
+    debug("Storing association for \"" + server + "\" and handle \"" + handle + "\" in db");
     ween_expired();
-    char *errMsg;
-    string secret_b64;
-    secret.to_base64(secret_b64);
+
     time_t rawtime;
     time (&rawtime);
-    string id = server + " " + handle;
-    string s_expires_on;
-    int_to_string((rawtime + expires_in), s_expires_on);
-    string query = "INSERT INTO associations (id, server, handle, secret, expires_on) VALUES("
-      "\"" + id.substr(0, 254) + "\", "
-      "\"" + server + "\", "
-      "\"" + handle + "\", "
-      "\"" + secret_b64 + "\", " + s_expires_on + ")"; 
-    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
-    test_result(rc, "problem storing association in associations table");
     int expires_on = rawtime + expires_in;
-    return assoc_t(new association(server, handle, "assoc type", secret, expires_on, false));
+
+    char *query = "INSERT INTO assocations (server, handle, secret, expires_on, encryption_type) VALUES(%Q,%Q,%Q,%d,%Q)";
+    char *sql = sqlite3_mprintf(query, 
+				server.c_str(), 
+				handle.c_str(), 
+				util::encode_base64(&(secret.front()),secret.size()).c_str(),
+				expires_on,
+				type.c_str());
+    int rc = sqlite3_exec(db, sql, 0, 0, 0);
+    sqlite3_free(sql);
+    test_result(rc, "problem storing association in associations table");
+
+    return assoc_t(new association(server, handle, type, secret, expires_on, false));
   };
 
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle) {
     ween_expired();
     debug("looking up association: server = " + server + " handle = " + handle);
-    sqlite3_stmt *pSelect;
-    string id = server + " " + handle;
-    string query = "SELECT * FROM associations WHERE id = \"" + id + "\"";
-    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
-    if( rc!=SQLITE_OK || !pSelect ){
-      debug("error preparing sql query: " + query);
-      throw failed_lookup(OPKELE_CP_ "Could not find association due to db error.");
-    }
-    rc = sqlite3_step(pSelect);
-    if(rc != SQLITE_ROW){
+
+    char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q AND handle=%Q LIMIT 1";
+    char *sql = sqlite3_mprintf(query, server.c_str(), handle.c_str());
+    int nr, nc;
+    char **table;
+    int rc = sqlite3_get_table(db, sql, table, nr, nc, 0);
+    sqlite3_free(sql);
+    test_result(rc, "problem fetching association");
+    if(nr ==0) {
       debug("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
-      rc = sqlite3_finalize(pSelect);
+      sqlite3_free_table(table);
       throw failed_lookup(OPKELE_CP_ "Could not find association.");
     }
-
-    char c_key[255];
-    char c_server[255];
-    char c_handle[100];
-    char c_secret[30];
-    snprintf(c_key, 255, "%s", sqlite3_column_text(pSelect, 0));
-    snprintf(c_server, 255, "%s", sqlite3_column_text(pSelect, 1));
-    snprintf(c_handle, 100, "%s", sqlite3_column_text(pSelect, 2));
-    snprintf(c_secret, 30, "%s", sqlite3_column_text(pSelect, 3));
-    int expires_on = sqlite3_column_int(pSelect, 4);
-    time_t rawtime;
-    time (&rawtime);
-    secret_t secret;
-    secret.from_base64(c_secret);
-    rc = sqlite3_finalize(pSelect);
-    return assoc_t(new association(c_server, c_handle, "assoc type", secret, expires_on, false));
+    // resulting row has table indexes: 
+    // server  handle  secret  expires_on  encryption_type
+    // 5       6       7       8           9
+    secret_t secret; 
+    util::decode_base64(table[7], secret);
+    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8])));
+    sqlite3_free_table(table);
+    return result;
   };
 
   void MoidConsumer::invalidate_assoc(const string& server,const string& handle) {
     debug("invalidating association: server = " + server + " handle = " + handle);
-    char *errMsg;
-    string id = server + " " + handle;
-    string query = "DELETE FROM associations WHERE id = \"" + id + "\"";
-    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    char *query = sqlite3_mprintf("DELETE FROM associations WHERE server=%Q AND handle=%Q", server.c_str(), handle.c_str());
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
+    sqlite3_free(query);
     test_result(rc, "problem invalidating assocation for server \"" + server + "\" and handle \"" + handle + "\"");
   };
 
   assoc_t MoidConsumer::find_assoc(const string& server) {
     ween_expired();
-    debug("looking for any association with server = " + server);
-    time_t rawtime;
-    time (&rawtime);
-    sqlite3_stmt *pSelect;
-    string query = "SELECT * FROM associations";
-    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
-    if( rc!=SQLITE_OK || !pSelect ){
-      debug("error preparing sql query: " + query);
-      throw failed_lookup(OPKELE_CP_ "Could not find a valid handle due to db error."); 
+    debug("looking up association: server = " + server + " handle = " + handle);
+
+    char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q LIMIT 1";
+    char *sql = sqlite3_mprintf(query, server.c_str(), handle.c_str());
+    int nr, nc;
+    char **table;
+    int rc = sqlite3_get_table(db, sql, table, nr, nc, 0);
+    sqlite3_free(sql);
+    test_result(rc, "problem fetching association");
+    if(nr==0) {
+      debug("could not find handle for server \"" + server + "\" in db.");
+      sqlite3_free_table(table);
+      throw failed_lookup(OPKELE_CP_ "Could not find association.");
+    } else {
+      debug("found a handle for server \"" + server + "\" in db.");
     }
-    char c_key[255];
-    char c_server[255];
-    char c_handle[100];
-    char c_secret[30];
-    int expires_on;
-    vector<string> parts;
-    rc = sqlite3_step(pSelect);
-    while(rc == SQLITE_ROW){
-      snprintf(c_key, 255, "%s", sqlite3_column_text(pSelect, 0));
-      snprintf(c_server, 255, "%s", sqlite3_column_text(pSelect, 1));
-      snprintf(c_handle, 100, "%s", sqlite3_column_text(pSelect, 2));
-      snprintf(c_secret, 30, "%s", sqlite3_column_text(pSelect, 3));
-      expires_on = sqlite3_column_int(pSelect, 4);
-      parts = explode(string(c_key), " ");
-      // If server url we were given matches the current record, and it still has
-      // at least five minutes until it expires (to give the user time to be redirected -> there -> back)
-      if(parts.size()==2 && parts[0] == server && rawtime < (expires_on + 18000)) {
-	debug("....found one");
-	rc = sqlite3_finalize(pSelect);
-	secret_t secret;
-	secret.from_base64(c_secret);
-	auto_ptr<association_t> a(new association(c_server, c_handle, "assoc type", secret, expires_on, false));
-	return a;
-      }    
-      rc = sqlite3_step(pSelect);
-    } 
-    rc = sqlite3_finalize(pSelect);
-    throw failed_lookup(OPKELE_CP_ "Could not find a valid handle."); 
+    // resulting row has table indexes: 
+    // server  handle  secret  expires_on  encryption_type
+    // 5       6       7       8           9
+    secret_t secret; 
+    util::decode_base64(table[7], secret);
+    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8])));
+    sqlite3_free_table(table);
+    return result;
   };
 
   bool MoidConsumer::test_result(int result, const string& context) {
@@ -166,12 +147,53 @@ namespace modauthopenid {
   void MoidConsumer::ween_expired() {
     time_t rawtime;
     time (&rawtime);
-    char *errMsg;
-    string s_time;
-    int_to_string(rawtime, s_time);
-    string query = "DELETE FROM associations WHERE " + s_time + " > expires_on";
-    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    char *query = sqlite3_mprintf("DELETE FROM associations WHERE %d > expires_on", rawtime);
+    int rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
+    sqlite3_free(query);
     test_result(rc, "problem weening expired sessions from table");
+  };
+
+  void check_nonce(const string& server, const string& nonce) {
+  };
+
+  void begin_queueing() {
+    endpoint_set = false;
+  };
+
+  void queue_endpoint(const openid_endpoint_t& ep) {
+    debug("Queueing endpoint " + ep.claimed_id + " : " + ep.local_id + " @ " + ep.uri);
+    endpoint = ep;
+    endpoint_set = true;
+    /*
+    sqlite3_mem_t<char*> S = sqlite3_mprintf(
+                    "INSERT INTO endpoints_queue"
+                    " (as_id,eq_ctime,eq_ordinal,eq_uri,eq_claimed_id,eq_local_id)"
+                    " VALUES (%ld,strftime('%%s','now'),%d,%Q,%Q,%Q)",
+                    as_id,ordinal++,
+                    ep.uri.c_str(),ep.claimed_id.c_str(),ep.local_id.c_str());
+    db.exec(S);
+    */
+  }
+
+  const openid_endpoint_t& get_endpoint() const {
+    if(!endpoint_set)
+      throw opkele::exception(OPKELE_CP_ "No more endpoints queued");
+    return endpoint;
+  };
+
+  void next_endpoint() {
+  };
+
+  void set_normalized_id(const string& nid) {
+    idurl = nid;
+  };
+
+  const string get_normalized_id() const {
+    return idurl;
+  };
+
+  const string get_this_url() const {
+    return serverurl;
   };
 
   // This is a method to be used by a utility program, never the apache module

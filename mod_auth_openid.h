@@ -110,9 +110,9 @@ namespace modauthopenid {
 
   class MoidConsumer : public opkele::consumer_t {
   public:
-    MoidConsumer(const string& storage_location);
+    MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl);
     virtual ~MoidConsumer() { close(); };
-    assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
+    assoc_t store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in);
     assoc_t retrieve_assoc(const string& server,const string& handle);
     void invalidate_assoc(const string& server,const string& handle);
     assoc_t find_assoc(const string& server);
@@ -123,7 +123,9 @@ namespace modauthopenid {
     sqlite3 *db;
     void ween_expired();
     bool test_result(int result, const string& context);
-    bool is_closed;
+    bool is_closed, endpoint_set;
+    string asnonceid, idurl, serverurl; 
+    openid_endpoint_t endpoint;
   };
 
 
