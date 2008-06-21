@@ -67,15 +67,6 @@ static void base_dir(std::string path, std::string& s) {
   s = path.substr(0, i+1);
 }
 
-// make a random alpha-numeric string size characters long
-static void make_rstring(int size, std::string& s) {
-  s = "";
-  const char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  srand((unsigned) time(0));
-  for(int index=0; index<size; index++)
-    s += cs[rand()%62];
-}
-
 static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
@@ -297,7 +288,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
     params = modauthopenid::remove_openid_vars(params);
     modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
     std::string nonce;
-    make_rstring(10, nonce);
+    modauthopenid::make_rstring(10, nonce);
     nm.add(nonce, identity);
     nm.close();
     params["openid.nonce"] = nonce;
@@ -348,7 +339,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
       if(s_cfg->use_cookie) {
 	// now set auth cookie, if we're doing session based auth
 	std::string session_id, hostname, path, cookie_value, redirect_location, args;
-	make_rstring(32, session_id);
+	modauthopenid::make_rstring(32, session_id);
 	base_dir(std::string(r->uri), path);
 	modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan); 
 	modauthopenid::debug("setting cookie: " + cookie_value);

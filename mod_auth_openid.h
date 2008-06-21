@@ -76,11 +76,8 @@ namespace modauthopenid {
     string checkid_setup(const string& identity,const string& return_to,const string& trust_root,extension_t *ext=0);
     void id_res(const params_t& pin,const string& identity="",extension_t *ext=0);
   private:
-#ifdef SQLITE
-    MoidConsumerSQLite mc;
-#else
-    MoidConsumerBDB mc;
-#endif
+  MoidConsumerSQLite mc;
+  string url, asnonceid;
   };
 
   class SessionManager {
@@ -91,11 +88,7 @@ namespace modauthopenid {
     int num_records();
     void close();
   private:
-#ifdef SQLITE
-    SessionManagerSQLite sm;
-#else
-    SessionManagerBDB sm;
-#endif
+  SessionManagerSQLite sm;
   };
 
   class NonceManager {
@@ -108,11 +101,7 @@ namespace modauthopenid {
     int num_records();
     void close();
   private:
-#ifdef SQLITE
-    NonceManagerSQLite nm;
-#else
-    NonceManagerBDB nm;
-#endif   
+  NonceManagerSQLite nm;
   };
 
   // in moid_utils.cpp
@@ -135,6 +124,7 @@ namespace modauthopenid {
   bool regex_match(string subject, string pattern);
   void print_to_error_log(string s);
   void strip(string& s);
+  void make_rstring(int size, string& s);
 
   // in http_helpers.cpp
   int http_sendstring(request_rec *r, string s);

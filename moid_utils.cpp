@@ -245,4 +245,11 @@ namespace modauthopenid {
     while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
   };
 
+  // make a random alpha-numeric string size characters long                                                                                                  void make_rstring(int size, string& s) {
+    s = "";
+    const char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    srand((unsigned) time(0));
+    for(int index=0; index<size; index++)
+      s += cs[rand()%62];
+  }
 }

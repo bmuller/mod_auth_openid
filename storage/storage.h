@@ -25,11 +25,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
-#ifdef SQLITE
 #include <sqlite3.h>
-#else
-#include <db_cxx.h>
-#endif
 
 namespace modauthopenid {
   using namespace opkele;
@@ -48,14 +44,7 @@ namespace modauthopenid {
     char identity[255]; // identity nonce is good for
   } NONCE;
 
-  typedef struct bdb_association {
-    char server[255];
-    char handle[100];
-    char secret[30];
-    int expires_on; // exact moment it expires
-  } BDB_ASSOC;
 
-#ifdef SQLITE  
   class SessionManagerSQLite {
   public:
     SessionManagerSQLite(const string& storage_location);
@@ -88,14 +77,20 @@ namespace modauthopenid {
     bool is_closed;
   };
 
-  class MoidConsumerSQLite : public opkele::consumer_t {
+  class MoidConsumerSQLite : public opkele::prequeue_RP {
   public:
     MoidConsumerSQLite(const string& storage_location);
     virtual ~MoidConsumerSQLite() { close(); };
-    assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
+    assoc_t store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in);
     assoc_t retrieve_assoc(const string& server,const string& handle);
     void invalidate_assoc(const string& server,const string& handle);
     assoc_t find_assoc(const string& server);
+    void begin_queueing();
+    void queue_endpoint(const openid_endpoint_t& oep);
+    void end_queueing();
+    void set_normalized_id(const string& nid);
+    const string get_normalized_id() const;
+    const string get_this_url() const;
     void print_db();
     int num_records();
     void close();
@@ -106,54 +101,5 @@ namespace modauthopenid {
     bool is_closed;
   };
 
-#else
-
-  class SessionManagerBDB {
-  public:
-    SessionManagerBDB(const string& storage_location);
-    ~SessionManagerBDB() { close(); };
-    void get_session(const string& session_id, SESSION& session);
-    void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
-    int num_records();
-    void close();
-  private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
-  };  
-
-  class NonceManagerBDB {
-  public:
-    NonceManagerBDB(const string& storage_location);
-    ~NonceManagerBDB() { close(); };
-    bool is_valid(const string& nonce, bool delete_on_find);
-    void add(const string& nonce, const string& identity);
-    void delete_nonce(const string& nonce);
-    void get_identity(const string& nonce, string& identity);
-    int num_records();
-    void close();
-  private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
-  };
-
-  class MoidConsumerBDB : public opkele::consumer_t {
-  public:
-    MoidConsumerBDB(const string& storage_location);
-    virtual ~MoidConsumerBDB() { close(); };
-    assoc_t store_assoc(const string& server,const string& handle,const secret_t& secret,int expires_in);
-    assoc_t retrieve_assoc(const string& server,const string& handle);
-    void invalidate_assoc(const string& server,const string& handle);
-    assoc_t find_assoc(const string& server);
-    void print_db();
-    int num_records();
-    void close();
-  private:
-    Db db_;
-    void ween_expired();
-    bool is_closed;
-  };
-#endif
 }
 

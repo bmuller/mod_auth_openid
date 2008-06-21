@@ -31,14 +31,15 @@ namespace modauthopenid {
   using namespace std;
   using namespace opkele;
  
-  MoidConsumerSQLite::MoidConsumerSQLite(const string& storage_location) {
+  MoidConsumerSQLite::MoidConsumerSQLite(const string& storage_location, 
+					 const string& _url, const string& _asnonceid) : url(_url), asnonceid(_asnonceid) {
     is_closed = false;
     int rc = sqlite3_open(storage_location.c_str(), &db);
     char *errMsg;
     if(!test_result(rc, "problem opening database"))
       return;
-    string query = "CREATE TABLE IF NOT EXISTS associations "
-      "(id VARCHAR(255), server VARCHAR(255), handle VARCHAR(100), secret VARCHAR(30), expires_on INT)";
+    string query = "CREATE TABLE IF NOT EXISTS authentication_sessions "
+      "(nonce VARCHAR(255), server VARCHAR(255), handle VARCHAR(100), secret VARCHAR(30), expires_on INT, identity VARCHAR(255))";
     rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
     test_result(rc, "problem creating associations table if it didn't exist already");
   };
