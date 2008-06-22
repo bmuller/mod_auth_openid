@@ -41,9 +41,27 @@ Created by bmuller <bmuller@butterfat.net>
 #include <curl/curl.h>
 #include <pcre.h>
 #include <algorithm>
+
+
+#include <opkele/exception.h>
+#include <opkele/types.h>
+#include <opkele/util.h>
+#include <opkele/uris.h>
+#include <opkele/discovery.h>
+#include <opkele/association.h>
+#include <opkele/sreg.h>
+#include <opkele/prequeue_rp.h>
+
+/*
 #include <opkele/consumer.h>
 #include <opkele/association.h>
 #include <opkele/exception.h>
+#include <opkele/prequeue_rp.h>
+#include <opkele/sreg.h>
+#include <opkele/util.h>
+#include <opkele/types.h>
+*/
+
 #include <time.h>
 #include <string>
 #include <vector>
@@ -108,7 +126,7 @@ namespace modauthopenid {
     bool is_closed;
   };
 
-  class MoidConsumer : public opkele::consumer_t {
+  class MoidConsumer : public prequeue_RP {
   public:
     MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl);
     virtual ~MoidConsumer() { close(); };
@@ -116,6 +134,14 @@ namespace modauthopenid {
     assoc_t retrieve_assoc(const string& server,const string& handle);
     void invalidate_assoc(const string& server,const string& handle);
     assoc_t find_assoc(const string& server);
+    void check_nonce(const string& OP,const string& nonce);
+    void begin_queueing();
+    void queue_endpoint(const openid_endpoint_t& ep);
+    const openid_endpoint_t& get_endpoint() const;
+    void next_endpoint();
+    void set_normalized_id(const string& nid);
+    const string get_normalized_id() const;
+    const string get_this_url() const;
     void print_db();
     int num_records();
     void close();
@@ -124,8 +150,8 @@ namespace modauthopenid {
     void ween_expired();
     bool test_result(int result, const string& context);
     bool is_closed, endpoint_set;
-    string asnonceid, idurl, serverurl; 
-    openid_endpoint_t endpoint;
+    string asnonceid, normalized_id, serverurl; 
+    mutable openid_endpoint_t endpoint;
   };
 
 
@@ -136,7 +162,6 @@ namespace modauthopenid {
   vector<string> explode(string s, string e);
   string str_replace(string needle, string replacement, string haystack);
   string html_escape(string s);
-  bool is_valid_url(string url);
   string url_decode(const string& str);
   params_t remove_openid_vars(params_t params);
   string get_base_url(string url);

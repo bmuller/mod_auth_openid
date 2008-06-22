@@ -134,22 +134,6 @@ namespace modauthopenid {
     return params;
   }
 
-  bool is_valid_url(string url) {
-    // taken from http://www.osix.net/modules/article/?id=586
-    string regex = "^(https?://)"
-      "(([0-9]{1,3}\\.){3}[0-9]{1,3}" // IP- 199.194.52.184
-      "|" // allows either IP or domain or "localhost"
-      "localhost"
-      "|"
-      "([0-9a-z_!~*'()-]+\\.)*" // tertiary domain(s)- www.
-      "([0-9a-z][0-9a-z-]{0,61})?[0-9a-z]\\." // second level domain
-      "[a-z]{2,6})" // first level domain- .com or .museum
-      "(:[0-9]{1,4})?" // port number- :80
-      "((/?)|" // a slash isn't required if there is no file name
-      "(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)$";
-    return regex_match(url, regex);
-  }
-
   // This isn't a true html_escape function, but rather escapes just enough to get by for
   // quoted values - <blah name="stuff to be escaped">
   string html_escape(string s) {

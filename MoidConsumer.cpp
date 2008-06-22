@@ -32,13 +32,13 @@ namespace modauthopenid {
   using namespace opkele;
  
   MoidConsumer::MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl) :
-                             asnonceid(_asnonceid), is_closed(false), serverurl(_serverurl) {
+                             asnonceid(_asnonceid), is_closed(false), serverurl(_serverurl), endpoint_set(false) {
     int rc = sqlite3_open(storage_location.c_str(), &db);
     if(!test_result(rc, "problem opening database"))
       return;
 
     string query = "CREATE TABLE IF NOT EXISTS authentication_sessions "
-      "(nonce VARCHAR(255), server VARCHAR(255), handle VARCHAR(100), secret VARCHAR(30), expires_on INT, identity VARCHAR(255))";
+      "(nonce VARCHAR(255), uri VARCHAR(255), claimed_id VARCHAR(255), local_id VARCHAR(255), normalized_id VARCHAR(255) expires_on INT)";
     rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
     test_result(rc, "problem creating sessions table if it didn't exist already");
 
@@ -57,7 +57,7 @@ namespace modauthopenid {
     time (&rawtime);
     int expires_on = rawtime + expires_in;
 
-    char *query = "INSERT INTO assocations (server, handle, secret, expires_on, encryption_type) VALUES(%Q,%Q,%Q,%d,%Q)";
+    const char *query = "INSERT INTO assocations (server, handle, secret, expires_on, encryption_type) VALUES(%Q,%Q,%Q,%d,%Q)";
     char *sql = sqlite3_mprintf(query, 
 				server.c_str(), 
 				handle.c_str(), 
@@ -75,11 +75,11 @@ namespace modauthopenid {
     ween_expired();
     debug("looking up association: server = " + server + " handle = " + handle);
 
-    char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q AND handle=%Q LIMIT 1";
+    const char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q AND handle=%Q LIMIT 1";
     char *sql = sqlite3_mprintf(query, server.c_str(), handle.c_str());
     int nr, nc;
     char **table;
-    int rc = sqlite3_get_table(db, sql, table, nr, nc, 0);
+    int rc = sqlite3_get_table(db, sql, &table, &nr, &nc, 0);
     sqlite3_free(sql);
     test_result(rc, "problem fetching association");
     if(nr ==0) {
@@ -92,7 +92,7 @@ namespace modauthopenid {
     // 5       6       7       8           9
     secret_t secret; 
     util::decode_base64(table[7], secret);
-    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8])));
+    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8], 0, 0), false));
     sqlite3_free_table(table);
     return result;
   };
@@ -107,13 +107,13 @@ namespace modauthopenid {
 
   assoc_t MoidConsumer::find_assoc(const string& server) {
     ween_expired();
-    debug("looking up association: server = " + server + " handle = " + handle);
+    debug("looking up association: server = " + server);
 
-    char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q LIMIT 1";
-    char *sql = sqlite3_mprintf(query, server.c_str(), handle.c_str());
+    const char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q LIMIT 1";
+    char *sql = sqlite3_mprintf(query, server.c_str());
     int nr, nc;
     char **table;
-    int rc = sqlite3_get_table(db, sql, table, nr, nc, 0);
+    int rc = sqlite3_get_table(db, sql, &table, &nr, &nc, 0);
     sqlite3_free(sql);
     test_result(rc, "problem fetching association");
     if(nr==0) {
@@ -128,7 +128,7 @@ namespace modauthopenid {
     // 5       6       7       8           9
     secret_t secret; 
     util::decode_base64(table[7], secret);
-    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8])));
+    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8], 0, 0), false));
     sqlite3_free_table(table);
     return result;
   };
@@ -148,51 +148,76 @@ namespace modauthopenid {
     time_t rawtime;
     time (&rawtime);
     char *query = sqlite3_mprintf("DELETE FROM associations WHERE %d > expires_on", rawtime);
-    int rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem weening expired sessions from table");
+    test_result(rc, "problem weening expired associations from table");
+    char *querytwo = sqlite3_mprintf("DELETE FROM authentication_sessions WHERE %d > expires_on", rawtime);
+    rc = sqlite3_exec(db, querytwo, 0, 0, 0);
+    sqlite3_free(querytwo);
+    test_result(rc, "problem weening expired authentication sessions from table");
   };
 
-  void check_nonce(const string& server, const string& nonce) {
+  void MoidConsumer::check_nonce(const string& server, const string& nonce) {
   };
 
-  void begin_queueing() {
+  void MoidConsumer::begin_queueing() {
     endpoint_set = false;
+    char *query = sqlite3_mprintf("DELETE FROM authentication_sessions WHERE nonce=%Q", asnonceid.c_str());
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
+    sqlite3_free(query);
+    test_result(rc, "problem reseting authentication session");
   };
 
-  void queue_endpoint(const openid_endpoint_t& ep) {
-    debug("Queueing endpoint " + ep.claimed_id + " : " + ep.local_id + " @ " + ep.uri);
-    endpoint = ep;
-    endpoint_set = true;
-    /*
-    sqlite3_mem_t<char*> S = sqlite3_mprintf(
-                    "INSERT INTO endpoints_queue"
-                    " (as_id,eq_ctime,eq_ordinal,eq_uri,eq_claimed_id,eq_local_id)"
-                    " VALUES (%ld,strftime('%%s','now'),%d,%Q,%Q,%Q)",
-                    as_id,ordinal++,
-                    ep.uri.c_str(),ep.claimed_id.c_str(),ep.local_id.c_str());
-    db.exec(S);
-    */
+  void MoidConsumer::queue_endpoint(const openid_endpoint_t& ep) {
+    if(!endpoint_set) {
+      debug("Queueing endpoint " + ep.claimed_id + " : " + ep.local_id + " @ " + ep.uri);
+      time_t rawtime;
+      time (&rawtime);
+      int expires_on = rawtime + 3600;  // allow nonce to exist for up to one hour without being returned
+      const char *query = "INSERT INTO authentication_sessions (nonce,uri,claimed_id,local_id,normalized_id,expires_on) VALUES(%Q,%Q,%Q,%Q,%Q,%d)";
+      char *sql = sqlite3_mprintf(query, asnonceid.c_str(), ep.uri.c_str(), ep.claimed_id.c_str(), normalized_id.c_str(), expires_on);
+      debug(string(sql));
+      int rc = sqlite3_exec(db, sql, 0, 0, 0);
+      sqlite3_free(sql);
+      test_result(rc, "problem queuing endpoint");
+      endpoint_set = true;
+    }
   }
 
-  const openid_endpoint_t& get_endpoint() const {
-    if(!endpoint_set)
+  const openid_endpoint_t& MoidConsumer::get_endpoint() const {
+    char *query = sqlite3_mprintf("SELECT uri,claimed_id,local_id FROM authentication_sessions WHERE nonce=%Q LIMIT 1", asnonceid.c_str());
+    int nr, nc;
+    char **table;
+    int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
+    sqlite3_free(query);
+    //test_result(rc, "problem fetching authentication session");
+    if(nr==0) {
+      debug("could not find an endpoint for authentication session \"" + asnonceid + "\" in db.");
+      sqlite3_free_table(table);
       throw opkele::exception(OPKELE_CP_ "No more endpoints queued");
+    } 
+    // resulting row has table indexes:                                                   
+    // uri   claimed_id   local_id
+    // 3     4            5
+    endpoint.uri = string(table[3]);
+    endpoint.claimed_id = string(table[4]);
+    endpoint.local_id = string(table[5]);
+    sqlite3_free_table(table);
     return endpoint;
   };
 
-  void next_endpoint() {
+  void MoidConsumer::next_endpoint() {
   };
 
-  void set_normalized_id(const string& nid) {
-    idurl = nid;
+  void MoidConsumer::set_normalized_id(const string& nid) {
+    normalized_id = nid;
   };
 
-  const string get_normalized_id() const {
-    return idurl;
+  const string MoidConsumer::get_normalized_id() const {
+    return normalized_id;
   };
 
-  const string get_this_url() const {
+  const string MoidConsumer::get_this_url() const {
     return serverurl;
   };
 

@@ -86,7 +86,7 @@ namespace modauthopenid {
     "an identity on one of the sites listed <a href=\"http://openid.net/get/\">here</a>.</p>"
       + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
     "<form action=\"\" method=\"get\">"
-    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
+    "<b>Identity URL:</b> <input type=\"text\" name=\"openid_identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
     "</form>"
     "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"

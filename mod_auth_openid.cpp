@@ -239,6 +239,8 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url)
 }
 
 static int mod_authopenid_method_handler(request_rec *r) {
+  return DECLINED;
+  
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
@@ -278,34 +280,41 @@ static int mod_authopenid_method_handler(request_rec *r) {
   // parse the get params
   opkele::params_t params;
   if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
-  std::string identity = (params.has_param("openid.identity")) ? opkele::consumer_t::normalize(params.get_param("openid.identity")) : "unknown";
+  std::string identity = (params.has_param("openid_identity")) ? params.get_param("openid_identity") : "unknown";
 
   // if user is posting id (only openid.identity will contain a value)
-  if(params.has_param("openid.identity") && !params.has_param("openid.assoc_handle")) {
+  if(params.has_param("openid_identity") && !params.has_param("openid_assoc_handle")) {
     // remove all openid GET query params (openid.*) - we don't want that maintained through
     // the redirection process.  We do, however, want to keep all aother GET params.
     // also, add a nonce for security
     params = modauthopenid::remove_openid_vars(params);
-    modauthopenid::NonceManager nm(std::string(s_cfg->db_location));
-    std::string nonce;
-    modauthopenid::make_rstring(10, nonce);
-    nm.add(nonce, identity);
-    nm.close();
-    params["openid.nonce"] = nonce;
-    //remove first char - ? to fit r->args standard
-    std::string args = params.append_query("", "").substr(1); 
-    apr_cpystrn(r->args, args.c_str(), 1024);
-    if(!modauthopenid::is_valid_url(identity))
-      return show_input(r, s_cfg, modauthopenid::invalid_id_url);
+
+    // get our current url and trust root
     std::string return_to, trust_root, re_direct;
     full_uri(r, return_to, s_cfg);
     if(s_cfg->trust_root == NULL)
       base_dir(return_to, trust_root);
     else
       trust_root = std::string(s_cfg->trust_root);
-    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), std::string("blah"), return_to);
+
+    // add a nonce
+    std::string nonce;
+    modauthopenid::make_rstring(10, nonce);
+    modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), nonce, return_to);    
+    params["openid.nonce"] = nonce;
+    //remove first char - ? to fit r->args standard
+    std::string args = params.append_query("", "").substr(1); 
+    apr_cpystrn(r->args, args.c_str(), 1024);
+
+    // get identity provider and redirect
     try {
-      re_direct = consumer.checkid_setup(identity, return_to, trust_root);
+      consumer.initiate(identity);
+      opkele::openid_message_t cm; 
+      opkele::sreg_t sreg(opkele::sreg_t::fields_NONE,opkele::sreg_t::fields_NONE);
+      re_direct = consumer.checkid_(cm, opkele::mode_checkid_setup, return_to, trust_root, &sreg).append_query(consumer.get_endpoint().uri);
+    } catch (opkele::bad_input &e) {
+      consumer.close();
+      return show_input(r, s_cfg, modauthopenid::invalid_id_url);
     } catch (opkele::exception &e) {
       consumer.close();
       modauthopenid::debug("Error while fetching idP location: " + std::string(e.what()));
