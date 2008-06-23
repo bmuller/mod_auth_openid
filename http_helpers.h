@@ -25,48 +25,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
+namespace modauthopenid {
+  using namespace opkele;
+  using namespace std;
 
-/* Apache includes. */
-#include "httpd.h"
-#include "http_core.h"
-#include "http_config.h"
-#include "apr_strings.h"
-#include "http_protocol.h"
-#include "http_main.h"
-#include "util_script.h"
-#include "ap_config.h"
-#include "http_log.h"
+  int http_sendstring(request_rec *r, string s);
+  int http_redirect(request_rec *r, string location);
+  int show_html_input(request_rec *r, string msg);
+  void get_session_id(request_rec *r, string cookie_name, string& session_id);
+  void base_dir(string path, string& s);
+}
 
-/* other general lib includes */
-#include <curl/curl.h>
-#include <pcre.h>
-#include <algorithm>
-#include <time.h>
-#include <string>
-#include <vector>
-#include <sqlite3.h>
 
-/* opkele includes */
-#include <opkele/exception.h>
-#include <opkele/types.h>
-#include <opkele/util.h>
-#include <opkele/uris.h>
-#include <opkele/discovery.h>
-#include <opkele/association.h>
-#include <opkele/sreg.h>
-#include <opkele/prequeue_rp.h>
-
-/* overwrite package vars set by apache */
-#undef PACKAGE_BUGREPORT
-#undef PACKAGE_NAME
-#undef PACKAGE_STRING
-#undef PACKAGE_TARNAME
-#undef PACKAGE_VERSION
-
-/* mod_auth_openid includes */
-#include "config.h"
-#include "types.h"
-#include "http_helpers.h"
-#include "moid_utils.h"
-#include "SessionManager.h"
-#include "MoidConsumer.h"

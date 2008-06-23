@@ -25,48 +25,29 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
+namespace modauthopenid {
+  using namespace opkele;
+  using namespace std;
 
-/* Apache includes. */
-#include "httpd.h"
-#include "http_core.h"
-#include "http_config.h"
-#include "apr_strings.h"
-#include "http_protocol.h"
-#include "http_main.h"
-#include "util_script.h"
-#include "ap_config.h"
-#include "http_log.h"
+  string error_to_string(error_result_t e, bool use_short_string);
+  string get_queryless_url(string url);
+  params_t parse_query_string(const string& str);
+  vector<string> explode(string s, string e);
+  string str_replace(string needle, string replacement, string haystack);
+  string html_escape(string s);
+  string url_decode(const string& str);
+  void remove_openid_vars(params_t& params);
+  string get_base_url(string url);
+  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan);
+  // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
+  // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
+  // apache redirects stderr to the error log anyway.
+  void debug(string s);
+  void int_to_string(int i, string& s);
+  bool regex_match(string subject, string pattern);
+  void print_to_error_log(string s);
+  void strip(string& s);
+  void make_rstring(int size, string& s);
+}
 
-/* other general lib includes */
-#include <curl/curl.h>
-#include <pcre.h>
-#include <algorithm>
-#include <time.h>
-#include <string>
-#include <vector>
-#include <sqlite3.h>
 
-/* opkele includes */
-#include <opkele/exception.h>
-#include <opkele/types.h>
-#include <opkele/util.h>
-#include <opkele/uris.h>
-#include <opkele/discovery.h>
-#include <opkele/association.h>
-#include <opkele/sreg.h>
-#include <opkele/prequeue_rp.h>
-
-/* overwrite package vars set by apache */
-#undef PACKAGE_BUGREPORT
-#undef PACKAGE_NAME
-#undef PACKAGE_STRING
-#undef PACKAGE_TARNAME
-#undef PACKAGE_VERSION
-
-/* mod_auth_openid includes */
-#include "config.h"
-#include "types.h"
-#include "http_helpers.h"
-#include "moid_utils.h"
-#include "SessionManager.h"
-#include "MoidConsumer.h"

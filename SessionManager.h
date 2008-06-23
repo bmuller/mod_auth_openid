@@ -25,48 +25,24 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
+namespace modauthopenid {
+  using namespace opkele;
+  using namespace std;
 
-/* Apache includes. */
-#include "httpd.h"
-#include "http_core.h"
-#include "http_config.h"
-#include "apr_strings.h"
-#include "http_protocol.h"
-#include "http_main.h"
-#include "util_script.h"
-#include "ap_config.h"
-#include "http_log.h"
+  class SessionManager {
+  public:
+    SessionManager(const string& storage_location);
+    ~SessionManager() { close(); };
+    void get_session(const string& session_id, SESSION& session);
+    void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
+    int num_records();
+    void close();
+  private:
+    sqlite3 *db;
+    void ween_expired();
+    bool is_closed;
+    bool test_result(int result, const string& context);
+  };
+}
 
-/* other general lib includes */
-#include <curl/curl.h>
-#include <pcre.h>
-#include <algorithm>
-#include <time.h>
-#include <string>
-#include <vector>
-#include <sqlite3.h>
 
-/* opkele includes */
-#include <opkele/exception.h>
-#include <opkele/types.h>
-#include <opkele/util.h>
-#include <opkele/uris.h>
-#include <opkele/discovery.h>
-#include <opkele/association.h>
-#include <opkele/sreg.h>
-#include <opkele/prequeue_rp.h>
-
-/* overwrite package vars set by apache */
-#undef PACKAGE_BUGREPORT
-#undef PACKAGE_NAME
-#undef PACKAGE_STRING
-#undef PACKAGE_TARNAME
-#undef PACKAGE_VERSION
-
-/* mod_auth_openid includes */
-#include "config.h"
-#include "types.h"
-#include "http_helpers.h"
-#include "moid_utils.h"
-#include "SessionManager.h"
-#include "MoidConsumer.h"

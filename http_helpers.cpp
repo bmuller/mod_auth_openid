@@ -58,7 +58,7 @@ namespace modauthopenid {
     opkele::params_t params;
     if(r->args != NULL)
       params = parse_query_string(std::string(r->args));
-    std::string identity = params.has_param("openid.identity") ? params.get_param("openid.identity") : "";
+    std::string identity = params.has_param("openid_identifier") ? params.get_param("openid_identifier") : "";
     remove_openid_vars(params);
     std::map<std::string,std::string>::iterator iter;
     std::string args = "";
@@ -86,7 +86,7 @@ namespace modauthopenid {
     "an identity on one of the sites listed <a href=\"http://openid.net/get/\">here</a>.</p>"
       + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
     "<form action=\"\" method=\"get\">"
-    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
+    "<b>Identity URL:</b> <input type=\"text\" name=\"openid_identifier\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
     "</form>"
     "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
@@ -114,6 +114,20 @@ namespace modauthopenid {
 	}
       }
     }
+  };
+
+  // get the base directory of the url
+  void base_dir(string path, string& s) {
+    // guaranteed that path will at least be "/" - but just to be safe... 
+    if(path.size() == 0)
+      return;
+    string::size_type q = path.find('?', 0);
+    int i;
+    if(q != string::npos)
+      i = path.find_last_of('/', q);
+    else
+      i = path.find_last_of('/');
+    s = path.substr(0, i+1);
   };
 
 }

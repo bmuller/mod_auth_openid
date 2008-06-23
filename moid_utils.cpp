@@ -122,7 +122,8 @@ namespace modauthopenid {
     map<string,string>::iterator iter;
     for(iter = params.begin(); iter != params.end(); iter++) {
       string param_key(iter->first);
-      if((param_key.substr(0, 7) == "openid." || param_key.substr(0, 14) == "modauthopenid.")
+      // if starts with openid. or modauthopenid. (for the nonce) or openid_identifier (the login)
+      if((param_key.substr(0, 7) == "openid." || param_key.substr(0, 14) == "modauthopenid." || param_key == "openid_identifier")
 	 && param_key.substr(0, 10) != "openid.ax."
 	 && param_key.substr(0, 12) != "openid.sreg.") {
 	params.erase(param_key);
