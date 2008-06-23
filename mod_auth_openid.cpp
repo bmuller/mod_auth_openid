@@ -295,7 +295,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
 
   // save session values
   modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
-  sm.store_session(session_id, hostname, path, identity);
+  sm.store_session(session_id, hostname, path, identity, s_cfg->cookie_lifespan);
   sm.close();
 
   modauthopenid::remove_openid_vars(params);

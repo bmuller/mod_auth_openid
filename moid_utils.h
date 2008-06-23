@@ -36,11 +36,11 @@ namespace modauthopenid {
   // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
   // apache redirects stderr to the error log anyway.
   void debug(string s);
-  void int_to_string(int i, string& s);
   bool regex_match(string subject, string pattern);
   void print_to_error_log(string s);
   void strip(string& s);
   void make_rstring(int size, string& s);
   void print_sqlite_table(sqlite3 *db, string tablename);
+  bool test_sqlite_return(sqlite3 *db, int result, const string& context);
 }
 

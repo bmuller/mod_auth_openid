@@ -34,7 +34,7 @@ namespace modauthopenid {
     SessionManager(const string& storage_location);
     ~SessionManager() { close(); };
     void get_session(const string& session_id, session_t& session);
-    void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
+    void store_session(const string& session_id, const string& hostname, const string& path, const string& identity, int lifespan);
     void print_table();
     void close();
   private:

@@ -32,7 +32,7 @@ namespace modauthopenid {
   using namespace opkele;
  
   MoidConsumer::MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl) :
-                             asnonceid(_asnonceid), is_closed(false), serverurl(_serverurl), endpoint_set(false), normalized_id("") {
+                             asnonceid(_asnonceid), serverurl(_serverurl), is_closed(false), endpoint_set(false), normalized_id("") {
     int rc = sqlite3_open(storage_location.c_str(), &db);
     if(!test_result(rc, "problem opening database"))
       return;
@@ -239,7 +239,7 @@ namespace modauthopenid {
     char **table;
     int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
     sqlite3_free(query);
-    //test_result(rc, "problem fetching authentication session");
+    test_sqlite_return(db, rc, "problem fetching authentication session");
     if(nr==0) {
       debug("could not find an endpoint for authentication session \"" + asnonceid + "\" in db.");
       sqlite3_free_table(table);
@@ -291,7 +291,7 @@ namespace modauthopenid {
     char **table;
     int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
     sqlite3_free(query);
-    //test_result(rc, "problem fetching authentication session");
+    test_sqlite_return(db, rc, "problem fetching authentication session");
     if(nr==0) {
       debug("could not find an normalized_id for authentication session \"" + asnonceid + "\" in db.");
       sqlite3_free_table(table);

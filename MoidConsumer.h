@@ -54,8 +54,8 @@ namespace modauthopenid {
     sqlite3 *db;
     void ween_expired();
     bool test_result(int result, const string& context);
-    bool is_closed, endpoint_set;
     string asnonceid, serverurl; 
+    bool is_closed, endpoint_set;
     mutable string normalized_id;
     mutable openid_endpoint_t endpoint;
   };

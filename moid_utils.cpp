@@ -87,7 +87,7 @@ namespace modauthopenid {
       break;
     }
     return (use_short_string) ? short_string : long_string;
-  }
+  };
 
   string str_replace(string needle, string replacement, string haystack) {
     vector<string> v = explode(haystack, needle);
@@ -96,7 +96,7 @@ namespace modauthopenid {
       r += v[i] + replacement;
     r += v[v.size()-1];
     return r;
-  }
+  };
 
   vector<string> explode(string s, string e) {
     vector<string> ret;
@@ -111,13 +111,7 @@ namespace modauthopenid {
     if(s!="")
       ret.push_back(s);
     return ret;
-  }
-
-  void int_to_string(int i, string& s) {
-    char c_int[100];
-    sprintf(c_int, "%ld", i);
-    s = string(c_int);
-  }
+  };
 
   bool regex_match(string subject, string pattern) {
     const char * error;
@@ -152,12 +146,21 @@ namespace modauthopenid {
     rc = sqlite3_get_table(db, sql.c_str(), &table, &nr, &nc, 0);
     fprintf(stdout, "There are %d rows.\n", nr);    
     size = (nr * nc) + nc;
-    for(unsigned int i=0; i<size; i++) {
+    for(int i=0; i<size; i++) {
       fprintf(stdout, "%s\t", table[i]);
       if(((i+1) % nc) == 0) 
 	fprintf(stdout, "\n");
     }
     fprintf(stdout, "\n");
     sqlite3_free_table(table);
+  };
+
+  bool test_sqlite_return(sqlite3 *db, int result, const string& context) {
+    if(result != SQLITE_OK){
+      string msg = "SQLite Error - " + context + ": %s\n";
+      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
+      return false;
+    }
+    return true;
   };
 }

@@ -31,7 +31,8 @@ namespace modauthopenid {
   using namespace std;
 
   int http_sendstring(request_rec *r, std::string s) {
-    // no idea why the following line only sometimes worked.....                                                                                                //apr_table_setn(r->headers_out, "Content-Type", "text/html");
+    // no idea why the following line only sometimes worked.....
+    //apr_table_setn(r->headers_out, "Content-Type", "text/html");
     ap_set_content_type(r, "text/html");
     const char *c_s = s.c_str();
     conn_rec *c = r->connection;
@@ -70,7 +71,7 @@ namespace modauthopenid {
     }
     std::string result =
     "<html><head><title>Protected Location</title><style type=\"text/css\">"
-    "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 5px; }\n"
+    "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 10px; }\n"
     "a { text-decoration: none; }\n"
     "a:hover { text-decoration: underline; }\n"
     "#desc { border: 1px solid #000; background: #ccc; padding: 10px; }\n"

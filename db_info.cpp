@@ -28,12 +28,14 @@ Created by bmuller <bmuller@butterfat.net>
 #include <iostream>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
 #include "mod_auth_openid.h"
 
 using namespace std;
 using namespace modauthopenid;
 
 void print_databases(string db_location) {
+  cout << "Current time: " << time(0) << endl;
   SessionManager s(db_location);
   s.print_table();
   s.close();
@@ -48,7 +50,6 @@ int main(int argc, char **argv) {
     cout << "usage: ./" << argv[0] << " <sqlite database location>";
     return -1;
   }
-  struct stat buffer ;
   if(access(argv[1], 0) == -1) {
     cout << "File \"" << argv[1] << "\" does not exist or cannot be read.\n";
     return -1;

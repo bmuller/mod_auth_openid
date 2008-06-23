@@ -74,11 +74,14 @@ namespace modauthopenid {
     return true;
   };
 
-  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity) {
+  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity, int lifespan) {
     ween_expired();
     time_t rawtime;
     time (&rawtime);
-    int expires_on = rawtime + 86400;
+
+    // lifespan will be 0 if not specified by user in config - so lasts as long as browser is open.  In this case, make it last for up to a day.
+    int expires_on = (lifespan == 0) ? (rawtime + 86400) : (rawtime + lifespan);
+
     const char* url = "INSERT INTO sessionmanager (session_id,hostname,path,identity,expires_on) VALUES(%Q,%Q,%Q,%Q,%d)";
     char *query = sqlite3_mprintf(url, session_id.c_str(), hostname.c_str(), path.c_str(), identity.c_str(), expires_on);
     debug(query);
@@ -90,11 +93,9 @@ namespace modauthopenid {
   void SessionManager::ween_expired() {
     time_t rawtime;
     time (&rawtime);
-    char *errMsg;
-    string s_time;
-    int_to_string(rawtime, s_time);
-    string query = "DELETE FROM sessionmanager WHERE " + s_time + " > expires_on";
-    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    char *query = sqlite3_mprintf("DELETE FROM sessionmanager WHERE %d > expires_on", rawtime);
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
+    sqlite3_free(query);
     test_result(rc, "problem weening expired sessions from table");
   };
 
