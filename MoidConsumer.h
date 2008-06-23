@@ -47,8 +47,7 @@ namespace modauthopenid {
     const string get_normalized_id() const;
     const string get_this_url() const;
     bool session_exists();
-    void print_db();
-    int num_records();
+    void print_tables();
     void close();
     void kill_session();
   private:

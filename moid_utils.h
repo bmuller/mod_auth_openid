@@ -41,5 +41,6 @@ namespace modauthopenid {
   void print_to_error_log(string s);
   void strip(string& s);
   void make_rstring(int size, string& s);
+  void print_sqlite_table(sqlite3 *db, string tablename);
 }
 

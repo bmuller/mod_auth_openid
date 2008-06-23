@@ -308,24 +308,11 @@ namespace modauthopenid {
   };
 
   // This is a method to be used by a utility program, never the apache module
-  int MoidConsumer::num_records() {
+  void MoidConsumer::print_tables() {
     ween_expired();
-    int number = 0;
-    sqlite3_stmt *pSelect;
-    string query = "SELECT COUNT(*) AS count FROM associations";
-    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
-    if( rc!=SQLITE_OK || !pSelect ){
-      debug("error preparing sql query: " + query);
-      return number;
-    }
-    rc = sqlite3_step(pSelect);
-    if(rc == SQLITE_ROW){
-      number = sqlite3_column_int(pSelect, 0);
-    } else {
-      debug("Problem fetching num records from associations table");
-    }
-    rc = sqlite3_finalize(pSelect);
-    return number;
+    print_sqlite_table(db, "authentication_sessions");
+    print_sqlite_table(db, "response_nonces");
+    print_sqlite_table(db, "associations");
   };
 
   void MoidConsumer::close() {

@@ -143,4 +143,21 @@ namespace modauthopenid {
     for(int index=0; index<size; index++)
       s += cs[rand()%62];
   }
+
+  void print_sqlite_table(sqlite3 *db, string tablename) {
+    fprintf(stdout, "Printing table: %s.  ", tablename.c_str());
+    string sql = "SELECT * FROM " + tablename;
+    int rc, nr, nc, size;
+    char **table;
+    rc = sqlite3_get_table(db, sql.c_str(), &table, &nr, &nc, 0);
+    fprintf(stdout, "There are %d rows.\n", nr);    
+    size = (nr * nc) + nc;
+    for(unsigned int i=0; i<size; i++) {
+      fprintf(stdout, "%s\t", table[i]);
+      if(((i+1) % nc) == 0) 
+	fprintf(stdout, "\n");
+    }
+    fprintf(stdout, "\n");
+    sqlite3_free_table(table);
+  };
 }

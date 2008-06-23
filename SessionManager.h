@@ -35,7 +35,7 @@ namespace modauthopenid {
     ~SessionManager() { close(); };
     void get_session(const string& session_id, session_t& session);
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity);
-    int num_records();
+    void print_table();
     void close();
   private:
     sqlite3 *db;

@@ -98,24 +98,10 @@ namespace modauthopenid {
     test_result(rc, "problem weening expired sessions from table");
   };
 
-  int SessionManager::num_records() {
+  // This is a method to be used by a utility program, never the apache module                 
+  void SessionManager::print_table() {
     ween_expired();
-    int number = 0;
-    sqlite3_stmt *pSelect;
-    string query = "SELECT COUNT(*) AS count FROM sessionmanager";
-    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
-    if( rc!=SQLITE_OK || !pSelect ){
-      debug("error preparing sql query: " + query);
-      return number;
-    }
-    rc = sqlite3_step(pSelect);
-    if(rc == SQLITE_ROW){
-       number = sqlite3_column_int(pSelect, 0);
-    } else {
-      debug("Problem fetching num records from sessionmanager table");
-    }
-    rc = sqlite3_finalize(pSelect);    
-    return number;
+    print_sqlite_table(db, "sessionmanager");
   };
 
   void SessionManager::close() {
