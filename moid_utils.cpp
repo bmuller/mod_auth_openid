@@ -118,20 +118,20 @@ namespace modauthopenid {
     return "";
   }
 
-  params_t remove_openid_vars(params_t params) {
+  void remove_openid_vars(params_t& params) {
     map<string,string>::iterator iter;
     for(iter = params.begin(); iter != params.end(); iter++) {
       string param_key(iter->first);
-      if(param_key.substr(0, 7) == "openid."
+      if((param_key.substr(0, 7) == "openid." || param_key.substr(0, 14) == "modauthopenid.")
 	 && param_key.substr(0, 10) != "openid.ax."
 	 && param_key.substr(0, 12) != "openid.sreg.") {
 	params.erase(param_key);
 	// stupid map iterator screws up if we just continue the iteration...
 	// so recursion to the rescue - we'll delete them one at a time
-	return remove_openid_vars(params);
+	remove_openid_vars(params);
+	return;
       } 
     }
-    return params;
   }
 
   // This isn't a true html_escape function, but rather escapes just enough to get by for

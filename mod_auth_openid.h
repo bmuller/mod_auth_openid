@@ -41,7 +41,10 @@ Created by bmuller <bmuller@butterfat.net>
 #include <curl/curl.h>
 #include <pcre.h>
 #include <algorithm>
-
+#include <time.h>
+#include <string>
+#include <vector>
+#include <sqlite3.h>
 
 #include <opkele/exception.h>
 #include <opkele/types.h>
@@ -51,21 +54,6 @@ Created by bmuller <bmuller@butterfat.net>
 #include <opkele/association.h>
 #include <opkele/sreg.h>
 #include <opkele/prequeue_rp.h>
-
-/*
-#include <opkele/consumer.h>
-#include <opkele/association.h>
-#include <opkele/exception.h>
-#include <opkele/prequeue_rp.h>
-#include <opkele/sreg.h>
-#include <opkele/util.h>
-#include <opkele/types.h>
-*/
-
-#include <time.h>
-#include <string>
-#include <vector>
-#include <sqlite3.h>
 
 /* overwrite package vars set by apache */
 #undef PACKAGE_BUGREPORT
@@ -94,6 +82,15 @@ namespace modauthopenid {
     char identity[255]; // identity nonce is good for
   } NONCE;
 
+  class modauthopenid_message_t : public params_t {
+  public:
+    modauthopenid_message_t(params_t& _bom) { bom = _bom; };
+    bool has_field(const string& n) const { return bom.has_param("openid."+n); };
+    const string& get_field(const string& n) const { return bom.get_param("openid."+n); };
+  private:
+    params_t bom;
+  };
+
   class SessionManager {
   public:
     SessionManager(const string& storage_location);
@@ -107,23 +104,6 @@ namespace modauthopenid {
     void ween_expired();
     bool is_closed;
     bool test_result(int result, const string& context);
-  };
-
-  class NonceManager {
-  public:
-    NonceManager(const string& storage_location);
-    ~NonceManager() { close(); };
-    bool is_valid(const string& nonce, bool delete_on_find = false);
-    void add(const string& nonce, const string& identity);
-    void delete_nonce(const string& nonce);
-    void get_identity(const string& nonce, string& identity);
-    int num_records();
-    void close();
-  private:
-    sqlite3 *db;
-    void ween_expired();
-    bool test_result(int result, const string& context);
-    bool is_closed;
   };
 
   class MoidConsumer : public prequeue_RP {
@@ -142,15 +122,18 @@ namespace modauthopenid {
     void set_normalized_id(const string& nid);
     const string get_normalized_id() const;
     const string get_this_url() const;
+    bool session_exists();
     void print_db();
     int num_records();
     void close();
+    void kill_session();
   private:
     sqlite3 *db;
     void ween_expired();
     bool test_result(int result, const string& context);
     bool is_closed, endpoint_set;
-    string asnonceid, normalized_id, serverurl; 
+    string asnonceid, serverurl; 
+    mutable string normalized_id;
     mutable openid_endpoint_t endpoint;
   };
 
@@ -163,7 +146,7 @@ namespace modauthopenid {
   string str_replace(string needle, string replacement, string haystack);
   string html_escape(string s);
   string url_decode(const string& str);
-  params_t remove_openid_vars(params_t params);
+  void remove_openid_vars(params_t& params);
   string get_base_url(string url);
   void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan);
   // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 

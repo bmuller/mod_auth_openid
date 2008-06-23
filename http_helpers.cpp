@@ -58,8 +58,8 @@ namespace modauthopenid {
     opkele::params_t params;
     if(r->args != NULL)
       params = parse_query_string(std::string(r->args));
-    std::string identity = (params.has_param("openid.identity")?params.get_param("openid.identity"):"");
-    params = remove_openid_vars(params);
+    std::string identity = params.has_param("openid.identity") ? params.get_param("openid.identity") : "";
+    remove_openid_vars(params);
     std::map<std::string,std::string>::iterator iter;
     std::string args = "";
     std::string key, value;
@@ -73,9 +73,9 @@ namespace modauthopenid {
     "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 5px; }\n"
     "a { text-decoration: none; }\n"
     "a:hover { text-decoration: underline; }\n"
-    "#desc { border: 1px solid #000; background: #ccc; }\n"
+    "#desc { border: 1px solid #000; background: #ccc; padding: 10px; }\n"
     "#sig { text-align: center; font-style: italic; margin-top: 50px; word-spacing: .3em; color: #777; }\n"
-      ".loginbox { background: url(http://www.openid.net/login-bg.gif) no-repeat; background-color: #fff; " // logo location is in 1.1 spec, should stay same  
+    ".loginbox { background: url(http://www.openid.net/login-bg.gif) no-repeat; background-color: #fff; " // logo location is in 1.1 spec, should stay same
     " background-position: 0 50%; color: #000; padding-left: 18px; }\n"
     "form { margin: 15px; }\n"
     "</style></head><body>"
@@ -86,7 +86,7 @@ namespace modauthopenid {
     "an identity on one of the sites listed <a href=\"http://openid.net/get/\">here</a>.</p>"
       + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
     "<form action=\"\" method=\"get\">"
-    "<b>Identity URL:</b> <input type=\"text\" name=\"openid_identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
+    "<b>Identity URL:</b> <input type=\"text\" name=\"openid.identity\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
     "</form>"
     "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"

@@ -1,4 +1,4 @@
-AC_INIT([mod_auth_openid], [0.2.1], [bmuller@butterfat.net])
+AC_INIT([mod_auth_openid], [0.3], [bmuller@butterfat.net])
 AC_DEFINE([PACKAGE_URL],["http://trac.butterfat.net/public/mod_auth_openid"],[project url])
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])

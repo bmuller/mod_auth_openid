@@ -63,7 +63,6 @@ namespace modauthopenid {
       debug("could not find session id " + session_id + " in db: session probably just expired");
     }
     rc = sqlite3_finalize(pSelect);
-    debug("your momma: " + string(session.identity));
   };
 
   bool SessionManager::test_result(int result, const string& context) {

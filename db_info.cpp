@@ -30,16 +30,6 @@ Created by bmuller <bmuller@butterfat.net>
 #include <unistd.h>
 #include "mod_auth_openid.h"
 
-#include <opkele/exception.h>
-#include <opkele/types.h>
-#include <opkele/util.h>
-#include <opkele/uris.h>
-#include <opkele/discovery.h>
-#include <opkele/association.h>
-#include <opkele/sreg.h>
-using namespace opkele;
-#include <opkele/prequeue_rp.h>
-
 using namespace std;
 using namespace modauthopenid;
 
@@ -50,7 +40,6 @@ void num_records(string db_location) {
   s.close();
 
   MoidConsumer c(db_location);
-
   cout << "There are " << c.num_records() << " records in the associations table.\n";
   c.close();
 
