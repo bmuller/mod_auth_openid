@@ -30,15 +30,8 @@ namespace modauthopenid {
   using namespace std;
 
   string error_to_string(error_result_t e, bool use_short_string);
-  string get_queryless_url(string url);
-  params_t parse_query_string(const string& str);
   vector<string> explode(string s, string e);
   string str_replace(string needle, string replacement, string haystack);
-  string html_escape(string s);
-  string url_decode(const string& str);
-  void remove_openid_vars(params_t& params);
-  string get_base_url(string url);
-  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan);
   // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
   // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
   // apache redirects stderr to the error log anyway.
@@ -49,5 +42,4 @@ namespace modauthopenid {
   void strip(string& s);
   void make_rstring(int size, string& s);
 }
-
 

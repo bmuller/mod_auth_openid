@@ -33,36 +33,34 @@ namespace modauthopenid {
   SessionManager::SessionManager(const string& storage_location) {
     is_closed = false;
     int rc = sqlite3_open(storage_location.c_str(), &db);
-    char *errMsg;
     if(!test_result(rc, "problem opening database"))
       return;
     string query = "CREATE TABLE IF NOT EXISTS sessionmanager "
       "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)";
-    rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
     test_result(rc, "problem creating table if it didn't exist already");
   };
 
-  void SessionManager::get_session(const string& session_id, SESSION& session) {
+  void SessionManager::get_session(const string& session_id, session_t& session) {
     ween_expired();
-    sqlite3_stmt *pSelect;
-    string query = "SELECT * FROM sessionmanager WHERE session_id = \"" + session_id + "\"";
-    int rc = sqlite3_prepare(db, query.c_str(), -1, &pSelect, 0);
-    if( rc!=SQLITE_OK || !pSelect ){
-      debug("error preparing sql query: " + query);
-      return;
-    }
-    rc = sqlite3_step(pSelect);
-    if(rc == SQLITE_ROW){
-      snprintf(session.identity, 33, "%s", sqlite3_column_text(pSelect, 0));
-      snprintf(session.hostname, 255, "%s", sqlite3_column_text(pSelect, 1));
-      snprintf(session.path, 255, "%s", sqlite3_column_text(pSelect, 2));
-      snprintf(session.identity, 255, "%s", sqlite3_column_text(pSelect, 3));
-      session.expires_on = sqlite3_column_int(pSelect, 4);
-    } else {
-      strcpy(session.identity, "");
+    const char *query = "SELECT session_id,hostname,path,identity,expires_on FROM sessionmanager WHERE session_id=%Q LIMIT 1";
+    char *sql = sqlite3_mprintf(query, session_id.c_str());
+    int nr, nc;
+    char **table;
+    int rc = sqlite3_get_table(db, sql, &table, &nr, &nc, 0);
+    sqlite3_free(sql);
+    test_result(rc, "problem fetching session with id " + session_id);
+    if(nr==0) {
+      session.identity = "";
       debug("could not find session id " + session_id + " in db: session probably just expired");
+    } else {
+      session.session_id = string(table[5]);
+      session.hostname = string(table[6]);
+      session.path = string(table[7]);
+      session.identity = string(table[8]);
+      session.expires_on = strtol(table[9], 0, 0);
     }
-    rc = sqlite3_finalize(pSelect);
+    sqlite3_free_table(table);
   };
 
   bool SessionManager::test_result(int result, const string& context) {
@@ -80,16 +78,12 @@ namespace modauthopenid {
     ween_expired();
     time_t rawtime;
     time (&rawtime);
-    string s_expires_on;
-    char *errMsg;
-    int_to_string((rawtime + 86400), s_expires_on);
-    string query = "INSERT INTO sessionmanager (session_id, hostname, path, identity, expires_on) VALUES("
-      "\"" + session_id + "\", "
-      "\"" + hostname + "\", "
-      "\"" + path + "\", "
-      "\"" + identity + "\", " + s_expires_on + ")";
-    debug("storing session " + session_id + " for path " + path + " and id " + identity);
-    int rc = sqlite3_exec(db, query.c_str(), NULL, 0, &errMsg);
+    int expires_on = rawtime + 86400;
+    const char* url = "INSERT INTO sessionmanager (session_id,hostname,path,identity,expires_on) VALUES(%Q,%Q,%Q,%Q,%d)";
+    char *query = sqlite3_mprintf(url, session_id.c_str(), hostname.c_str(), path.c_str(), identity.c_str(), expires_on);
+    debug(query);
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
+    sqlite3_free(query);
     test_result(rc, "problem inserting session into db");    
   };
 

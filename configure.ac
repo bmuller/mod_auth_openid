@@ -63,6 +63,20 @@ AC_CHECK_CURL([7], [], [ AC_MSG_ERROR([No curl library found.  You can get it at
 AC_SUBST(CURL_CFLAGS)
 AC_SUBST(CURL_LIBS)
 
+# Idea taken from libopekele
+nitpick=false
+AC_ARG_ENABLE([nitpicking],
+ AC_HELP_STRING([--enable-nitpicking],[make compiler somewhat overly fastidious about the code it deals with]),
+ [ test "$enableval" = "no" || nitpick=true ]
+)
+if $nitpick ; then
+ CPP_NITPICK="-Wall -Wextra -Wundef -Wshadow -Wunsafe-loop-optimizations -Wconversion -Wmissing-format-attribute"
+ CPP_NITPICK="$CPP_NITPICK -Wredundant-decls -ansi -Wmissing-noreturn"
+ CPPFLAGS="$CPPFLAGS $CPP_NITPICK"
+# CFLAGS="$CFLAGS $CPP_NITPICK"
+# CXXFLAGS="$CXXFLAGS $CPP_NITPICK"
+fi
+
 AC_CONFIG_FILES([
  Makefile
 ])

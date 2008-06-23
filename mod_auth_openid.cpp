@@ -221,7 +221,7 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
   modauthopenid::get_session_id(r, std::string(s_cfg->cookie_name), session_id);
   if(session_id != "" && s_cfg->use_cookie) {
     modauthopenid::debug("found session_id in cookie: " + session_id);
-    modauthopenid::SESSION session;
+    modauthopenid::session_t session;
     modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
     sm.get_session(session_id, session);
     sm.close();
@@ -232,7 +232,7 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
       modauthopenid::base_dir(std::string(r->uri), uri_path);
       std::string valid_path(session.path);
       // if found session has a valid path
-      if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname, r->hostname)==0) {
+      if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname.c_str(), r->hostname)==0) {
 	modauthopenid::debug("setting REMOTE_USER to \"" + std::string(session.identity) + "\"");
 	r->user = apr_pstrdup(r->pool, std::string(session.identity).c_str());
 	return true;

@@ -32,6 +32,7 @@ namespace modauthopenid {
 
   enum error_result_t { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
 
+  /*
   typedef struct session {
     char session_id[33];
     char hostname[255]; // name of server (this is in case there are virtual hosts on this server)
@@ -39,11 +40,15 @@ namespace modauthopenid {
     char identity[255];
     int expires_on; // exact moment it expires
   } SESSION;
+  */
 
-  typedef struct nonce {
+  typedef struct session {
+    string session_id;
+    string hostname; // name of server (this is in case there are virtual hosts on this server)
+    string path;
+    string identity;
     int expires_on; // exact moment it expires
-    char identity[255]; // identity nonce is good for
-  } NONCE;
+  } session_t;
 
   class modauthopenid_message_t : public params_t {
   public:
