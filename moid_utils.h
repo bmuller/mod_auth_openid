@@ -29,18 +29,37 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
+  // get the appropriate error string for the given error
   string error_to_string(error_result_t e, bool use_short_string);
+
+  // explode string s into parts, split based on occurance of e
   vector<string> explode(string s, string e);
+
+  // replace needle with replacement in haystack
   string str_replace(string needle, string replacement, string haystack);
+
   // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
   // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
   // apache redirects stderr to the error log anyway.
   void debug(string s);
-  bool regex_match(string subject, string pattern);
+
+  // print a string to the error log (called by debug if DEBUG is defined)
   void print_to_error_log(string s);
+
+  // return true if pattern found in subject
+  bool regex_match(string subject, string pattern);
+
+  // strip any spaces before or after actual string in s
   void strip(string& s);
+
+  // make a random string of size size
   void make_rstring(int size, string& s);
+
+  // print an sqlite table to stdout
   void print_sqlite_table(sqlite3 *db, string tablename);
+
+  // test a sqlite return value, print error if there is one to stdout and return false, 
+  // return true on no error
   bool test_sqlite_return(sqlite3 *db, int result, const string& context);
 }
 

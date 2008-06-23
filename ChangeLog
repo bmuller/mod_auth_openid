@@ -4,6 +4,12 @@
 # All references to issues/bugs can be found at:
 # http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
 
+Version 0.3
+	Added support for OpenID 2.0 spec - using new libopkele
+	Removed support for BDB - now SQLite only
+	Fixed security issue with sessions potentially being valid for too long (issue 16)
+	Changed get param from openid.identity to openid_identifier (per 2.0 spec - issue 14)
+		
 Version 0.2.1
 	302 Redirect issue fixed - nasty, reason for 0.2.1 release (issue 6)
 	AuthOpenIDEnabled now allowed in .htaccess files (issue 9)

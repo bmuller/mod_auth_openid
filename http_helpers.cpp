@@ -144,22 +144,6 @@ namespace modauthopenid {
     return "";
   };
 
-  // assuming the url given will begin with http(s):// - worst case, return blank string   
-  string get_base_url(string url) {
-    if(url.size() < 8)
-      return "";
-    if(url.find("http://",0) != string::npos || url.find("https://",0) != string::npos) {
-      string::size_type last = url.find('/', 8);
-      string::size_type last_q = url.find('?', 8);
-      if(last==string::npos || (last_q<last && last_q!=string::npos))
-        last = last_q;
-      if(last != string::npos)
-        return url.substr(0, last);
-      return url;
-    }
-    return "";
-  };
-
   void remove_openid_vars(params_t& params) {
     map<string,string>::iterator iter;
     for(iter = params.begin(); iter != params.end(); iter++) {

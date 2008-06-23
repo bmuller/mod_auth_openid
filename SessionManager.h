@@ -29,18 +29,37 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
+  // This class keeps track of cookie based sessions
   class SessionManager {
   public:
+    // storage_location is db location
     SessionManager(const string& storage_location);
     ~SessionManager() { close(); };
+
+    // get session with id session_id and set values in session
+    // if session doesn't exist, don't do anything
     void get_session(const string& session_id, session_t& session);
+
+    // store given session information in a new session entry
+    // if lifespan is 0, let it expire in a day.  otherwise, expire in "lifespan" seconds
+    // See issue 16 - http://trac.butterfat.net/public/mod_auth_openid/ticket/16
     void store_session(const string& session_id, const string& hostname, const string& path, const string& identity, int lifespan);
+
+    // print session table to stdout
     void print_table();
+    
+    // close database
     void close();
   private:
     sqlite3 *db;
+    
+    // delete all expired sessions
     void ween_expired();
+
+    // db status
     bool is_closed;
+
+    // test sqlite query result - print any errors to stderr
     bool test_result(int result, const string& context);
   };
 }
