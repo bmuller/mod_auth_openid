@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -30,7 +30,7 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  int http_sendstring(request_rec *r, std::string s) {
+  int http_sendstring(request_rec *r, string s) {
     // no idea why the following line only sometimes worked.....
     //apr_table_setn(r->headers_out, "Content-Type", "text/html");
     ap_set_content_type(r, "text/html");
@@ -48,28 +48,28 @@ namespace modauthopenid {
     return OK;
   };
 
-  int http_redirect(request_rec *r, std::string location) {
+  int http_redirect(request_rec *r, string location) {
     apr_table_set(r->headers_out, "Location", location.c_str());
     apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
     debug("redirecting client to: " + location);
     return HTTP_MOVED_TEMPORARILY;
   };
 
-  int show_html_input(request_rec *r, std::string msg) {
+  int show_html_input(request_rec *r, string msg) {
     opkele::params_t params;
     if(r->args != NULL)
-      params = parse_query_string(std::string(r->args));
-    std::string identity = params.has_param("openid_identifier") ? params.get_param("openid_identifier") : "";
+      params = parse_query_string(string(r->args));
+    string identity = params.has_param("openid_identifier") ? params.get_param("openid_identifier") : "";
     remove_openid_vars(params);
-    std::map<std::string,std::string>::iterator iter;
-    std::string args = "";
-    std::string key, value;
+    map<string,string>::iterator iter;
+    string args = "";
+    string key, value;
     for(iter = params.begin(); iter != params.end(); iter++) {
       key = html_escape(iter->first);
       value = html_escape(iter->second);
       args += "<input type=\"hidden\" name=\"" + key + "\" value = \"" + value + "\" />";
     }
-    std::string result =
+    string result =
     "<html><head><title>Protected Location</title><style type=\"text/css\">"
     "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 10px; }\n"
     "a { text-decoration: none; }\n"
@@ -95,18 +95,18 @@ namespace modauthopenid {
     return http_sendstring(r, result);
   };
 
-  void get_session_id(request_rec *r, std::string cookie_name, std::string& session_id) {
+  void get_session_id(request_rec *r, string cookie_name, string& session_id) {
     const char * cookies_c = apr_table_get(r->headers_in, "Cookie");
     if(cookies_c == NULL)
       return;
-    std::string cookies(cookies_c);
-    std::vector<std::string> pairs = explode(cookies, ";");
-    for(std::string::size_type i = 0; i < pairs.size(); i++) {
-      std::vector<std::string> pair = explode(pairs[i], "=");
+    string cookies(cookies_c);
+    vector<string> pairs = explode(cookies, ";");
+    for(string::size_type i = 0; i < pairs.size(); i++) {
+      vector<string> pair = explode(pairs[i], "=");
       if(pair.size() == 2) {
-	std::string key = pair[0];
+	string key = pair[0];
 	strip(key);
-	std::string value = pair[1];
+	string value = pair[1];
 	strip(value);
 	debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
 	if(key == cookie_name) {

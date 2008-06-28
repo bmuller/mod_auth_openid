@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -124,7 +124,7 @@ namespace modauthopenid {
     return (pcre_exec(re, NULL, subject.c_str(), subject.size(), 0, 0, NULL, 0) >= 0);
   };
 
-  void strip(std::string& s) {
+  void strip(string& s) {
     while(!s.empty() && s.substr(0,1) == " ") s.erase(0,1);
     while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
   };

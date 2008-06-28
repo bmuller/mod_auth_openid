@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -97,9 +97,17 @@ namespace modauthopenid {
     // test result from sqlite query - print error to stderr if there is one
     bool test_result(int result, const string& context);
 
+    // strings for the nonce based authentication session and the server's url (the originally 
+    // requested url)
     string asnonceid, serverurl; 
+
+    // booleans for the database state and whether any endpoint has been set yet
     bool is_closed, endpoint_set;
+    
+    // The normalized id the user has attempted to use
     mutable string normalized_id;
+
+    // the endpoint for the user's identity
     mutable openid_endpoint_t endpoint;
   };
 }
