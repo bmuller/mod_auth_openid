@@ -50,10 +50,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include <opkele/exception.h>
 #include <opkele/types.h>
 #include <opkele/util.h>
-#include <opkele/uris.h>
-#include <opkele/discovery.h>
 #include <opkele/association.h>
-#include <opkele/sreg.h>
 #include <opkele/prequeue_rp.h>
 
 /* overwrite package vars set by apache */
