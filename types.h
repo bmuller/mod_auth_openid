@@ -30,7 +30,7 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  enum error_result_t { no_idp_found, invalid_id_url, idp_not_trusted, invalid_nonce, canceled, unspecified };
+  enum error_result_t { no_idp_found, invalid_id, idp_not_trusted, invalid_nonce, canceled, unspecified };
 
   typedef struct session {
     string session_id;

@@ -3,3 +3,5 @@ bmuller <bmuller@butterfat.net>
 Thanks to:
   Michael 'hacker' Krelin <hacker@klever.net> for autotools and C++ help and for working with me
 	to get mod_auth_openid working with his libopkele library.
+
+  Goran Lowkrantz <glz@hidden-powers.com> for helping test the module.

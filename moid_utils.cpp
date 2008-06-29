@@ -62,16 +62,16 @@ namespace modauthopenid {
     switch(e) {
     case no_idp_found:
       short_string = "no_idp_found";
-      long_string = "There was either no identity provider found at the identity URL given"
+      long_string = "There was either no identity provider found for the identity given"
 	" or there was trouble connecting to it.";
       break;
-    case invalid_id_url:
-      short_string = "invalid_id_url";
-      long_string = "The identity URL given is not a valid URL.";
+    case invalid_id:
+      short_string = "invalid_id";
+      long_string = "The identity given is not a valid identity.";
       break;
     case idp_not_trusted:
       short_string = "idp_not_trusted";
-      long_string = "The identity provider for the identity URL given is not trusted.";
+      long_string = "The identity provider for the identity given is not trusted.";
       break;
     case invalid_nonce:
       short_string = "invalid_nonce";
