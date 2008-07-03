@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -27,37 +27,32 @@ Created by bmuller <bmuller@butterfat.net>
 
 #include <iostream>
 #include <sys/stat.h>
-#include <unistd.h>
+#include <time.h>
 #include "mod_auth_openid.h"
 
-using namespace opkele;
 using namespace std;
 using namespace modauthopenid;
 
-void num_records(string db_location) {
+void print_databases(string db_location) {
+  cout << "Current time: " << time(0) << endl;
   SessionManager s(db_location);
-  cout << "There are " << s.num_records() << " records in the sessions table.\n";
+  s.print_table();
   s.close();
 
-  MoidConsumer c(db_location);
-  cout << "There are " << c.num_records() << " records in the associations table.\n";
+  MoidConsumer c(db_location, "blah", "balh");
+  c.print_tables();
   c.close();
-
-  NonceManager n(db_location);
-  cout << "There are " << n.num_records() << " records in the nonces table.\n";
-  n.close();
 };
 
 int main(int argc, char **argv) { 
   if(argc != 2) {
-    cout << "usage: ./" << argv[0] << " <BDB database location>";
+    cout << "usage: ./" << argv[0] << " <sqlite database location>";
     return -1;
   }
-  struct stat buffer ;
   if(access(argv[1], 0) == -1) {
     cout << "File \"" << argv[1] << "\" does not exist or cannot be read.\n";
     return -1;
   }
-  num_records(string(argv[1]));
+  print_databases(string(argv[1]));
   return 0; 
 }

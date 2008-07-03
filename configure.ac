@@ -1,4 +1,4 @@
-AC_INIT([mod_auth_openid], [0.2.1], [bmuller@butterfat.net])
+AC_INIT([mod_auth_openid], [0.3], [bmuller@butterfat.net])
 AC_DEFINE([PACKAGE_URL],["http://trac.butterfat.net/public/mod_auth_openid"],[project url])
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])
@@ -17,18 +17,6 @@ AC_ARG_ENABLE(debug, AC_HELP_STRING([[--enable-debug]], [enable debugging output
 [if test "$enableval" = "yes"; then
     DEBUG="yes"
     CPPFLAGS="$CPPFLAGS -DDEBUG"
-fi]
-)
-
-# use sqlite
-AC_ARG_ENABLE(sqlite, AC_HELP_STRING([[--enable-sqlite]], [force use of SQLite instead of BDB]),
-[if test "$enableval" = "yes"; then
-    AX_LIB_SQLITE3([3.3.0])
-    if test "$SQLITE3_VERSION" != ""; then
-       CPPFLAGS="$CPPFLAGS -DSQLITE"
-    else
-       AC_MSG_ERROR([Could not find sqlite3 library as requested - get a copy from http://www.sqlite.org]) 
-    fi
 fi]
 )
 
@@ -52,24 +40,16 @@ if test "$?" != "0"; then
   AC_MSG_ERROR($apr_config is not a valid apr-config program)
 fi
 
-AX_PATH_BDB([3], [], [
-    AX_LIB_SQLITE3([3.3.0])
-    if test "$SQLITE3_VERSION" != ""; then
-        CPPFLAGS="$CPPFLAGS -DSQLITE"
-    else
-	AC_MSG_ERROR([No C++ BDB library found (http://www.oracle.com/database/berkeley-db/db/index.html).  You can alternatively install sqlite 3 (http://www.sqlite.org)])
-    fi
-  ])
-AC_SUBST([BDB_LIBS])
-AC_SUBST([BDB_CPPFLAGS])
-
-AM_CONDITIONAL([SQLITE], [test "$SQLITE3_VERSION" != ""])
+AX_LIB_SQLITE3([3.3.0])
+if test "$SQLITE3_VERSION" == ""; then
+  AC_MSG_ERROR([No sqlite 3 (http://www.sqlite.org) library found.])
+fi
 
 APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)
 
-PKG_CHECK_MODULES([OPKELE],[libopkele >= 0.3.2],,[
- AC_MSG_ERROR([no libopkele library found (version 0.3.2 or higher). get one from http://kin.klever.net/libopkele/])
+PKG_CHECK_MODULES([OPKELE],[libopkele >= 2.0],,[
+ AC_MSG_ERROR([no libopkele library found (version 2.0 or higher). get one from http://kin.klever.net/libopkele/])
 ])
 
 # These next few are prerequisites for libopekele, but it's possible they've been removed since that install....
@@ -83,18 +63,25 @@ AC_CHECK_CURL([7], [], [ AC_MSG_ERROR([No curl library found.  You can get it at
 AC_SUBST(CURL_CFLAGS)
 AC_SUBST(CURL_LIBS)
 
+# Idea taken from libopekele
+nitpick=false
+AC_ARG_ENABLE([nitpicking],
+ AC_HELP_STRING([--enable-nitpicking],[make compiler somewhat overly fastidious about the code it deals with]),
+ [ test "$enableval" = "no" || nitpick=true ]
+)
+if $nitpick ; then
+ CPP_NITPICK="-Wall -Wextra -Wundef -Wshadow -Wunsafe-loop-optimizations -Wconversion -Wmissing-format-attribute"
+ CPP_NITPICK="$CPP_NITPICK -Wredundant-decls -ansi -Wmissing-noreturn"
+ CPPFLAGS="$CPPFLAGS $CPP_NITPICK"
+# CFLAGS="$CFLAGS $CPP_NITPICK"
+# CXXFLAGS="$CXXFLAGS $CPP_NITPICK"
+fi
+
 AC_CONFIG_FILES([
  Makefile
 ])
 AC_OUTPUT
 
-echo
-echo " ***"
-if test "$SQLITE3_VERSION" != ""; then
-   echo " *** Using sqlite3 storage backend."
-else
-   echo " *** Using BDB storage backend."
-fi
 echo " ***"
 echo " *** You are now ready to build mod_auth_openid:"
 echo " *** Enter the following commands:"

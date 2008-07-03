@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -25,37 +25,31 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
-#include "mod_auth_openid.h"
 
 namespace modauthopenid {
+  using namespace opkele;
   using namespace std;
- 
-  bool NonceManager::is_valid(const string& nonce, bool delete_on_find) {
-    return nm.is_valid(nonce, delete_on_find);
-  };
-  
-  void NonceManager::delete_nonce(const string& nonce) {
-    nm.delete_nonce(nonce);
+
+  enum error_result_t { no_idp_found, invalid_id, idp_not_trusted, invalid_nonce, canceled, unspecified };
+
+  typedef struct session {
+    string session_id;
+    string hostname; // name of server (this is in case there are virtual hosts on this server)
+    string path;
+    string identity;
+    int expires_on; // exact moment it expires
+  } session_t;
+
+  // Wrapper for basic_openid_message - just so it works with openid namespace
+  class modauthopenid_message_t : public params_t {
+  public:
+    modauthopenid_message_t(params_t& _bom) { bom = _bom; };
+    bool has_field(const string& n) const { return bom.has_param("openid."+n); };
+    const string& get_field(const string& n) const { return bom.get_param("openid."+n); };
+  private:
+    params_t bom;
   };
 
-  void NonceManager::get_identity(const string& nonce, string& identity) {
-    nm.get_identity(nonce, identity);
-  };
-  
-  // The reason we need to store the identity for the case of delgation - we need
-  // to keep track of the original identity used by the user.  The identity stored
-  // with this nonce will be used later if auth succeeds to create the session
-  // for the original identity.
-  void NonceManager::add(const string& nonce, const string& identity) {
-    nm.add(nonce, identity);
-  };
-
-  int NonceManager::num_records() {
-    return nm.num_records();
-  };
-
-  void NonceManager::close() {
-    nm.close();
-  };
-  
 }
+
+

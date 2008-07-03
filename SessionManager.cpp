@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -30,19 +30,85 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  void SessionManager::get_session(const string& session_id, SESSION& session) {
-    sm.get_session(session_id, session);
+  SessionManager::SessionManager(const string& storage_location) {
+    is_closed = false;
+    int rc = sqlite3_open(storage_location.c_str(), &db);
+    if(!test_result(rc, "problem opening database"))
+      return;
+    string query = "CREATE TABLE IF NOT EXISTS sessionmanager "
+      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)";
+    rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
+    test_result(rc, "problem creating table if it didn't exist already");
   };
 
-  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity) {
-    sm.store_session(session_id, hostname, path, identity);
+  void SessionManager::get_session(const string& session_id, session_t& session) {
+    ween_expired();
+    const char *query = "SELECT session_id,hostname,path,identity,expires_on FROM sessionmanager WHERE session_id=%Q LIMIT 1";
+    char *sql = sqlite3_mprintf(query, session_id.c_str());
+    int nr, nc;
+    char **table;
+    int rc = sqlite3_get_table(db, sql, &table, &nr, &nc, 0);
+    sqlite3_free(sql);
+    test_result(rc, "problem fetching session with id " + session_id);
+    if(nr==0) {
+      session.identity = "";
+      debug("could not find session id " + session_id + " in db: session probably just expired");
+    } else {
+      session.session_id = string(table[5]);
+      session.hostname = string(table[6]);
+      session.path = string(table[7]);
+      session.identity = string(table[8]);
+      session.expires_on = strtol(table[9], 0, 0);
+    }
+    sqlite3_free_table(table);
   };
 
-  int SessionManager::num_records() {
-    return sm.num_records();
+  bool SessionManager::test_result(int result, const string& context) {
+    if(result != SQLITE_OK){
+      string msg = "SQLite Error in Session Manager - " + context + ": %s\n";
+      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
+      sqlite3_close(db);
+      is_closed = true;
+      return false;
+    }
+    return true;
+  };
+
+  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity, int lifespan) {
+    ween_expired();
+    time_t rawtime;
+    time (&rawtime);
+
+    // lifespan will be 0 if not specified by user in config - so lasts as long as browser is open.  In this case, make it last for up to a day.
+    int expires_on = (lifespan == 0) ? (rawtime + 86400) : (rawtime + lifespan);
+
+    const char* url = "INSERT INTO sessionmanager (session_id,hostname,path,identity,expires_on) VALUES(%Q,%Q,%Q,%Q,%d)";
+    char *query = sqlite3_mprintf(url, session_id.c_str(), hostname.c_str(), path.c_str(), identity.c_str(), expires_on);
+    debug(query);
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
+    sqlite3_free(query);
+    test_result(rc, "problem inserting session into db");    
+  };
+
+  void SessionManager::ween_expired() {
+    time_t rawtime;
+    time (&rawtime);
+    char *query = sqlite3_mprintf("DELETE FROM sessionmanager WHERE %d > expires_on", rawtime);
+    int rc = sqlite3_exec(db, query, 0, 0, 0);
+    sqlite3_free(query);
+    test_result(rc, "problem weening expired sessions from table");
+  };
+
+  // This is a method to be used by a utility program, never the apache module                 
+  void SessionManager::print_table() {
+    ween_expired();
+    print_sqlite_table(db, "sessionmanager");
   };
 
   void SessionManager::close() {
-    sm.close();
+    if(is_closed)
+      return;
+    is_closed = true;
+    test_result(sqlite3_close(db), "problem closing database");
   };
 }

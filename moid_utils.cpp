@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2008 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -62,16 +62,16 @@ namespace modauthopenid {
     switch(e) {
     case no_idp_found:
       short_string = "no_idp_found";
-      long_string = "There was either no identity provider found at the identity URL given"
+      long_string = "There was either no identity provider found for the identity given"
 	" or there was trouble connecting to it.";
       break;
-    case invalid_id_url:
-      short_string = "invalid_id_url";
-      long_string = "The identity URL given is not a valid URL.";
+    case invalid_id:
+      short_string = "invalid_id";
+      long_string = "The identity given is not a valid identity.";
       break;
     case idp_not_trusted:
       short_string = "idp_not_trusted";
-      long_string = "The identity provider for the identity URL given is not trusted.";
+      long_string = "The identity provider for the identity given is not trusted.";
       break;
     case invalid_nonce:
       short_string = "invalid_nonce";
@@ -87,77 +87,7 @@ namespace modauthopenid {
       break;
     }
     return (use_short_string) ? short_string : long_string;
-  }
-
-  // assuming the url given will begin with http(s):// - worst case, return blank string
-  string get_queryless_url(string url) {
-    if(url.size() < 8)
-      return "";
-    if(url.find("http://",0) != string::npos || url.find("https://",0) != string::npos) {
-      string::size_type last = url.find('?', 8);
-      if(last != string::npos)
-	return url.substr(0, last);
-      return url;
-    }
-    return "";
-  }
-
-  // assuming the url given will begin with http(s):// - worst case, return blank string
-  string get_base_url(string url) {
-    if(url.size() < 8)
-      return "";
-    if(url.find("http://",0) != string::npos || url.find("https://",0) != string::npos) {
-      string::size_type last = url.find('/', 8);
-      string::size_type last_q = url.find('?', 8);
-      if(last==string::npos || (last_q<last && last_q!=string::npos))
-	last = last_q;
-      if(last != string::npos)
-	return url.substr(0, last);
-      return url;
-    }
-    return "";
-  }
-
-  params_t remove_openid_vars(params_t params) {
-    map<string,string>::iterator iter;
-    for(iter = params.begin(); iter != params.end(); iter++) {
-      string param_key(iter->first);
-      if(param_key.substr(0, 7) == "openid."
-	 && param_key.substr(0, 10) != "openid.ax."
-	 && param_key.substr(0, 12) != "openid.sreg.") {
-	params.erase(param_key);
-	// stupid map iterator screws up if we just continue the iteration...
-	// so recursion to the rescue - we'll delete them one at a time
-	return remove_openid_vars(params);
-      } 
-    }
-    return params;
-  }
-
-  bool is_valid_url(string url) {
-    // taken from http://www.osix.net/modules/article/?id=586
-    string regex = "^(https?://)"
-      "(([0-9]{1,3}\\.){3}[0-9]{1,3}" // IP- 199.194.52.184
-      "|" // allows either IP or domain or "localhost"
-      "localhost"
-      "|"
-      "([0-9a-z_!~*'()-]+\\.)*" // tertiary domain(s)- www.
-      "([0-9a-z][0-9a-z-]{0,61})?[0-9a-z]\\." // second level domain
-      "[a-z]{2,6})" // first level domain- .com or .museum
-      "(:[0-9]{1,4})?" // port number- :80
-      "((/?)|" // a slash isn't required if there is no file name
-      "(/[0-9a-z_!~*'().;?:@&=+$,%#-]+)+/?)$";
-    return regex_match(url, regex);
-  }
-
-  // This isn't a true html_escape function, but rather escapes just enough to get by for
-  // quoted values - <blah name="stuff to be escaped">
-  string html_escape(string s) {
-    s = str_replace("\"", "&quot;", s);
-    s = str_replace("<", "&lt;", s);
-    s = str_replace(">", "&gt;", s);
-    return s;
-  }
+  };
 
   string str_replace(string needle, string replacement, string haystack) {
     vector<string> v = explode(haystack, needle);
@@ -166,7 +96,7 @@ namespace modauthopenid {
       r += v[i] + replacement;
     r += v[v.size()-1];
     return r;
-  }
+  };
 
   vector<string> explode(string s, string e) {
     vector<string> ret;
@@ -181,53 +111,7 @@ namespace modauthopenid {
     if(s!="")
       ret.push_back(s);
     return ret;
-  }
-
-  string url_decode(const string& str) {
-    char * t = curl_unescape(str.c_str(),str.length());
-    if(!t)
-      throw failed_conversion(OPKELE_CP_ "failed to curl_unescape()");
-    string rv(t);
-    curl_free(t);
-    return rv;
-  }
-
-  params_t parse_query_string(const string& str) {
-    params_t p;
-    if(str.size() == 0) return p;
-
-    vector<string> pairs = explode(str, "&");
-    for(unsigned int i=0; i < pairs.size(); i++) {
-      string::size_type loc = pairs[i].find( "=", 0 );
-      // if loc found and loc isn't last char in string
-      if( loc != string::npos && loc != str.size()-1) {
-        string key = url_decode(pairs[i].substr(0, loc));
-        string value = url_decode(pairs[i].substr(loc+1));
-        p[key] = value;
-      }
-    }
-    return p;
-  }
-
-  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan) {
-    if(cookie_lifespan == 0) {
-      cookie_value = name + "=" + session_id + "; path=" + path;
-    } else {
-      time_t t;
-      t = time(NULL) + cookie_lifespan;
-      struct tm *tmp;
-      tmp = gmtime(&t);
-      char expires[200];
-      strftime(expires, sizeof(expires), "%a, %d-%b-%Y %H:%M:%S GMT", tmp);
-      cookie_value = name + "=" + session_id + "; expires=" + string(expires) + "; path=" + path;
-    }
-  }
-
-  void int_to_string(int i, string& s) {
-    char c_int[100];
-    sprintf(c_int, "%ld", i);
-    s = string(c_int);
-  }
+  };
 
   bool regex_match(string subject, string pattern) {
     const char * error;
@@ -238,5 +122,45 @@ namespace modauthopenid {
       return false;
     }
     return (pcre_exec(re, NULL, subject.c_str(), subject.size(), 0, 0, NULL, 0) >= 0);
+  };
+
+  void strip(string& s) {
+    while(!s.empty() && s.substr(0,1) == " ") s.erase(0,1);
+    while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
+  };
+
+  // make a random alpha-numeric string size characters long
+  void make_rstring(int size, string& s) {
+    s = "";
+    const char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    srand((unsigned) time(0));
+    for(int index=0; index<size; index++)
+      s += cs[rand()%62];
+  }
+
+  void print_sqlite_table(sqlite3 *db, string tablename) {
+    fprintf(stdout, "Printing table: %s.  ", tablename.c_str());
+    string sql = "SELECT * FROM " + tablename;
+    int rc, nr, nc, size;
+    char **table;
+    rc = sqlite3_get_table(db, sql.c_str(), &table, &nr, &nc, 0);
+    fprintf(stdout, "There are %d rows.\n", nr);    
+    size = (nr * nc) + nc;
+    for(int i=0; i<size; i++) {
+      fprintf(stdout, "%s\t", table[i]);
+      if(((i+1) % nc) == 0) 
+	fprintf(stdout, "\n");
+    }
+    fprintf(stdout, "\n");
+    sqlite3_free_table(table);
+  };
+
+  bool test_sqlite_return(sqlite3 *db, int result, const string& context) {
+    if(result != SQLITE_OK){
+      string msg = "SQLite Error - " + context + ": %s\n";
+      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
+      return false;
+    }
+    return true;
   };
 }
