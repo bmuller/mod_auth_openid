@@ -296,7 +296,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
   modauthopenid::base_dir(std::string(r->uri), path);
   modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan); 
   modauthopenid::debug("setting cookie: " + cookie_value);
-  apr_table_setn(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
+  apr_table_set(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
   hostname = std::string(r->hostname);
 
   // save session values
