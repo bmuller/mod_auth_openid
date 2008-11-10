@@ -168,6 +168,11 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid
   if(r->args != NULL) 
     params = modauthopenid::parse_query_string(std::string(r->args));
   modauthopenid::remove_openid_vars(params);  
+
+  std::string uri_location;
+  full_uri(r, uri_location, s_cfg);
+  params["modauthopenid.referrer"] = uri_location;
+
   params["modauthopenid.error"] = modauthopenid::error_to_string(e, true);
   return modauthopenid::http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
