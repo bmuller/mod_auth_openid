@@ -149,9 +149,10 @@ namespace modauthopenid {
     for(iter = params.begin(); iter != params.end(); iter++) {
       string param_key(iter->first);
       // if starts with openid. or modauthopenid. (for the nonce) or openid_identifier (the login)
+      // remove it - except if another namespace (openid.ns.asdf, openid.ax.adsfasdf, etc)
+      vector<string> parts = explode(param_key, ".");
       if((param_key.substr(0, 7) == "openid." || param_key.substr(0, 14) == "modauthopenid." || param_key == "openid_identifier")
-         && param_key.substr(0, 10) != "openid.ax."
-         && param_key.substr(0, 12) != "openid.sreg.") {
+         && parts.size() < 3) {
         params.erase(param_key);
         // stupid map iterator screws up if we just continue the iteration... 
 	// so recursion to the rescue - we'll delete them one at a time    
