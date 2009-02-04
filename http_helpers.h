@@ -62,6 +62,10 @@ namespace modauthopenid {
 
   // create the cookie string that will be sent out in a header
   void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan);
+
+  // Get the extension parameters from the parameter list and put them in
+  // extparams
+  void get_extension_params(params_t &extparams, params_t &params);
 }
 
 

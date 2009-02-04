@@ -254,8 +254,11 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
 					std::string& return_to, std::string& trust_root) {
   // remove all openid GET query params (openid.*) - we don't want that maintained through
   // the redirection process.  We do, however, want to keep all aother GET params.
-  // also, add a nonce for security
+  // also, add a nonce for security 
   std::string identity = params.get_param("openid_identifier");
+  // pull out the extension parameters before we get rid of openid.*
+  opkele::params_t ext_params;
+  modauthopenid::get_extension_params(ext_params, params);
   modauthopenid::remove_openid_vars(params);
 
   // add a nonce and reset what return_to is
@@ -273,6 +276,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
     consumer.initiate(identity);
     opkele::openid_message_t cm; 
     re_direct = consumer.checkid_(cm, opkele::mode_checkid_setup, return_to, trust_root).append_query(consumer.get_endpoint().uri);
+    re_direct = ext_params.append_query(re_direct);
   } catch (opkele::failed_xri_resolution &e) {
     consumer.close();
     return show_input(r, s_cfg, modauthopenid::invalid_id);
@@ -309,7 +313,12 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
   sm.store_session(session_id, hostname, path, identity, s_cfg->cookie_lifespan);
   sm.close();
 
+  opkele::params_t ext_params;
+  modauthopenid::get_extension_params(ext_params, params);
   modauthopenid::remove_openid_vars(params);
+
+  // here bmuller
+
   args = params.append_query("", "").substr(1);
   if(args.length() == 0)
     r->args = NULL;
