@@ -1,8 +1,8 @@
-ACLOCAL_AMFLAGS=-I ${top_srcdir}/acinclude.d/
-
 noinst_LTLIBRARIES = libmodauthopenid.la
 noinst_PROGRAMS = db_info
 noinst_DATA = mod_auth_openid.la
+
+ACLOCAL_AMFLAGS = -I acinclude.d
 
 INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${SQLITE3_CFLAGS} ${PCRE_CFLAGS} ${CURL_CFLAGS}
 AM_LDFLAGS = ${OPKELE_LIBS} ${SQLITE3_LDFLAGS} ${PCRE_LIBS} ${CURL_LIBS}

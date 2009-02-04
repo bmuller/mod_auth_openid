@@ -172,6 +172,15 @@ namespace modauthopenid {
     }
   };
 
+  // for each key/value in params_one, set params_two[key] = value
+  void merge_params(params_t& params_one, params_t& params_two) {
+    map<string,string>::iterator iter;
+    for(iter = params_one.begin(); iter != params_one.end(); iter++) {
+      string param_key(iter->first);
+      params_two[param_key] = params_one[param_key];
+    }
+  };
+
   // This isn't a true html_escape function, but rather escapes just enough to get by for
   // quoted values - <blah name="stuff to be escaped">  
   string html_escape(string s) {

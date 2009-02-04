@@ -276,7 +276,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
     consumer.initiate(identity);
     opkele::openid_message_t cm; 
     re_direct = consumer.checkid_(cm, opkele::mode_checkid_setup, return_to, trust_root).append_query(consumer.get_endpoint().uri);
-    re_direct = ext_params.append_query(re_direct);
+    re_direct = ext_params.append_query(re_direct, "");
   } catch (opkele::failed_xri_resolution &e) {
     consumer.close();
     return show_input(r, s_cfg, modauthopenid::invalid_id);
@@ -316,9 +316,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
   opkele::params_t ext_params;
   modauthopenid::get_extension_params(ext_params, params);
   modauthopenid::remove_openid_vars(params);
-
-  // here bmuller
-
+  modauthopenid::merge_params(ext_params, params);
   args = params.append_query("", "").substr(1);
   if(args.length() == 0)
     r->args = NULL;

@@ -3,6 +3,8 @@ AC_DEFINE([PACKAGE_URL],["http://trac.butterfat.net/public/mod_auth_openid"],[pr
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE([no-dist])
 
+AC_CONFIG_MACRO_DIR([acinclude.d])
+
 AC_PROG_CXX
 AC_PROG_CXXCPP
 AC_LANG_CPLUSPLUS

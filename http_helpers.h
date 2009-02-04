@@ -66,6 +66,9 @@ namespace modauthopenid {
   // Get the extension parameters from the parameter list and put them in
   // extparams
   void get_extension_params(params_t &extparams, params_t &params);
-}
+
+  // for each key/value in params_one, set params_two[key] = value
+  void merge_params(params_t& params_one, params_t& params_two);
+};
 
 
