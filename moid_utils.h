@@ -61,5 +61,10 @@ namespace modauthopenid {
   // test a sqlite return value, print error if there is one to stdout and return false, 
   // return true on no error
   bool test_sqlite_return(sqlite3 *db, int result, const string& context);
+
+  // Exec a program located at exec_location with a single parameter of username
+  // program should return a 0 if authorized, anything else otherwise
+  // NOTE: if program hangs, so does apache
+  bool exec_auth(string exec_location, string username);
 }
 

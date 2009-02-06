@@ -40,11 +40,18 @@ Created by bmuller <bmuller@butterfat.net>
 /* other general lib includes */
 #include <curl/curl.h>
 #include <pcre.h>
+#include <sqlite3.h>
+
+#include <ctime>
+#include <cstdlib>
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include <algorithm>
-#include <time.h>
 #include <string>
 #include <vector>
-#include <sqlite3.h>
 
 /* opkele includes */
 #include <opkele/exception.h>

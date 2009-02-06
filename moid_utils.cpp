@@ -81,6 +81,10 @@ namespace modauthopenid {
       short_string = "canceled";
       long_string = "Identification process has been canceled.";
       break;
+    case unauthorized:
+      short_string = "unauthorized";
+      long_string = "User is not authorized to access this location.";
+      break;
     default: // unspecified
       short_string = "unspecified";
       long_string = "There has been an error while attempting to authenticate.";
@@ -163,4 +167,47 @@ namespace modauthopenid {
     }
     return true;
   };
-}
+
+  bool exec_auth(string exec_location, string username) {
+    if(exec_location.size() > 255)
+      exec_location.resize(255);
+    if(username.size() > 255)
+      username.resize(255);
+
+    char *const argv[] = { (char *) exec_location.c_str(), (char *) username.c_str(), NULL };
+    bool result = false;
+    int rvalue = 0;
+    
+    pid_t pid = fork();
+    switch(pid) {
+    case -1:
+      // Fork failed
+      print_to_error_log("Could not fork to exec program: " + exec_location);
+      result = false;
+      break;
+    case 0:
+      // congrats, you're a kid
+      debug("Executing " + exec_location + " with parameter " + username);
+      execv(exec_location.c_str(), argv);
+      // if we make it here, exec failed, exit from kid with rvalue 1
+      print_to_error_log("Could not execv \"" + exec_location + "\" - does the file exist?");
+      exit(1);
+    default:
+      // you're an adult parent, act responsibly
+      if(waitpid(pid, &rvalue, 0) == -1) {	
+	char c_pid[100];
+	sprintf(c_pid, "%i", (int) pid);
+	print_to_error_log("Problem waiting for child with pid of " + string(c_pid) + " to return");
+	result = false;
+      } else { 
+	result = (rvalue == 0);
+	if(result) debug(username + " deemed authenticated by " + exec_location);
+	else debug(username + " deemed not authenticated by " + exec_location);
+      }
+      break;
+    }
+    return result;
+  };
+
+} // end namespace
+

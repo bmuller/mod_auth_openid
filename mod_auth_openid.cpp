@@ -40,6 +40,8 @@ typedef struct {
   apr_array_header_t *distrusted;
   int cookie_lifespan;
   char *server_name;
+  char *auth_program;
+  bool use_auth_program;
 } modauthopenid_config;
 
 typedef const char *(*CMD_HAND_TYPE) ();
@@ -56,6 +58,8 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->trust_root = NULL;
   newcfg->cookie_lifespan = 0;
   newcfg->server_name = NULL;
+  newcfg->auth_program = NULL;
+  newcfg->use_auth_program = false;
   return (void *) newcfg;
 }
 
@@ -119,6 +123,13 @@ static const char *set_modauthopenid_server_name(cmd_parms *parms, void *mconfig
   return NULL;
 } 
  
+static const char *set_modauthopenid_auth_program(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->auth_program = (char *) arg;
+  s_cfg->use_auth_program = true;
+  return NULL;
+} 
+
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDCookieLifespan", (CMD_HAND_TYPE) set_modauthopenid_cookie_lifespan, NULL, OR_AUTHCFG,
 		"AuthOpenIDCookieLifespan <number seconds>"),
@@ -140,6 +151,8 @@ static const command_rec mod_authopenid_cmds[] = {
 		  "AuthOpenIDDistrusted <a blacklist list of identity providers>"),
   AP_INIT_TAKE1("AuthOpenIDServerName", (CMD_HAND_TYPE) set_modauthopenid_server_name, NULL, OR_AUTHCFG,
 		"AuthOpenIDServerName <server name and port prefix>"),
+  AP_INIT_TAKE1("AuthOpenIDUserProgram", (CMD_HAND_TYPE) set_modauthopenid_auth_program, NULL, OR_AUTHCFG,
+		"AuthOpenIDUserProgram <full path to authentication program>"),
   {NULL}
 };
 
@@ -340,6 +353,13 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       consumer.close();
       return show_input(r, s_cfg, modauthopenid::invalid_nonce); 
     }
+
+    // if we should be using a user specified auth program, run it to see if user is authorized
+    if(s_cfg->use_auth_program && !modauthopenid::exec_auth(std::string(s_cfg->auth_program), consumer.get_normalized_id())) {
+      consumer.close();
+      return show_input(r, s_cfg, modauthopenid::unauthorized);       
+    }
+
     // Make sure that identity is set to the original one given by the user (in case of delegation
     // this will be different than openid_identifier GET param
     std::string identity = consumer.get_normalized_id();
