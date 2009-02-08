@@ -36,6 +36,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include "util_script.h"
 #include "ap_config.h"
 #include "http_log.h"
+#include "mod_ssl.h"
 
 /* other general lib includes */
 #include <curl/curl.h>
