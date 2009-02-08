@@ -8,6 +8,7 @@ Dev Version
 	No longer clearing attribute exchange parameters (issue 34) - see wiki page for attribute exchange
 	Added ability to specify external program for authorization (issues 8, 35, and 17)
 	Fixed bug that left openid params in referrer param after custom login page redirect (issue 28).
+	Fixed bug that resulted in referrer param not having http/s being set correctly (issue 26).
 	
 Version 0.3
 	Added support for OpenID 2.0 spec - using new libopkele
