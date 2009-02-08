@@ -156,8 +156,9 @@ static const command_rec mod_authopenid_cmds[] = {
   {NULL}
 };
 
-/* Get the full URI of the request_rec's request location */
-static void full_uri(request_rec *r, std::string& result, modauthopenid_config *s_cfg) {
+// Get the full URI of the request_rec's request location 
+// clean_params specifies whether or not all openid.* and modauthopenid.* params should be cleared
+static void full_uri(request_rec *r, std::string& result, modauthopenid_config *s_cfg, bool clean_params=false) {
   std::string hostname(r->hostname);
   std::string protocol(r->protocol);
   std::string uri(r->uri);
@@ -165,7 +166,17 @@ static void full_uri(request_rec *r, std::string& result, modauthopenid_config *
   std::string prefix = (i_port == 443) ? "https://" : "http://";
   char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
   std::string s_port = (i_port == 80 || i_port == 443) ? "" : ":" + std::string(port);
-  std::string args = (r->args == NULL) ? "" : "?" + std::string(r->args);
+
+  std::string args;
+  if(clean_params) {
+    opkele::params_t params;
+    if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
+    modauthopenid::remove_openid_vars(params);
+    args = params.append_query("", "");
+  } else {
+    args = (r->args == NULL) ? "" : "?" + std::string(r->args);
+  }
+
   if(s_cfg->server_name == NULL)
     result = prefix + hostname + s_port + uri + args;
   else
@@ -183,7 +194,7 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid
   modauthopenid::remove_openid_vars(params);  
 
   std::string uri_location;
-  full_uri(r, uri_location, s_cfg);
+  full_uri(r, uri_location, s_cfg, true);
   params["modauthopenid.referrer"] = uri_location;
 
   params["modauthopenid.error"] = modauthopenid::error_to_string(e, true);
@@ -198,7 +209,7 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
     params = modauthopenid::parse_query_string(std::string(r->args));
   modauthopenid::remove_openid_vars(params);
   std::string uri_location;
-  full_uri(r, uri_location, s_cfg);
+  full_uri(r, uri_location, s_cfg, true);
   params["modauthopenid.referrer"] = uri_location;
   return modauthopenid::http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
