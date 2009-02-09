@@ -75,7 +75,8 @@ namespace modauthopenid {
     "a { text-decoration: none; }\n"
     "a:hover { text-decoration: underline; }\n"
     "#desc { border: 1px solid #000; background: #ccc; padding: 10px; }\n"
-    "#sig { text-align: center; font-style: italic; margin-top: 50px; word-spacing: .3em; color: #777; }\n"
+    "#sig { text-align: center; font-style: italic; margin-top: 50px; color: #777; font-size: .7em; }\n"
+    "#sig a { color: #222; }\n"
     ".loginbox { background: url(http://www.openid.net/login-bg.gif) no-repeat; background-color: #fff; " // logo location is in 1.1 spec, should stay same
     " background-position: 0 50%; color: #000; padding-left: 18px; }\n"
     "form { margin: 15px; }\n"
@@ -90,7 +91,7 @@ namespace modauthopenid {
     "<b>Identity URL:</b> <input type=\"text\" name=\"openid_identifier\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
     "<input type=\"submit\" value=\"Log In\" />" + args +
     "</form>"
-    "<div id=\"sig\"><a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
+    "<div id=\"sig\">protected by <a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
       "<body></html>";
     return http_sendstring(r, result);
   };
