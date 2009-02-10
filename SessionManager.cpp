@@ -35,6 +35,7 @@ namespace modauthopenid {
     int rc = sqlite3_open(storage_location.c_str(), &db);
     if(!test_result(rc, "problem opening database"))
       return;
+    sqlite3_busy_timeout(db, 5000);
     string query = "CREATE TABLE IF NOT EXISTS sessionmanager "
       "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)";
     rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);

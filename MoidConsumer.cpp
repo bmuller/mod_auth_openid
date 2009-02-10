@@ -36,6 +36,7 @@ namespace modauthopenid {
     int rc = sqlite3_open(storage_location.c_str(), &db);
     if(!test_result(rc, "problem opening database"))
       return;
+    sqlite3_busy_timeout(db, 5000);
 
     string query = "CREATE TABLE IF NOT EXISTS authentication_sessions "
       "(nonce VARCHAR(255), uri VARCHAR(255), claimed_id VARCHAR(255), local_id VARCHAR(255), normalized_id VARCHAR(255), expires_on INT)";
