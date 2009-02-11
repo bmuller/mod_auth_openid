@@ -368,14 +368,14 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     }
 
     // if we should be using a user specified auth program, run it to see if user is authorized
-    if(s_cfg->use_auth_program && !modauthopenid::exec_auth(std::string(s_cfg->auth_program), consumer.get_normalized_id())) {
+    if(s_cfg->use_auth_program && !modauthopenid::exec_auth(std::string(s_cfg->auth_program), consumer.get_claimed_id())) {
       consumer.close();
       return show_input(r, s_cfg, modauthopenid::unauthorized);       
     }
 
     // Make sure that identity is set to the original one given by the user (in case of delegation
     // this will be different than openid_identifier GET param
-    std::string identity = consumer.get_normalized_id();
+    std::string identity = consumer.get_claimed_id();
     consumer.kill_session();
     consumer.close();
 
