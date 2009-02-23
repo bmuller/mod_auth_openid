@@ -2,6 +2,8 @@ noinst_LTLIBRARIES = libmodauthopenid.la
 noinst_PROGRAMS = db_info
 noinst_DATA = mod_auth_openid.la
 
+dist_data_DATA = UPGRADE
+
 ACLOCAL_AMFLAGS = -I acinclude.d
 
 INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${SQLITE3_CFLAGS} ${PCRE_CFLAGS} ${CURL_CFLAGS}
