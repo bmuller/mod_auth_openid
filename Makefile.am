@@ -2,7 +2,7 @@ noinst_LTLIBRARIES = libmodauthopenid.la
 noinst_PROGRAMS = db_info
 noinst_DATA = mod_auth_openid.la
 
-dist_data_DATA = UPGRADE
+EXTRA_DIST = UPGRADE
 
 ACLOCAL_AMFLAGS = -I acinclude.d
 
