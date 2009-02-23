@@ -1,1 +1,3 @@
-First, delete the old database file.  Then, follow the instructions in INSTALL.
+First, delete the old database file (this is /tmp/mod_auth_openid.db unless
+you set it to something else using the AuthOpenIDDBLocation configuration
+option).  Then, follow the instructions in INSTALL.

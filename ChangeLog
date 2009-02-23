@@ -3,7 +3,7 @@
 
 # All references to issues/bugs can be found at:
 # http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
-Dev Version
+Version 0.4
 	Fixed bug involving custom auth cookie names (issue 27)
 	No longer clearing attribute exchange parameters (issue 34) - see wiki page for attribute exchange
 	Added ability to specify external program for authorization (issues 8, 35, and 17)
