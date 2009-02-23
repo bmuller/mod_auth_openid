@@ -9,6 +9,8 @@ Dev Version
 	Added ability to specify external program for authorization (issues 8, 35, and 17)
 	Fixed bug that left openid params in referrer param after custom login page redirect (issue 28).
 	Fixed bug that resulted in referrer param not having http/s being set correctly (issue 26).
+	Fixed bug that resulted in auth error when too many requests were hitting Session DB (issue 36).
+	Fixed bug that set REMOTE_USER to normalized id rather than claimed id (issue 37).
 	
 Version 0.3
 	Added support for OpenID 2.0 spec - using new libopkele
