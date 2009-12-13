@@ -41,6 +41,7 @@ typedef struct {
   int cookie_lifespan;
   char *server_name;
   char *auth_program;
+  char *cookie_path;
   bool use_auth_program;
 } modauthopenid_config;
 
@@ -56,6 +57,7 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->enabled = false;
   newcfg->use_cookie = true;
   newcfg->cookie_name = "open_id_session_id";
+  newcfg->cookie_path = NULL; 
   newcfg->trusted = apr_array_make(p, 5, sizeof(char *));
   newcfg->distrusted = apr_array_make(p, 5, sizeof(char *));
   newcfg->trust_root = NULL;
@@ -71,6 +73,12 @@ static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig
   s_cfg->db_location = (char *) arg;
   return NULL;
 }
+
+static const char *set_modauthopenid_cookie_path(cmd_parms *parms, void *mconfig, const char *arg) { 
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig; 
+  s_cfg->cookie_path = (char *) arg; 
+  return NULL; 
+} 
 
 static const char *set_modauthopenid_trust_root(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
@@ -144,6 +152,8 @@ static const command_rec mod_authopenid_cmds[] = {
 		"AuthOpenIDTrustRoot <trust root to use>"),
   AP_INIT_TAKE1("AuthOpenIDCookieName", (CMD_HAND_TYPE) set_modauthopenid_cookie_name, NULL, OR_AUTHCFG,
 		"AuthOpenIDCookieName <name of cookie to use>"),
+  AP_INIT_TAKE1("AuthOpenIDCookiePath", (CMD_HAND_TYPE) set_modauthopenid_cookie_path, NULL, OR_AUTHCFG, 
+		"AuthOpenIDCookiePath <path of cookie to use>"), 
   AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, OR_AUTHCFG,
 	       "AuthOpenIDEnabled <On | Off>"),
   AP_INIT_FLAG("AuthOpenIDUseCookie", (CMD_HAND_TYPE) set_modauthopenid_usecookie, NULL, OR_AUTHCFG,
@@ -327,8 +337,11 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
 static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, std::string identity) {
   // now set auth cookie, if we're doing session based auth
   std::string session_id, hostname, path, cookie_value, redirect_location, args;
+  if(s_cfg->cookie_path != NULL) 
+    path = std::string(s_cfg->cookie_path); 
+  else 
+    modauthopenid::base_dir(std::string(r->uri), path); 
   modauthopenid::make_rstring(32, session_id);
-  modauthopenid::base_dir(std::string(r->uri), path);
   modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan); 
   modauthopenid::debug("setting cookie: " + cookie_value);
   apr_table_set(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
