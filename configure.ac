@@ -37,6 +37,7 @@ AC_ARG_WITH(apr_config, AC_HELP_STRING([[--with-apr-config=FILE]], [Path to apr-
 if test "$apr_config" = "no"; then
    AC_MSG_ERROR(Could not find the apr-config program.  You can specify a location with the --with-apr-config=FILE option.  It may be named apr-0-config or apr-1-config and can be found in your apache2 bin directory.)
 fi
+
 $apr_config --cppflags &> /dev/null
 if test "$?" != "0"; then
   AC_MSG_ERROR($apr_config is not a valid apr-config program)
@@ -46,6 +47,9 @@ AX_LIB_SQLITE3([3.3.0])
 if test "$SQLITE3_VERSION" == ""; then
   AC_MSG_ERROR([No sqlite 3 (http://www.sqlite.org) library found.])
 fi
+
+APR_LDFLAGS="`${apr_config} --link-ld --libs`"
+AC_SUBST(APR_LDFLAGS)
 
 APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)

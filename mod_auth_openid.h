@@ -37,6 +37,9 @@ Created by bmuller <bmuller@butterfat.net>
 #include "ap_config.h"
 #include "http_log.h"
 #include "mod_ssl.h"
+#include "apr.h"
+#include "apr_general.h"
+#include "apr_time.h"
 
 /* other general lib includes */
 #include <curl/curl.h>
@@ -67,6 +70,7 @@ Created by bmuller <bmuller@butterfat.net>
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
+#undef PACKAGE_URL
 
 /* mod_auth_openid includes */
 #include "config.h"

@@ -66,5 +66,8 @@ namespace modauthopenid {
   // program should return a 0 if authorized, anything else otherwise
   // NOTE: if program hangs, so does apache
   bool exec_auth(string exec_location, string username);
+
+  // Generate a random integer - taken from getuuid.c file in apr-util program
+  int true_random();
 }
 

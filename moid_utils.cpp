@@ -51,7 +51,7 @@ namespace modauthopenid {
       cleaned_s += parts[i] + "%%";
     cleaned_s += parts[parts.size()-1];
     // stderr is redirected by apache to apache's error log
-    fprintf(stderr, cleaned_s.c_str());
+    fputs(cleaned_s.c_str(), stderr);
     fflush(stderr);
   };
 
@@ -137,9 +137,8 @@ namespace modauthopenid {
   void make_rstring(int size, string& s) {
     s = "";
     const char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    srand((unsigned) time(0));
     for(int index=0; index<size; index++)
-      s += cs[rand()%62];
+      s += cs[true_random()%62];
   }
 
   void print_sqlite_table(sqlite3 *db, string tablename) {
@@ -207,6 +206,22 @@ namespace modauthopenid {
       break;
     }
     return result;
+  };
+
+  /* true_random -- generate a crypto-quality random number. Taken from apr-util's getuuid.c file */
+  int true_random() {
+    apr_uint64_t time_now;
+
+#if APR_HAS_RANDOM
+    unsigned char buf[2];
+    if (apr_generate_random_bytes(buf, 2) == APR_SUCCESS) {
+      return (buf[0] << 8) | buf[1];
+    }
+#endif
+
+    time_now = apr_time_now();
+    srand((unsigned int)(((time_now >> 32) ^ time_now) & 0xffffffff));
+    return rand() & 0x0FFFF;
   };
 
 } // end namespace
