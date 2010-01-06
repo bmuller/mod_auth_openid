@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2007-2009 Butterfat, LLC (http://butterfat.net)
+Copyright (C) 2007-2010 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -302,7 +302,6 @@ namespace modauthopenid {
 	  else 
 	    query_string = apr_pstrcat(r->pool, query_string, data, NULL);
 	}
-	//apr_bucket_delete(in_bucket);
       } 
       apr_brigade_cleanup(bb); 
     } while (!seen_eos); 
