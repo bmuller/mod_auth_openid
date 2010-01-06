@@ -48,11 +48,42 @@ namespace modauthopenid {
     return OK;
   };
 
+  int send_form_post(request_rec *r, string location) {
+    string::size_type last = location.find('?', 0);
+    string url = (last != string::npos) ? location.substr(0, last) : location;
+
+    params_t params;
+    if(url.size() < location.size())
+      params = parse_query_string(location.substr(url.size()+1));
+
+    string inputs = "";
+    map<string,string>::iterator iter;
+    for(iter = params.begin(); iter != params.end(); iter++) {
+      string key(iter->first);
+      inputs += "<input type=\"hidden\" name=\"" + key + "\" value=\"" + params[key] + "\" />";
+    }
+
+    string result = 
+      "<html><head><title>redirection</title></head><body onload=\"document.getElementById('form').submit();\">"
+      "This page will automatically redirect you to your identity provider.  "
+      "If you are not immediately redirected, click the submit button below."
+      "<form id=\"form\" action=\"" + url + "\" method=\"post\">" + inputs + "<input type=\"submit\" value=\"submit\">"      
+      "</form></body></html>";
+      
+    return http_sendstring(r, result);
+  };
+
   int http_redirect(request_rec *r, string location) {
-    apr_table_set(r->headers_out, "Location", location.c_str());
-    apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
-    debug("redirecting client to: " + location);
-    return HTTP_MOVED_TEMPORARILY;
+    // Because IE is retarded, we have to do a form post if the URL is too big (over 2048 characters)
+    if(location.size() > 2000) {
+      debug("Redirecting via POST to: " + location);
+      return send_form_post(r, location);
+    } else {
+      debug("Redirecting via HTTP_MOVED_TEMPORARILY to: " + location);
+      apr_table_set(r->headers_out, "Location", location.c_str());
+      apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
+      return HTTP_MOVED_TEMPORARILY;
+    }
   };
 
   int show_html_input(request_rec *r, string msg) {
@@ -231,4 +262,65 @@ namespace modauthopenid {
     }
   };
 
+  // Get the post query string from a HTTP POST
+  bool get_post_data(request_rec *r, string& qs) {
+    // check to make sure the right content type was used
+    const char *type = apr_table_get(r->headers_in, "Content-Type");
+    if (strcasecmp(type, DEFAULT_POST_ENCTYPE) != 0)
+      return false;
+
+    apr_bucket_brigade *bb = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+    apr_status_t ret;
+    int seen_eos, child_stopped_reading;
+    seen_eos = child_stopped_reading = 0; 
+    char *query_string = NULL;
+
+    do { 
+      ret = ap_get_brigade(r->input_filters, bb, AP_MODE_READBYTES, APR_BLOCK_READ, 8192); 
+      if(ret != APR_SUCCESS)
+	return false;
+
+      apr_bucket *bucket; 
+      for(bucket=APR_BRIGADE_FIRST(bb); bucket!=APR_BRIGADE_SENTINEL(bb); bucket=APR_BUCKET_NEXT(bucket)) { 
+	apr_size_t len; 
+	const char *data; 
+	if(APR_BUCKET_IS_EOS(bucket)) { 
+	  seen_eos = 1; 
+	  break; 
+	}
+	if(APR_BUCKET_IS_FLUSH(bucket)) 
+	  continue;
+	if(child_stopped_reading)
+	  continue; 
+
+	ret = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ); 
+	if(ret != APR_SUCCESS) {
+	  child_stopped_reading = 1;
+	} else {
+	  if (query_string == NULL) 
+	    query_string = apr_pstrdup(r->pool, data);
+	  else 
+	    query_string = apr_pstrcat(r->pool, query_string, data, NULL);
+	}
+	//apr_bucket_delete(in_bucket);
+      } 
+      apr_brigade_cleanup(bb); 
+    } while (!seen_eos); 
+
+    qs = (query_string == NULL) ? "" : string(query_string);
+    return true; 
+  };
+
+  // Get request parameters - whether POST or GET
+  void get_request_params(request_rec *r, params_t& params) {
+    string query;
+    if(r->method_number == M_GET && r->args != NULL) {
+      debug("Request GET params: " + string(r->args));
+      params = parse_query_string(string(r->args));
+    } else if(r->method_number == M_POST && get_post_data(r, query)) {
+      debug("Request POST params: " + query);
+      params = parse_query_string(query);
+    }
+  };
+  
 }

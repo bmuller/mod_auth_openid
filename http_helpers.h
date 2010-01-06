@@ -69,6 +69,12 @@ namespace modauthopenid {
 
   // for each key/value in params_one, set params_two[key] = value
   void merge_params(params_t& params_one, params_t& params_two);
+
+  // Get request parameters - whether POST or GET
+  void get_request_params(request_rec *r, params_t& params);
+
+  // Get the post query string from a HTTP POST
+  bool get_post_data(request_rec *r, string& query_string);
 };
 
 

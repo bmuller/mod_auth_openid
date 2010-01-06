@@ -72,6 +72,9 @@ Created by bmuller <bmuller@butterfat.net>
 #undef PACKAGE_VERSION
 #undef PACKAGE_URL
 
+/* Header enctype for POSTed form data */
+#define DEFAULT_POST_ENCTYPE "application/x-www-form-urlencoded"
+
 /* mod_auth_openid includes */
 #include "config.h"
 #include "types.h"

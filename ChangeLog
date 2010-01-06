@@ -3,6 +3,11 @@
 
 # All references to issues/bugs can be found at:
 # http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
+Version 0.5
+	Added support for HTML form submission (POSTs) per the 2.0 spec (issue 52) 
+	Created AuthOpenIDCookiePath option (issue 76)
+	Nonce is now more secure (issue 77)
+
 Version 0.4
 	Fixed bug involving custom auth cookie names (issue 27)
 	No longer clearing attribute exchange parameters (issue 34) - see wiki page for attribute exchange

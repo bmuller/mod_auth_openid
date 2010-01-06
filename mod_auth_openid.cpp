@@ -302,10 +302,8 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
   modauthopenid::make_rstring(10, nonce);
   modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), nonce, return_to);    
   params["modauthopenid.nonce"] = nonce;
-  //remove first char - ? to fit r->args standard, then get the return_to url with original non-openid get parameters
-  std::string args = params.append_query("", "").substr(1); 
-  apr_cpystrn(r->args, args.c_str(), 1024);
   full_uri(r, return_to, s_cfg);
+  return_to = params.append_query(return_to, "");
 
   // get identity provider and redirect
   try {
@@ -420,9 +418,9 @@ static int mod_authopenid_method_handler(request_rec *r) {
   if(has_valid_session(r, s_cfg))
     return DECLINED;
 
-  // parse the get params
+  // parse the get/post params
   opkele::params_t params;
-  if(r->args != NULL) params = modauthopenid::parse_query_string(std::string(r->args));
+  modauthopenid::get_request_params(r, params);
 
   // get our current url and trust root
   std::string return_to, trust_root;
