@@ -302,7 +302,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
   modauthopenid::make_rstring(10, nonce);
   modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), nonce, return_to);    
   params["modauthopenid.nonce"] = nonce;
-  full_uri(r, return_to, s_cfg);
+  full_uri(r, return_to, s_cfg, true);
   return_to = params.append_query(return_to, "");
 
   // get identity provider and redirect
