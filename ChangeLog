@@ -3,6 +3,10 @@
 
 # All references to issues/bugs can be found at:
 # http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
+Version 0.6
+	Fixed error that caused openid_identifier to leak into return_to, causes cancel messages to fail (issue 92)
+	Fixed problem with module not always recognizing when locked URL was using https (issue 83)
+	
 Version 0.5
 	Added support for HTML form submission (POSTs) per the 2.0 spec (issue 52) 
 	Created AuthOpenIDCookiePath option (issue 76)

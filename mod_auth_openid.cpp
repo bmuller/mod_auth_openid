@@ -47,9 +47,6 @@ typedef struct {
 
 typedef const char *(*CMD_HAND_TYPE) ();
 
-// determine if a connection is using https - only took 1000 years to figure this one out
-static APR_OPTIONAL_FN_TYPE(ssl_is_https) *using_https = APR_RETRIEVE_OPTIONAL_FN(ssl_is_https);
-
 static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
@@ -175,6 +172,8 @@ static void full_uri(request_rec *r, std::string& result, modauthopenid_config *
   std::string hostname(r->hostname);
   std::string uri(r->uri);
   apr_port_t i_port = ap_get_server_port(r);
+  // Fetch the APR function for determining if we are looking at an https URL
+  APR_OPTIONAL_FN_TYPE(ssl_is_https) *using_https = APR_RETRIEVE_OPTIONAL_FN(ssl_is_https);
   std::string prefix = (using_https != NULL && using_https(r->connection)) ? "https://" : "http://";
   char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
   std::string s_port = (i_port == 80 || i_port == 443) ? "" : ":" + std::string(port);
