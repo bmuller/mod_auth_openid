@@ -30,6 +30,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include "httpd.h"
 #include "http_core.h"
 #include "http_config.h"
+#include "http_request.h"
 #include "apr_strings.h"
 #include "http_protocol.h"
 #include "http_main.h"

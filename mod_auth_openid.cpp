@@ -34,7 +34,6 @@ typedef struct {
   char *trust_root;
   const char *cookie_name;
   char *login_page;
-  bool enabled;
   bool use_cookie;
   apr_array_header_t *trusted;
   apr_array_header_t *distrusted;
@@ -51,7 +50,6 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
   newcfg->db_location = "/tmp/mod_auth_openid.db";
-  newcfg->enabled = false;
   newcfg->use_cookie = true;
   newcfg->cookie_name = "open_id_session_id";
   newcfg->cookie_path = NULL; 
@@ -92,12 +90,6 @@ static const char *set_modauthopenid_login_page(cmd_parms *parms, void *mconfig,
 static const char *set_modauthopenid_cookie_name(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->cookie_name = (char *) arg;
-  return NULL;
-}
-
-static const char *set_modauthopenid_enabled(cmd_parms *parms, void *mconfig, int flag) {
-  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
-  s_cfg->enabled = (bool) flag;
   return NULL;
 }
 
@@ -151,8 +143,6 @@ static const command_rec mod_authopenid_cmds[] = {
 		"AuthOpenIDCookieName <name of cookie to use>"),
   AP_INIT_TAKE1("AuthOpenIDCookiePath", (CMD_HAND_TYPE) set_modauthopenid_cookie_path, NULL, OR_AUTHCFG, 
 		"AuthOpenIDCookiePath <path of cookie to use>"), 
-  AP_INIT_FLAG("AuthOpenIDEnabled", (CMD_HAND_TYPE) set_modauthopenid_enabled, NULL, OR_AUTHCFG,
-	       "AuthOpenIDEnabled <On | Off>"),
   AP_INIT_FLAG("AuthOpenIDUseCookie", (CMD_HAND_TYPE) set_modauthopenid_usecookie, NULL, OR_AUTHCFG,
 	       "AuthOpenIDUseCookie <On | Off> - use session auth?"),
   AP_INIT_ITERATE("AuthOpenIDTrusted", (CMD_HAND_TYPE) add_modauthopenid_trusted, NULL, OR_AUTHCFG,
@@ -408,14 +398,16 @@ static int mod_authopenid_method_handler(request_rec *r) {
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
 
   // if we're not enabled for this location/dir, decline doing anything
-  if(!s_cfg->enabled) 
+  const char *current_auth = ap_auth_type(r);
+  if (!current_auth || strcasecmp(current_auth, "openid"))
     return DECLINED;
 
   // make a record of our being called
-  modauthopenid::debug("***" + std::string(PACKAGE_STRING) + " module has been called***");
+  modauthopenid::debug("*** " + std::string(PACKAGE_STRING) + " module has been called ***");
   
+  // if user has a valid session, they are authorized (OK)
   if(has_valid_session(r, s_cfg))
-    return DECLINED;
+    return OK;
 
   // parse the get/post params
   opkele::params_t params;
@@ -442,7 +434,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
 }
 
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
-  ap_hook_handler(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_FIRST);
+  ap_hook_check_user_id(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 //module AP_MODULE_DECLARE_DATA 

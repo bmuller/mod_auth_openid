@@ -29,8 +29,10 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  // Send the string s as to the client (type text/html)
-  int http_sendstring(request_rec *r, string s);
+  // Send the string s as to the client (type text/html).  On success,
+  // send either the value of the parameter success_rvalue or OK by 
+  // default
+  int http_sendstring(request_rec *r, string s, int success_rvalue = OK);
 
   //send Location header to given location
   int http_redirect(request_rec *r, string location);

@@ -30,7 +30,7 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  int http_sendstring(request_rec *r, string s) {
+  int http_sendstring(request_rec *r, string s, int success_rvalue) {
     // no idea why the following line only sometimes worked.....
     //apr_table_setn(r->headers_out, "Content-Type", "text/html");
     ap_set_content_type(r, "text/html");
@@ -45,7 +45,7 @@ namespace modauthopenid {
 
     if (ap_pass_brigade(r->output_filters, bb) != APR_SUCCESS)
       return HTTP_INTERNAL_SERVER_ERROR;
-    return OK;
+    return success_rvalue;
   };
 
   int send_form_post(request_rec *r, string location) {
@@ -70,7 +70,8 @@ namespace modauthopenid {
       "<form id=\"form\" action=\"" + url + "\" method=\"post\">" + inputs + "<input type=\"submit\" value=\"submit\">"      
       "</form></body></html>";
       
-    return http_sendstring(r, result);
+    // return HTTP_UNAUTHORIZED so that no further modules can produce output
+    return http_sendstring(r, result, HTTP_UNAUTHORIZED);
   };
 
   int http_redirect(request_rec *r, string location) {
@@ -124,7 +125,9 @@ namespace modauthopenid {
     "</form>"
     "<div id=\"sig\">protected by <a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
       "<body></html>";
-    return http_sendstring(r, result);
+
+    // return HTTP_UNAUTHORIZED so that no further modules can produce output
+    return http_sendstring(r, result, HTTP_UNAUTHORIZED);
   };
 
   void get_session_id(request_rec *r, string cookie_name, string& session_id) {
