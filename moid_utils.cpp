@@ -32,11 +32,6 @@ namespace modauthopenid {
 
   void debug(string s) {
 #ifdef DEBUG
-    print_to_error_log(s);
-#endif
-  };
-
-  void print_to_error_log(string s) {
     string time_s = "";
     time_t rawtime = time(NULL);
     tm *tm_t = localtime(&rawtime);
@@ -53,6 +48,7 @@ namespace modauthopenid {
     // stderr is redirected by apache to apache's error log
     fputs(cleaned_s.c_str(), stderr);
     fflush(stderr);
+#endif
   };
 
   // get a descriptive string for an error; a short string is used as a GET param
@@ -117,14 +113,13 @@ namespace modauthopenid {
     return ret;
   };
 
-  bool regex_match(string subject, string pattern) {
+  pcre * make_regex(string pattern) {
     const char * error;
     int erroffset;
-    pcre * re = pcre_compile(pattern.c_str(), 0, &error, &erroffset, NULL);
-    if (re == NULL) {
-      print_to_error_log("regex compilation failed for regex \"" + pattern + "\": " + error);
-      return false;
-    }
+    return pcre_compile(pattern.c_str(), 0, &error, &erroffset, NULL);
+  }
+
+  bool regex_match(string subject, pcre * re) {
     return (pcre_exec(re, NULL, subject.c_str(), subject.size(), 0, 0, NULL, 0) >= 0);
   };
 
@@ -167,42 +162,52 @@ namespace modauthopenid {
     return true;
   };
 
-  bool exec_auth(string exec_location, string username) {
+  string exec_error_to_string(exec_result_t e, string exec_location, string id) {
+    string error;
+    switch(e) {
+    case fork_failed:
+      error = "Could not fork to exec program: " + exec_location + "when attempting to auth " + id;
+      break;
+    case child_no_return:
+      error = "Problem waiting for child " + exec_location + " to return when authenticating " + id;
+      break;
+    case id_refused:
+      error = id + " deemed authenticated by " + exec_location;
+      break;
+    default: // unspecified
+      error = "Error while attempting to authenticate " + id + " using the program " + exec_location;
+      break;
+    }
+    return error;
+  }
+
+  exec_result_t exec_auth(string exec_location, string username) {
     if(exec_location.size() > 255)
       exec_location.resize(255);
     if(username.size() > 255)
       username.resize(255);
 
     char *const argv[] = { (char *) exec_location.c_str(), (char *) username.c_str(), NULL };
-    bool result = false;
+    exec_result_t result = id_refused;
     int rvalue = 0;
     
     pid_t pid = fork();
     switch(pid) {
     case -1:
       // Fork failed
-      print_to_error_log("Could not fork to exec program: " + exec_location);
-      result = false;
+      result = fork_failed;
       break;
     case 0:
       // congrats, you're a kid
-      debug("Executing " + exec_location + " with parameter " + username);
       execv(exec_location.c_str(), argv);
       // if we make it here, exec failed, exit from kid with rvalue 1
-      print_to_error_log("Could not execv \"" + exec_location + "\" - does the file exist?");
       exit(1);
     default:
       // you're an adult parent, act responsibly
-      if(waitpid(pid, &rvalue, 0) == -1) {	
-	char c_pid[100];
-	sprintf(c_pid, "%i", (int) pid);
-	print_to_error_log("Problem waiting for child with pid of " + string(c_pid) + " to return");
-	result = false;
-      } else { 
-	result = (rvalue == 0);
-	if(result) debug(username + " deemed authenticated by " + exec_location);
-	else debug(username + " deemed not authenticated by " + exec_location);
-      }
+      if(waitpid(pid, &rvalue, 0) == -1) 
+	result = child_no_return;
+      else
+	result = (rvalue == 0) ? id_accepted : id_refused;
       break;
     }
     return result;

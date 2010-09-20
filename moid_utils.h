@@ -43,11 +43,11 @@ namespace modauthopenid {
   // apache redirects stderr to the error log anyway.
   void debug(string s);
 
-  // print a string to the error log (called by debug if DEBUG is defined)
-  void print_to_error_log(string s);
-
   // return true if pattern found in subject
-  bool regex_match(string subject, string pattern);
+  bool regex_match(string subject, pcre * re);
+
+  // create a regular expression from the given pattern
+  pcre * make_regex(string pattern);
 
   // strip any spaces before or after actual string in s
   void strip(string& s);
@@ -63,9 +63,12 @@ namespace modauthopenid {
   bool test_sqlite_return(sqlite3 *db, int result, const string& context);
 
   // Exec a program located at exec_location with a single parameter of username
-  // program should return a 0 if authorized, anything else otherwise
+  // program should return a exec_result_t value.
   // NOTE: if program hangs, so does apache
-  bool exec_auth(string exec_location, string username);
+  exec_result_t exec_auth(string exec_location, string username);
+
+  // convert a exec_result_t value to a meaningful error message
+  string exec_error_to_string(exec_result_t e, string exec_location, string id);
 
   // Generate a random integer - taken from getuuid.c file in apr-util program
   int true_random();

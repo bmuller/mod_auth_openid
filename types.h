@@ -31,6 +31,7 @@ namespace modauthopenid {
   using namespace std;
 
   enum error_result_t { no_idp_found, invalid_id, idp_not_trusted, invalid_nonce, canceled, unspecified, unauthorized };
+  enum exec_result_t { id_accepted, fork_failed, child_no_return, id_refused };
 
   typedef struct session {
     string session_id;

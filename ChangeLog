@@ -4,6 +4,8 @@
 # All references to issues/bugs can be found at:
 # http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
 Version 0.6
+	Now a true authorization module (using ap_hook_check_user_id) (issue 79)
+	Now using integrated apache logging rather than logging directly to apache log with printing to stderr
 	Fixed error that caused openid_identifier to leak into return_to, causes cancel messages to fail (issue 92)
 	Fixed problem with module not always recognizing when locked URL was using https (issue 83)
 	

@@ -27,6 +27,10 @@ Created by bmuller <bmuller@butterfat.net>
 
 #include "mod_auth_openid.h"
 
+#define APDEBUG(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, msg, __VA_ARGS__);
+#define APWARN(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_WARNING, 0, r, msg, __VA_ARGS__);
+#define APERR(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, msg, __VA_ARGS__);
+
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
@@ -215,33 +219,39 @@ static int show_input(request_rec *r, modauthopenid_config *s_cfg) {
   return modauthopenid::http_redirect(r, params.append_query(s_cfg->login_page, ""));
 }
 
-static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url) {
+static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url, request_rec *r) {
   if(apr_is_empty_array(s_cfg->trusted))
     return true;
   char **trusted_sites = (char **) s_cfg->trusted->elts;
   std::string base_url = modauthopenid::get_queryless_url(url);
   for (int i = 0; i < s_cfg->trusted->nelts; i++) {
-    if(modauthopenid::regex_match(base_url, trusted_sites[i])) {
+    pcre * re = modauthopenid::make_regex(trusted_sites[i]);
+    if(re == NULL) { 
+      APERR(r, "regex compilation failed for regex: %s", trusted_sites[i]);
+    } else if(modauthopenid::regex_match(base_url, re)) {
       modauthopenid::debug(base_url + " is a trusted identity provider");
       return true;
     }
   }
-  modauthopenid::debug(base_url + " is NOT a trusted identity provider");
+  APWARN(r, "%s is NOT a trusted identity provider", base_url.c_str());
   return false;
 }
 
-static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url) {
+static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url, request_rec *r) {
   if(apr_is_empty_array(s_cfg->distrusted))
     return false;
   char **distrusted_sites = (char **) s_cfg->distrusted->elts;
   std::string base_url = modauthopenid::get_queryless_url(url);
   for (int i = 0; i < s_cfg->distrusted->nelts; i++) {
-    if(modauthopenid::regex_match(base_url, distrusted_sites[i])) {
-      modauthopenid::debug(base_url + " is a distrusted (on black list) identity provider");
+    pcre * re = modauthopenid::make_regex(distrusted_sites[i]);
+    if(re == NULL) {
+      APERR(r, "regex compilation failed for regex: %s", distrusted_sites[i]);
+    } else if(modauthopenid::regex_match(base_url, re)) {
+      APWARN(r, "%s is a distrusted (on black list) identity provider", base_url.c_str());
       return true;
     }
   }
-  modauthopenid::debug(base_url + " is NOT a distrusted identity provider (not blacklisted)");
+  APDEBUG(r, "%s is NOT a distrusted identity provider (not blacklisted)", base_url.c_str());
   return false;
 };
 
@@ -263,11 +273,12 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
       std::string valid_path(session.path);
       // if found session has a valid path
       if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname.c_str(), r->hostname)==0) {
-	modauthopenid::debug("setting REMOTE_USER to \"" + std::string(session.identity) + "\"");
-	r->user = apr_pstrdup(r->pool, std::string(session.identity).c_str());
+	const char* idchar = std::string(session.identity).c_str();
+	APDEBUG(r, "setting REMOTE_USER to \"%s\"", idchar);
+	r->user = apr_pstrdup(r->pool, idchar);
 	return true;
       } else {
-	modauthopenid::debug("session found for different path or hostname");
+	APDEBUG(r, "session found for different path or hostname (cooke was for %s)", session.hostname.c_str());
       }
     }
   }
@@ -311,11 +322,11 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
     return show_input(r, s_cfg, modauthopenid::invalid_id);
   } catch (opkele::exception &e) {
     consumer.close();
-    modauthopenid::debug("Error while fetching idP location: " + std::string(e.what()));
+    APERR(r, "Error while fetching idP location: %s", e.what());
     return show_input(r, s_cfg, modauthopenid::no_idp_found);
   }
   consumer.close();
-  if(!is_trusted_provider(s_cfg , re_direct) || is_distrusted_provider(s_cfg, re_direct))
+  if(!is_trusted_provider(s_cfg , re_direct, r) || is_distrusted_provider(s_cfg, re_direct, r))
     return show_input(r, s_cfg, modauthopenid::idp_not_trusted);
   return modauthopenid::http_redirect(r, re_direct);
 };
@@ -330,7 +341,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
     modauthopenid::base_dir(std::string(r->uri), path); 
   modauthopenid::make_rstring(32, session_id);
   modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan); 
-  modauthopenid::debug("setting cookie: " + cookie_value);
+  APDEBUG(r, "Setting cookie after authentication of user %s", identity.c_str());
   apr_table_set(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
   hostname = std::string(r->hostname);
 
@@ -368,9 +379,18 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     }
 
     // if we should be using a user specified auth program, run it to see if user is authorized
-    if(s_cfg->use_auth_program && !modauthopenid::exec_auth(std::string(s_cfg->auth_program), consumer.get_claimed_id())) {
-      consumer.close();
-      return show_input(r, s_cfg, modauthopenid::unauthorized);       
+    if(s_cfg->use_auth_program) {
+      std::string username = consumer.get_claimed_id();
+      std::string progname = std::string(s_cfg->auth_program);
+      modauthopenid::exec_result_t eresult = modauthopenid::exec_auth(progname, username);
+      if(eresult != modauthopenid::id_accepted) {
+	std::string error = modauthopenid::exec_error_to_string(eresult, progname, username);
+	APERR(r, "Error in authentication: %s", error.c_str());	
+	consumer.close();
+	return show_input(r, s_cfg, modauthopenid::unauthorized);       
+      } else {
+	APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());	
+      }
     }
 
     // Make sure that identity is set to the original one given by the user (in case of delegation
@@ -383,11 +403,11 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       return set_session_cookie(r, s_cfg, params, identity);
       
     // if we're not setting cookie - don't redirect, just show page
-    modauthopenid::debug("setting REMOTE_USER to \"" + identity + "\"");
+    APERR(r, "Setting REMOTE_USER to %s", identity.c_str());
     r->user = apr_pstrdup(r->pool, identity.c_str());
     return DECLINED;
   } catch(opkele::exception &e) {
-    modauthopenid::debug("Error in authentication: " + std::string(e.what()));
+    APERR(r, "Error in authentication: %s", e.what());
     consumer.close();
     return show_input(r, s_cfg, modauthopenid::unspecified);
   }
@@ -403,7 +423,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
     return DECLINED;
 
   // make a record of our being called
-  modauthopenid::debug("*** " + std::string(PACKAGE_STRING) + " module has been called ***");
+  APDEBUG(r, "*** %s module has been called ***", PACKAGE_STRING);
   
   // if user has a valid session, they are authorized (OK)
   if(has_valid_session(r, s_cfg))
