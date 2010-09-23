@@ -172,7 +172,7 @@ namespace modauthopenid {
       error = "Problem waiting for child " + exec_location + " to return when authenticating " + id;
       break;
     case id_refused:
-      error = id + " deemed authenticated by " + exec_location;
+      error = id + " not authenticated by " + exec_location;
       break;
     default: // unspecified
       error = "Error while attempting to authenticate " + id + " using the program " + exec_location;
