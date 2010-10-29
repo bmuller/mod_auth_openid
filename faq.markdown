@@ -17,9 +17,9 @@ title: mod_auth_openid
 ## How do I determine the identity URL of the person currently logged in? 
  The identity URL of the user currently logged is stored in the **REMOTE_USER** CGI environment variable.
 ##  Is it possible to limit login to some users, like htaccess/htpasswd does? 
- Yes, by using an external auth program and the [wiki:AuthUserProgram AuthOpenIDUserProgram] option.  Also, it is possible to limit authentication to certain identity providers (by using **AuthOpenIDDistrusted** and **AuthOpenIDTrusted**, see [http://trac.butterfat.net/public/mod_auth_openid/wiki the main page] for more info).  
+ Yes, by using an external auth program and the [AuthOpenIDUserProgram](authuserprogram.html) option.  Also, it is possible to limit authentication to certain identity providers (by using **AuthOpenIDDistrusted** and **AuthOpenIDTrusted**, see [the main page](index.html) the main page] for more info).  
 ## I hate the look of the default login page.  How can I use something different? 
- It's easy.  See the [wiki:CustomLoginPage custom login page howto].
+ It's easy.  See the [custom login page howto](custompage.html).
 ## What is the air speed velocity of an unladen swallow? 
  Already answered [here](http://answers.google.com/answers/main?cmd=threadview&id=233578).
 ## What if I'm using Apache 1.3? 

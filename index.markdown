@@ -5,7 +5,7 @@ title: mod_auth_openid
 # Introduction : The Apache OpenID Module 
 **mod_auth_openid** is an authentication module for the [Apache 2] webserver.  It handles the functions of an [OpenID](http://openid.net) consumer as specified in the [OpenID 2.0 specification](http://openid.net/specs/openid-authentication-2_0.html).  See the [FAQ][faq] for more information.  Download the current release from the [the releases page](releases.html).
 
-You can, now, specify an external program for authorization.  That is, after a user has authenticated themselves their identity can be passed to an external program that then returns a value that either authorize them or not to see the resource being protected.  See AuthUserProgram for more information.
+You can, now, specify an external program for authorization.  That is, after a user has authenticated themselves their identity can be passed to an external program that then returns a value that either authorize them or not to see the resource being protected.  See [AuthUserProgram](authuserprogram.html) for more information.
 
 # Example 
 Most people want to see an example first: 
@@ -101,7 +101,7 @@ After a user authenticates themselves, the user's identity will be available in 
 If you're upgrading, make sure you delete the old database file before upgrading and after stopping apache.
 
 # Attribute Exchange 
-See the AttributeExchange.
+See the [AttributeExchange](attex.html).
 
 # Questions/Problems/Complaints 
 First, read the [FAQ][faq].  If it's a bug, report it by creating a new ticket (link at top).  If it's a complaint or question, email [the mailing list](https://lists.butterfat.net/mailman/listinfo/mod-auth-openid).
