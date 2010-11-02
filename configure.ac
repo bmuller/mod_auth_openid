@@ -96,7 +96,7 @@ echo " *** $> make"
 echo " *** $> su root"
 echo " *** $> make install"
 echo " ***"
-echo " *** Report bugs at http://trac.butterfat.net/public/mod_auth_openid"
+echo " *** Report bugs at http://github.com/bmuller/mod_auth_openid/issues"
 echo " *** Thanks for using free (as in speech and beer) software."
 echo " ***"
 echo

@@ -453,8 +453,62 @@ static int mod_authopenid_method_handler(request_rec *r) {
   }
 }
 
+static int mod_authopenid_check_user_access(request_rec *r) {
+  modauthopenid_config *s_cfg;
+  s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
+  char *user = r->user;
+  int m = r->method_number;
+  int required_user = 0;
+  register int x;
+  const char *t, *w;
+  const apr_array_header_t *reqs_arr = ap_requires(r);
+  require_line *reqs;
+
+  if (!reqs_arr) 
+    return DECLINED;
+  
+  reqs = (require_line *)reqs_arr->elts;
+  for (x = 0; x < reqs_arr->nelts; x++) {
+
+    if (!(reqs[x].method_mask & (AP_METHOD_BIT << m))) 
+      continue;
+
+    t = reqs[x].requirement;
+    w = ap_getword_white(r->pool, &t);
+    if (!strcasecmp(w, "valid-user")) {
+      return OK;
+    }
+    if (!strcasecmp(w, "user")) {
+      /* And note that there are applicable requirements                                                                                                                                                                               
+       * which we consider ourselves the owner of.                                                                                                                                                                                     
+       */
+      required_user = 1;
+      while (t[0]) {
+	w = ap_getword_conf(r->pool, &t);
+	if (!strcmp(user, w)) {
+	  return OK;
+	}
+      }
+    }
+  }
+
+  if (!required_user) {
+    /* no applicable requirements */
+    return DECLINED;
+  }
+
+  ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                  "access to %s failed, reason: user '%s' does not meet "
+		"'require'ments for user/valid-user to be allowed access",
+		r->uri, user);
+
+  ap_note_auth_failure(r);
+  return HTTP_UNAUTHORIZED;
+}
+
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
   ap_hook_check_user_id(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
+  ap_hook_auth_checker(mod_authopenid_check_user_access, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 //module AP_MODULE_DECLARE_DATA 
