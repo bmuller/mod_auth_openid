@@ -1,8 +1,8 @@
-# See http://trac.butterfat.net/public/mod_auth_openid for 
-# instructions on SVN access for a full ChangeLog history.
+# See http://github.com/bmuller/mod_auth_openid for a full ChangeLog history.
 
-# All references to issues/bugs can be found at:
-# http://trac.butterfat.net/public/mod_auth_openid/ticket/<issue number>
+# Some issue references are from an old Trac installation.  New bugs can be found
+# at http://github.com/bmuller/mod_auth_openid/issues
+	
 Version 0.6
 	Now a true authorization module (using ap_hook_check_user_id) (issue 79)
 	Now using integrated apache logging rather than logging directly to apache log with printing to stderr
