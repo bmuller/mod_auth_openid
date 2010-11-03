@@ -98,7 +98,7 @@ Next, restart apache:
 After a user authenticates themselves, the user's identity will be available in the *REMOTE_USER* cgi environment variable.  A cookie named *open_id_session_id* is saved to maintain each user's session.
 
 # Upgrading 
-If you're upgrading, make sure you delete the old database file before upgrading and after stopping apache.
+If you're upgrading, make sure you delete the old database file before upgrading and after stopping apache (the db file is in */tmp/mod_auth_openid.db* by default).
 
 # Attribute Exchange 
 See the [AttributeExchange](attex.html).
