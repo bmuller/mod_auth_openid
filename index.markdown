@@ -60,9 +60,12 @@ chown www-data /tmp/mod_auth_openid.db
 ## Usage 
 Place the following directive in either a Directory, Location, or File directive in your httpd.conf (or in an .htaccess file if you have *AllowOverride AuthConfig*):
 {% highlight apache %}
-AuthOpenIDEnabled                 On
+AuthType			  OpenID
+require valid-user
 {% endhighlight %}
- * **AuthOpenIDEnabled**: The directory/location/file should be secured by mod_auth_openid.  This is the only required directive.
+ * **AuthType**: The directory/location/file should be secured by mod_auth_openid.
+ * **require**: You can specify either *valid-user* or a specific user (as in "*require user http://myopenid.com/myusername*")
+
 The following are optional:
 {% highlight apache %}
 AuthOpenIDDBLocation              /some/location/my_file.db
@@ -98,7 +101,7 @@ Next, restart apache:
 After a user authenticates themselves, the user's identity will be available in the *REMOTE_USER* cgi environment variable.  A cookie named *open_id_session_id* is saved to maintain each user's session.
 
 # Upgrading 
-If you're upgrading, make sure you delete the old database file before upgrading and after stopping apache.
+If you're upgrading, make sure you delete the old database file before upgrading and after stopping apache (by default, this can be found in */tmp/mod_auth_openid.db*).
 
 # Attribute Exchange 
 See the [AttributeExchange](attex.html).
