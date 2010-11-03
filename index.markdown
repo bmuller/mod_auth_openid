@@ -60,9 +60,11 @@ chown www-data /tmp/mod_auth_openid.db
 ## Usage 
 Place the following directive in either a Directory, Location, or File directive in your httpd.conf (or in an .htaccess file if you have *AllowOverride AuthConfig*):
 {% highlight apache %}
-AuthOpenIDEnabled                 On
+AuthType                 OpenID
+require valid-user
 {% endhighlight %}
- * **AuthOpenIDEnabled**: The directory/location/file should be secured by mod_auth_openid.  This is the only required directive.
+The *valid-user* constraint can be replaced with *require user http://myopenid.com/myusername/* if you want to restrict access to a specific user.
+
 The following are optional:
 {% highlight apache %}
 AuthOpenIDDBLocation              /some/location/my_file.db
