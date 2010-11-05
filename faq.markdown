@@ -17,7 +17,7 @@ title: mod_auth_openid
 ## How do I determine the identity URL of the person currently logged in? 
  The identity URL of the user currently logged is stored in the **REMOTE_USER** CGI environment variable.
 ##  Is it possible to limit login to some users, like htaccess/htpasswd does? 
- Yes, by using an external auth program and the [AuthOpenIDUserProgram](authuserprogram.html) option.  Also, it is possible to limit authentication to certain identity providers (by using **AuthOpenIDDistrusted** and **AuthOpenIDTrusted**, see [the main page](index.html) the main page] for more info).  
+ Yes, by using an external auth program and the [AuthOpenIDUserProgram](authuserprogram.html) option.  Also, it is possible to limit authentication to certain identity providers (by using **AuthOpenIDDistrusted** and **AuthOpenIDTrusted**, see [the main page](index.html) for more info).  
 ## I hate the look of the default login page.  How can I use something different? 
  It's easy.  See the [custom login page howto](custompage.html).
 ## What is the air speed velocity of an unladen swallow? 
@@ -25,7 +25,6 @@ title: mod_auth_openid
 ## What if I'm using Apache 1.3? 
  From the latest version of Apache 1.3's [release page](http://www.apache.org/dist/httpd/Announcement1.3.html):
   *We strongly recommend that users of all earlier versions, including 1.3 family release, upgrade to to the current 2.2 version as soon as possible.*
- I understand that quite a few sites are still running on 1.3 and that a backported version of **mod_auth_openid** would be useful, but I'd rather spend time working on make the Apache 2 module as stable and feature rich as possible.  If someone would like to backport it and send me the code I'll be happy to create a branch for it.  I'd like to focus my time on the Apache 2 version until I consider it entirely stable and secure.
 ## What if I'm using Windows? 
  As of yet, no one has compiled the module for Windows.  I will not do so.  If someone does, please send in instructions describing the process you used so that others can do so as well.  Feel free to send a link to your binary as well.
 ## Does Version 0.1 imply anything or is this actually ready for production? 

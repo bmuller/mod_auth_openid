@@ -3,8 +3,6 @@ layout: base
 title: mod_auth_openid
 ---
 # OpenID Attribute Exchange Support
-*This is currently only supported in SVN and versions > 0.3*
-
 The simplest manner of retrieving attributes is to first set up a [CustomLoginPage](custompage.html) (do that first, then keep reading).  In this example, I'll be fetching an email address from Google when a user authenticates.  First, the custom login page:
 {% highlight html %}
 <html><body>

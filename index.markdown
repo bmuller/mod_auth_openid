@@ -19,7 +19,7 @@ Most people want to see an example first:
  * libsqlite: SQLite C libs - [http://www.sqlite.org](http://www.sqlite.org)
 
 ## Get The Source 
-You can download the current stable release from [the releases page](releases.html) or use [Subversion](http://subversion.tigris.org) to get a development release:
+You can download the current stable release from [the releases page](releases.html) or use git to get a development release:
 {% highlight bash %}
 git clone git://github.com/bmuller/mod_auth_openid.git
 {% endhighlight %}
@@ -88,9 +88,9 @@ AuthOpenIDCookiePath              /path/to/protect
  * **AuthOpenIDCookieName**: The name of the session cookie set by mod_auth_openid.  *Default:* open_id_session_id
  * **AuthOpenIDLoginPage**: The URL location of a customized login page.  This could be a location on a different server or domain.  *Default:* use the mod_auth_openid login page that exists in the module.  See the [custom login page howto][custompage] for more information. 
  * **AuthOpenIDCookieLifespan**: The number of seconds that the session cookie should live after being set.  *Default:* If the cookie lifespan is not set than it will expire at the end of the browser session (when the browser is closed).
- * **AuthOpenIDServerName**: If mod_auth_openid is being used behind a proxy, this option can be used to specify a hostname that will be used to create redirection URLs.  For more info, see #3.
- * **AuthOpenIDUserProgram**: A user specified program for authorization functions.  Please please oh please read AuthUserProgram before using this.
- * **AuthOpenIDCookiePath**: Explicitly set the path of the auth cookie (for instance, if you want to explicitly grant access to a location other than the one the user is trying to access).  For more info, see #76.
+ * **AuthOpenIDServerName**: If mod_auth_openid is being used behind a proxy, this option can be used to specify a hostname that will be used to create redirection URLs.
+ * **AuthOpenIDUserProgram**: A user specified program for authorization functions.  Please please oh please read [the documentation](authuserprogram.html) before using this.
+ * **AuthOpenIDCookiePath**: Explicitly set the path of the auth cookie (for instance, if you want to explicitly grant access to a location other than the one the user is trying to access).
 Next, restart apache:
 {% highlight bash %}
 /path/to/apache2/bin/apachectl stop
