@@ -9,8 +9,8 @@ You can, now, specify an external program for authorization.  That is, after a u
 
 # Example 
 Most people want to see an example first: 
- * [http://coop.butterfat.net/~bmuller/mod_auth_openid/othersecret](http://coop.butterfat.net/~bmuller/mod_auth_openid/othersecret) (uses default login page)
- * [http://coop.butterfat.net/~bmuller/mod_auth_openid/secret](http://coop.butterfat.net/~bmuller/mod_auth_openid/secret) (uses [custom login page][custompage])
+ * [http://butterfat.net/mod_auth_openid/othersecret](http://butterfat.net/mod_auth_openid/othersecret) (uses default login page)
+ * [http://butterfat.net/mod_auth_openid/secret](http://butterfat.net/mod_auth_openid/secret) (uses [custom login page][custompage])
 
 # Installation 
 *These docs assume that you have [Apache 2] installed and running already.*
