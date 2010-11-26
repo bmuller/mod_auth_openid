@@ -8,16 +8,17 @@ You should have mod_auth_openid installed at this point and working for some loc
 *For information on passing along attribute exchange parameters, see [AttributeExchange](attex.html) too.*
 
 # Example 
-Let's say you want to protect the location "/supersecret" (that is, {{{http://example.com/supersecret}}}) on your web server, and you want to use your own custom page for users to enter their identity.
+Let's say you want to protect the location "/supersecret" (that is, *http://example.com/supersecret*) on your web server, and you want to use your own custom page for users to enter their identity.
 ## Step 1: Determine where your page will live 
 The page that you create **must** exist *outside* of your protected location/directory.  Other than that one rule, it can live anywhere, even on a different server.  Use whatever tools/framework/language you want to generate the page.  For the purposes of our example, let's say the page will live at "/login.html".
 
 ## Step 2: Add the location to your httpd.conf 
-Use the **AuthOpenIDLoginPage** option to specify the location of your login page.  This is *not* the location on your file system, but rather a full URL ({{{http://.....}}}) or the location relative to your server's www root.
+Use the **AuthOpenIDLoginPage** option to specify the location of your login page.  This is *not* the location on your file system, but rather a full URL (*http://.....*) or the location relative to your server's www root.
 {% highlight apache %}
 <Location /supersecret>
-        AuthOpenIDEnabled       On
-        AuthOpenIDLoginPage     /login.html
+	AuthType			OpenID
+	require valid-user
+        AuthOpenIDLoginPage		/login.html
 </Location>
 {% endhighlight %}
 
@@ -33,7 +34,7 @@ It really doesn't matter what's on your page, either, other than a form.  This f
 </form>
 </body></html>
 {% endhighlight %}
-Also, there is a GET parameter **modauthopenid.referrer** that will be sent to the custom login page that contains the original location the user requested (see #4 for more information).
+Also, there is a GET parameter **modauthopenid.referrer** that will be sent to the custom login page that contains the original location the user requested.
 ## Step 4: Handle errors on your login page 
 In the case that a user cancels the identification process or that there is an authentication error, the user will be redirected back to the login page location with a special GET parameter named **modauthopenid.error** (as well as any other parameters you may have added in the first place).  This parameter will have one of six possible values:
  * **no_idp_found**:  This is returned when the there was no identity provider URL found on the identity page given by the user, or if the page could not be downloaded.  The user probably just mistyped her identity URL.
