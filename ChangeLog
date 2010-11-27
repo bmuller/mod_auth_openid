@@ -1,10 +1,11 @@
 # See http://github.com/bmuller/mod_auth_openid for a full ChangeLog history.
 
 # Some issue references are from an old Trac installation.  New bugs can be found
-# at http://github.com/bmuller/mod_auth_openid/issues
+# at http://github.com/bmuller/mod_auth_openid/issues and are prefixed with a #
 	
 Version 0.6
 	Now a true authorization module (using ap_hook_check_user_id) (issue 79)
+	Because now using propper hook, REMOTE_USER now accessible to mod_rewrite (issue #2)
 	Now using integrated apache logging rather than logging directly to apache log with printing to stderr
 	Fixed error that caused openid_identifier to leak into return_to, causes cancel messages to fail (issue 92)
 	Fixed problem with module not always recognizing when locked URL was using https (issue 83)
