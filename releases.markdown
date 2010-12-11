@@ -9,6 +9,9 @@ View the current [ChangeLog](http://github.com/bmuller/mod_auth_openid/blob/mast
 git co git://github.com/bmuller/mod_auth_openid.git
 {% endhighlight %}
 
+## Version 0.6 
+ * [mod_auth_openid-0.6.tar.gz](http://butterfat.net/releases/mod_auth_openid/mod_auth_openid-0.6.tar.gz) *md5sum: f72c6a716e368f83756b25c062e70666*
+
 ## Version 0.5 
  * [mod_auth_openid-0.5.tar.gz](http://butterfat.net/releases/mod_auth_openid/mod_auth_openid-0.5.tar.gz) *md5sum: 63f3ac92a5acad8028c85947970806d5*
 
