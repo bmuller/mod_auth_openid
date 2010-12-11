@@ -1,5 +1,5 @@
-Basic Installation
-==================
+BBasic Installation
+=1;2c=================
 
 First, you'll need a few prerequisites.
  - the latest libopkele from http://kin.klever.net/libopkele/
@@ -29,17 +29,5 @@ Or you can specify an alternate location that the user running apache has write
 privieges on (see the docs for the AuthOpenIDDBLocation directive on the homepage).
 
 
-Usage
-==================
-
-In either a Directory, Location, or File directive in httpd.conf, place the following directive:
-
-AuthOpenIDEnabled        On
-
-There are also additional, optional directives.  See the homepage for a list and docs.
-
-The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
-authentication.
-
-See http://trac.butterfat.net/public/mod_auth_openid for more information.
+See README for usage.
 
