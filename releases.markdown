@@ -4,7 +4,7 @@ title: mod_auth_openid
 ---
 View the current [ChangeLog](http://github.com/bmuller/mod_auth_openid/blob/master/ChangeLog).
 
-## Unstable
+## Unstable on Github
 {% highlight bash %}
 git co git://github.com/bmuller/mod_auth_openid.git
 {% endhighlight %}
