@@ -31,6 +31,7 @@ Enter the mod_auth_openid directory and type:
 {% highlight bash %}
 ./configure
 {% endhighlight %}
+
 You can use the following to see additional configuration options:
 {% highlight bash %}
 ./configure --help
