@@ -15,3 +15,4 @@ This will create an executable in the current directory named '''db_info'''.  Us
 It will print out the number of sessions, associations, and nonces in the database.
 
 You can also use the *--enable-debug* configuration option to get debugging information in the apache 2 error log.
+
