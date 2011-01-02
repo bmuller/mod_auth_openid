@@ -226,11 +226,20 @@ namespace modauthopenid {
   };
 
   string url_decode(const string& str) {
-    char * t = curl_unescape(str.c_str(),str.length());
+    // if +'s aren't replaced with %20's then curl won't unescape to spaces propperly
+    string url = str_replace("+", "%20", str);
+
+    CURL *curl = curl_easy_init();
+    if(!curl)
+      throw failed_conversion(OPKELE_CP_ "failed to curl_easy_init()");
+
+    char * t = curl_easy_unescape(curl, url.c_str(), url.length(), NULL);
     if(!t)
       throw failed_conversion(OPKELE_CP_ "failed to curl_unescape()");
+
     string rv(t);
     curl_free(t);
+    curl_easy_cleanup(curl);
     return rv;
   };
 
