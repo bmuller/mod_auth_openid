@@ -1,6 +1,6 @@
 ---
 layout: base
-title: mod_auth_openid
+title: mod_auth_openid: The Apache OpenID Module
 ---
 # Introduction : The Apache OpenID Module 
 **mod_auth_openid** is an authentication module for the [Apache 2] webserver.  It handles the functions of an [OpenID](http://openid.net) consumer as specified in the [OpenID 2.0 specification](http://openid.net/specs/openid-authentication-2_0.html).  See the [FAQ][faq] for more information.  Download the current release from the [the releases page](releases.html).
