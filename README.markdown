@@ -1,6 +1,7 @@
 # Basic Installation
 
 First, you'll need a few prerequisites.
+
  * the latest libopkele from http://kin.klever.net/libopkele (C++ implementation of important OpenID functions)
  * libsqlite from http://www.sqlite.org (SQLite C libs)
 
@@ -36,5 +37,5 @@ There are also additional, optional directives.  See the homepage for a list and
 The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
 authentication.
 
-See http://findingscience.com/mod_auth_openid for more information.
+See [the project page](http://findingscience.com/mod_auth_openid) for more information.
 
