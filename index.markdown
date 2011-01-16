@@ -104,7 +104,7 @@ After a user authenticates themselves, the user's identity will be available in 
 If you're upgrading, make sure you delete the old database file before upgrading and after stopping apache (the db file is in */tmp/mod_auth_openid.db* by default).
 
 # Attribute Exchange 
-See the [AttributeExchange](attex.html).
+See the [AttributeExchange](attex.html) page for more information.
 
 # Questions/Problems/Complaints 
 First, read the [FAQ][faq].  If it's a bug, report it by creating a new ticket (link at top).  If it's a complaint or question, email [the mailing list](https://lists.butterfat.net/mailman/listinfo/mod-auth-openid).
