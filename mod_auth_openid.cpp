@@ -163,7 +163,7 @@ static const command_rec mod_authopenid_cmds[] = {
 // Get the full URI of the request_rec's request location 
 // clean_params specifies whether or not all openid.* and modauthopenid.* params should be cleared
 static void full_uri(request_rec *r, std::string& result, modauthopenid_config *s_cfg, bool clean_params=false) {
-  std::string proto_host_port = mod_auth_openid::get_proto_host_port(r);
+  std::string proto_host_port = modauthopenid::get_proto_host_port(r);
   std::string uri(r->uri);
   std::string args;
   if(clean_params) {
