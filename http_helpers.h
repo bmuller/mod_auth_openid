@@ -77,6 +77,12 @@ namespace modauthopenid {
 
   // Get the post query string from a HTTP POST
   bool get_post_data(request_rec *r, string& query_string);
+
+  // Get a header value
+  string get_header(request_rec *r, string headername, string def);
+
+  // Get the protocol + host + port string
+  string get_proto_host_port(request_rec *r);
 };
 
 

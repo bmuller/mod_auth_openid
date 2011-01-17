@@ -130,6 +130,26 @@ namespace modauthopenid {
     return http_sendstring(r, result, HTTP_UNAUTHORIZED);
   };
 
+  string get_header(request_rec *r, string headername, string def) {
+    const char * header_c = apr_table_get(r->headers_in, "Cookie");
+    return (header_c == NULL) ? def : string(header_c);
+  };
+
+  string get_proto_host_port(request_rec *r) {
+    string hostname(r->hostname);
+    hostname = mod_auth_openid::get_header("x-forwarded-host", hostname);
+
+    // Fetch the APR function for determining if we are looking at an https URL                                                                                              APR_OPTIONAL_FN_TYPE(ssl_is_https) *using_https = APR_RETRIEVE_OPTIONAL_FN(ssl_is_https);
+    string prefix = (using_https != NULL && using_https(r->connection)) ? "https://" : "http://";
+
+    apr_port_t i_port = ap_get_server_port(r);
+    string port(apr_psprintf(r->pool, "%lu", (unsigned long) i_port));
+    port = mod_auth_openid::get_header("x-forwarded-port", port);
+    port = (port == "80" || port == "443") ? "" : ":" + port;
+
+    return prefix + hostname + port;
+  };
+
   void get_session_id(request_rec *r, string cookie_name, string& session_id) {
     const char * cookies_c = apr_table_get(r->headers_in, "Cookie");
     if(cookies_c == NULL)

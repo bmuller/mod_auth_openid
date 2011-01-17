@@ -163,15 +163,8 @@ static const command_rec mod_authopenid_cmds[] = {
 // Get the full URI of the request_rec's request location 
 // clean_params specifies whether or not all openid.* and modauthopenid.* params should be cleared
 static void full_uri(request_rec *r, std::string& result, modauthopenid_config *s_cfg, bool clean_params=false) {
-  std::string hostname(r->hostname);
+  std::string proto_host_port = mod_auth_openid::get_proto_host_port(r);
   std::string uri(r->uri);
-  apr_port_t i_port = ap_get_server_port(r);
-  // Fetch the APR function for determining if we are looking at an https URL
-  APR_OPTIONAL_FN_TYPE(ssl_is_https) *using_https = APR_RETRIEVE_OPTIONAL_FN(ssl_is_https);
-  std::string prefix = (using_https != NULL && using_https(r->connection)) ? "https://" : "http://";
-  char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
-  std::string s_port = (i_port == 80 || i_port == 443) ? "" : ":" + std::string(port);
-
   std::string args;
   if(clean_params) {
     opkele::params_t params;
@@ -183,7 +176,7 @@ static void full_uri(request_rec *r, std::string& result, modauthopenid_config *
   }
 
   if(s_cfg->server_name == NULL)
-    result = prefix + hostname + s_port + uri + args;
+    result = proto_host_port + uri + args;
   else
     result = std::string(s_cfg->server_name) + uri + args;
 }
