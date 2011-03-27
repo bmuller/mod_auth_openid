@@ -310,9 +310,9 @@ namespace modauthopenid {
 	  child_stopped_reading = 1;
 	} else {
 	  if (query_string == NULL) 
-	    query_string = apr_pstrdup(r->pool, data);
+	    query_string = apr_pstrndup(r->pool, data, len);
 	  else 
-	    query_string = apr_pstrcat(r->pool, query_string, data, NULL);
+	    query_string = apr_pstrcat(r->pool, query_string, apr_pstrndup(r->pool, data, len), NULL);
 	}
       } 
       apr_brigade_cleanup(bb); 
