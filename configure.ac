@@ -1,6 +1,6 @@
 AC_INIT([mod_auth_openid], [0.6], [bmuller@butterfat.net])
 AC_DEFINE([PACKAGE_URL],["http://findingscience.com/mod_auth_openid"],[project url])
-AM_CONFIG_HEADER(config.h)
+AM_CONFIG_HEADER(src/config.h)
 AM_INIT_AUTOMAKE()
 
 AC_CONFIG_MACRO_DIR([acinclude.d])
@@ -85,6 +85,7 @@ fi
 
 AC_CONFIG_FILES([
  Makefile
+ src/Makefile
 ])
 AC_OUTPUT
 
