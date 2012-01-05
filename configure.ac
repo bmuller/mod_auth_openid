@@ -1,4 +1,4 @@
-AC_INIT([mod_auth_openid], [0.6], [bmuller@butterfat.net])
+AC_INIT([mod_auth_openid], [0.7], [bamuller@gmail.com])
 AC_DEFINE([PACKAGE_URL],["http://findingscience.com/mod_auth_openid"],[project url])
 AM_CONFIG_HEADER(src/config.h)
 AM_INIT_AUTOMAKE()
@@ -15,15 +15,14 @@ AM_PROG_LIBTOOL
 AC_HEADER_STDC
 
 # provide flag --enable-debug
-AC_ARG_ENABLE(debug, AC_HELP_STRING([[--enable-debug]], [enable debugging output to Apache error log]),
-[if test "$enableval" = "yes"; then
-    DEBUG="yes"
-    CPPFLAGS="$CPPFLAGS -DDEBUG"
-fi]
+AC_ARG_ENABLE(debug, 
+  AC_HELP_STRING([[--enable-debug]], [enable debugging output to Apache error log]),
+  AM_CONDITIONAL(DEBUG, test x$enableval = xyes)
 )
 
 # this will look for apxs command - put it in $APXS, fail on failure
 AX_WITH_APXS()
+
 # find apr-config binary
 AC_ARG_WITH(apr_config, AC_HELP_STRING([[--with-apr-config=FILE]], [Path to apr-config program]),
 			[ apr_config="$withval" ],
@@ -72,16 +71,11 @@ AC_SUBST(CURL_LIBS)
 # Idea taken from libopekele
 nitpick=false
 AC_ARG_ENABLE([nitpicking],
- AC_HELP_STRING([--enable-nitpicking],[make compiler somewhat overly fastidious about the code it deals with]),
+ AC_HELP_STRING([--enable-nitpicking],[make compiler warn about possible problems]),
  [ test "$enableval" = "no" || nitpick=true ]
 )
-if $nitpick ; then
- CPP_NITPICK="-Wall -Wextra -Wundef -Wshadow -Wunsafe-loop-optimizations -Wconversion -Wmissing-format-attribute"
- CPP_NITPICK="$CPP_NITPICK -Wredundant-decls -ansi -Wmissing-noreturn"
- CPPFLAGS="$CPPFLAGS $CPP_NITPICK"
-# CFLAGS="$CFLAGS $CPP_NITPICK"
-# CXXFLAGS="$CXXFLAGS $CPP_NITPICK"
-fi
+AM_CONDITIONAL(NITPICK, test x$nitpick = xtrue)
+
 
 AC_CONFIG_FILES([
  Makefile
