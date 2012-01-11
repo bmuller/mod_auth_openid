@@ -191,6 +191,8 @@ static void full_uri(request_rec *r, std::string& result, modauthopenid_config *
 static int show_input(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::error_result_t e) {
   if(s_cfg->login_page == NULL) {
     std::string msg = modauthopenid::error_to_string(e, false);
+    if(e == modauthopenid::canceled)
+      msg += "<br>Try to log out from thrid party website first";
     return modauthopenid::show_html_input(r, msg);
   }
   opkele::params_t params;

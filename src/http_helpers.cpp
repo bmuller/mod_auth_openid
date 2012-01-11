@@ -87,6 +87,43 @@ namespace modauthopenid {
     }
   };
 
+
+void generate_required_users_shortcut_list(request_rec *r, string& result){
+  int m = r->method_number;
+  register int x;
+  bool empty = true;
+  const char *t, *w;
+  const apr_array_header_t *reqs_arr = ap_requires(r);
+  require_line *reqs;
+
+  if (!reqs_arr)
+    return;
+
+  reqs = (require_line *)reqs_arr->elts;
+  for (x = 0; x < reqs_arr->nelts; x++) {
+    if (!(reqs[x].method_mask & (AP_METHOD_BIT << m)))
+      continue;
+
+    t = reqs[x].requirement;
+    w = ap_getword_white(r->pool, &t);
+
+    if (!strcasecmp(w, "user")) {
+      while (t[0]) {
+	empty = false;
+        w = ap_getword_conf(r->pool, &t);
+        result = result + "<li><a href='?openid_identifier="+w+"'>"+w+"</a> "
+                 "<a class='website' href='"+w+"' target='_blank'>[Website]</a></li>";
+      }
+    }
+  }
+
+  if(!empty)
+    result = "<b>Click on an Identity URL to log in:<b>"
+             "<ul>"
+             + result + "</ul>";
+}
+	
+
   int show_html_input(request_rec *r, string msg) {
     opkele::params_t params;
     if(r->args != NULL)
@@ -101,6 +138,18 @@ namespace modauthopenid {
       value = html_escape(iter->second);
       args += "<input type=\"hidden\" name=\"" + key + "\" value = \"" + value + "\" />";
     }
+
+    string required_users_shortcut_list;
+    generate_required_users_shortcut_list(r,required_users_shortcut_list);
+    string shortcut_list_styles =  "li { background-image: url('http://www.openid.net/login-bg.gif');\n"
+    "     background-position: 0 1px;\n"
+    "     background-repeat: no-repeat;\n"
+    "     list-style: none outside none;\n"
+    "     margin-bottom: 10px;\n"
+    "     margin-left: -39px;\n"
+    "    padding-left: 22px; }\n"
+    " li .website { color: #AAAAAA; padding-left: 3px }";
+
     string result =
     "<html><head><title>Protected Location</title><style type=\"text/css\">"
     "#msg { border: 1px solid #ff0000; background: #ffaaaa; font-weight: bold; padding: 10px; }\n"
@@ -112,16 +161,18 @@ namespace modauthopenid {
     ".loginbox { background: url(http://www.openid.net/login-bg.gif) no-repeat; background-color: #fff; " // logo location is in 1.1 spec, should stay same
     " background-position: 0 50%; color: #000; padding-left: 18px; }\n"
     "form { margin: 15px; }\n"
+	+ (!required_users_shortcut_list.empty()?shortcut_list_styles:"") +
     "</style></head><body>"
     "<h1>Protected Location</h1>"
     "<p id=\"desc\">This site is protected and requires that you identify yourself with an "
     "<a href=\"http://openid.net\">OpenID</a> url.  To find out how it works, see "
     "<a href=\"http://openid.net/what/\">http://openid.net/what/</a>.  You can sign up for "
     "an identity on one of the sites listed <a href=\"http://openid.net/get/\">here</a>.</p>"
-      + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") +
+      + (msg.empty()?"":"<div id=\"msg\">"+msg+"</div>") + 
     "<form action=\"\" method=\"get\">"
+      + (!required_users_shortcut_list.empty() ? required_users_shortcut_list : 
     "<b>Identity URL:</b> <input type=\"text\" name=\"openid_identifier\" value=\""+identity+"\" size=\"30\" class=\"loginbox\" />"
-    "<input type=\"submit\" value=\"Log In\" />" + args +
+    "<input type=\"submit\" value=\"Log In\" />" + args ) +
     "</form>"
     "<div id=\"sig\">protected by <a href=\"" + PACKAGE_URL + "\">" + PACKAGE_STRING + "</a></div>"
       "<body></html>";
