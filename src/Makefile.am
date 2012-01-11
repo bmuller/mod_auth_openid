@@ -13,17 +13,6 @@ db_info_SOURCES = db_info.cpp
 db_info_LDFLAGS = -lmodauthopenid
 db_info_DEPENDENCIES = libmodauthopenid.la
 
-AM_CXXFLAGS = -Wall
-
-if NITPICK
-AM_CXXFLAGS += -Wextra -Wundef -Wshadow -Wunsafe-loop-optimizations -Wconversion -Wmissing-format-attribute
-AM_CXXFLAGS += -Wredundant-decls -ansi -Wmissing-noreturn
-endif
-
-if DEBUG
-AM_CXXFLAGS += -DDEBUG
-endif
-
 install-exec-local:
 	${APXS} -i -a -n 'authopenid' mod_auth_openid.la
 
