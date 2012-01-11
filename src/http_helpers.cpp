@@ -111,7 +111,8 @@ void generate_required_users_shortcut_list(request_rec *r, string& result){
       while (t[0]) {
 	empty = false;
         w = ap_getword_conf(r->pool, &t);
-        result = result + "<li><a href='?openid_identifier="+w+"'>"+w+"</a></li>";
+        result = result + "<li><a href='?openid_identifier="+w+"'>"+w+"</a> "
+                 "<a class='website' href='"+w+"' target='_blank'>[Website]</a></li>";
       }
     }
   }
@@ -146,7 +147,8 @@ void generate_required_users_shortcut_list(request_rec *r, string& result){
     "     list-style: none outside none;\n"
     "     margin-bottom: 10px;\n"
     "     margin-left: -39px;\n"
-    "    padding-left: 22px; }\n";
+    "    padding-left: 22px; }\n"
+    " li .website { color: #AAAAAA; padding-left: 3px }";
 
     string result =
     "<html><head><title>Protected Location</title><style type=\"text/css\">"
