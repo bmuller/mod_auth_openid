@@ -1,4 +1,4 @@
-a/*
+/*
 Copyright (C) 2007-2010 Butterfat, LLC (http://butterfat.net)
 
 Permission is hereby granted, free of charge, to any person
