@@ -46,6 +46,11 @@ typedef struct {
   char *auth_program;
   char *cookie_path;
   bool use_auth_program;
+  bool use_ax;
+  apr_table_t *ax_attr_uris;
+  apr_table_t *ax_attr_patterns;
+  bool use_single_op;
+  char *single_op_url;
 } modauthopenid_config;
 
 typedef const char *(*CMD_HAND_TYPE) ();
@@ -64,6 +69,11 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->server_name = NULL;
   newcfg->auth_program = NULL;
   newcfg->use_auth_program = false;
+  newcfg->use_ax = false;
+  newcfg->ax_attr_uris = apr_table_make(p, 5);
+  newcfg->ax_attr_patterns = apr_table_make(p, 5);
+  newcfg->use_single_op = false;
+  newcfg->single_op_url = NULL;
   return (void *) newcfg;
 }
 
@@ -125,14 +135,28 @@ static const char *set_modauthopenid_server_name(cmd_parms *parms, void *mconfig
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->server_name = (char *) arg;
   return NULL;
-} 
- 
+}
+
 static const char *set_modauthopenid_auth_program(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->auth_program = (char *) arg;
   s_cfg->use_auth_program = true;
   return NULL;
-} 
+}
+
+static const char *set_modauthopenid_ax_require(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->use_ax = true;
+  s_cfg->single_op_url = (char *) arg;
+  return NULL;
+}
+
+static const char *set_modauthopenid_single_op(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->use_single_op = true;
+  s_cfg->single_op_url = (char *) arg;
+  return NULL;
+}
 
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDCookieLifespan", (CMD_HAND_TYPE) set_modauthopenid_cookie_lifespan, NULL, OR_AUTHCFG,
@@ -157,6 +181,10 @@ static const command_rec mod_authopenid_cmds[] = {
 		"AuthOpenIDServerName <server name and port prefix>"),
   AP_INIT_TAKE1("AuthOpenIDUserProgram", (CMD_HAND_TYPE) set_modauthopenid_auth_program, NULL, OR_AUTHCFG,
 		"AuthOpenIDUserProgram <full path to authentication program>"),
+  AP_INIT_TAKE3("AuthOpenIDAXRequire", (CMD_HAND_TYPE) set_modauthopenid_ax_require, NULL, OR_AUTHCFG,
+		"Add AuthOpenIDAXRequire <alias> <URI> <regex>"),
+  AP_INIT_TAKE1("AuthOpenIDSingleOP", (CMD_HAND_TYPE) set_modauthopenid_single_op, NULL, OR_AUTHCFG,
+		"AuthOpenIDSingleOP <OP identifier URL>"),
   {NULL}
 };
 
@@ -273,12 +301,12 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
       std::string valid_path(session.path);
       // if found session has a valid path
       if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname.c_str(), r->hostname)==0) {
-	const char* idchar = std::string(session.identity).c_str();
-	APDEBUG(r, "setting REMOTE_USER to \"%s\"", idchar);
-	r->user = apr_pstrdup(r->pool, idchar);
-	return true;
+		const char* idchar = std::string(session.identity).c_str();
+		APDEBUG(r, "setting REMOTE_USER to \"%s\"", idchar);
+		r->user = apr_pstrdup(r->pool, idchar);
+		return true;
       } else {
-	APDEBUG(r, "session found for different path or hostname (cooke was for %s)", session.hostname.c_str());
+		APDEBUG(r, "session found for different path or hostname (cooke was for %s)", session.hostname.c_str());
       }
     }
   }
@@ -289,9 +317,14 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
 static int start_authentication_session(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, 
 					std::string& return_to, std::string& trust_root) {
   // remove all openid GET query params (openid.*) - we don't want that maintained through
-  // the redirection process.  We do, however, want to keep all aother GET params.
+  // the redirection process.  We do, however, want to keep all other GET params.
   // also, add a nonce for security 
-  std::string identity = params.get_param("openid_identifier");
+  std::string identity = s_cfg->use_single_op
+    ? s_cfg->single_op_url
+    : params.get_param("openid_identifier");
+  APDEBUG(r, "identity = %s, use_single_op = %s", identity.c_str(), s_cfg->use_single_op ? "true" : "false");
+  std::string debugtf = s_cfg->use_single_op ? "true" : "false";
+  modauthopenid::debug("identity = " + identity + ", use_single_op = " + debugtf);
   // pull out the extension parameters before we get rid of openid.*
   opkele::params_t ext_params;
   modauthopenid::get_extension_params(ext_params, params);
@@ -384,12 +417,12 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       std::string progname = std::string(s_cfg->auth_program);
       modauthopenid::exec_result_t eresult = modauthopenid::exec_auth(progname, username);
       if(eresult != modauthopenid::id_accepted) {
-	std::string error = modauthopenid::exec_error_to_string(eresult, progname, username);
-	APERR(r, "Error in authentication: %s", error.c_str());	
-	consumer.close();
-	return show_input(r, s_cfg, modauthopenid::unauthorized);       
+		std::string error = modauthopenid::exec_error_to_string(eresult, progname, username);
+		APERR(r, "Error in authentication: %s", error.c_str());	
+		consumer.close();
+		return show_input(r, s_cfg, modauthopenid::unauthorized);       
       } else {
-	APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());	
+		APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());	
       }
     }
 
@@ -441,11 +474,12 @@ static int mod_authopenid_method_handler(request_rec *r) {
   else
     trust_root = std::string(s_cfg->trust_root);
 
-  // if user is posting id (only openid_identifier will contain a value)
-  if(params.has_param("openid_identifier") && !params.has_param("openid.assoc_handle")) {
-    return start_authentication_session(r, s_cfg, params, return_to, trust_root);
-  } else if(params.has_param("openid.assoc_handle")) { // user has been redirected, authenticate them and set cookie
+  if(params.has_param("openid.assoc_handle")) { 
+    // user has been redirected, authenticate them and set cookie
     return validate_authentication_session(r, s_cfg, params, return_to);
+  } else if(params.has_param("openid_identifier") || s_cfg->use_single_op) {
+    // user is posting id URL, or we're in single OP mode and already have one, so try to authenticate
+    return start_authentication_session(r, s_cfg, params, return_to, trust_root);
   } else { //display an input form
     if(params.has_param("openid.mode") && params.get_param("openid.mode") == "cancel")
       return show_input(r, s_cfg, modauthopenid::canceled);
