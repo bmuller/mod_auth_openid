@@ -42,6 +42,7 @@ typedef struct {
   apr_array_header_t *trusted;
   apr_array_header_t *distrusted;
   int cookie_lifespan;
+  bool secure_cookie;
   char *server_name;
   char *auth_program;
   char *cookie_path;
@@ -67,6 +68,7 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->distrusted = apr_array_make(p, 5, sizeof(char *));
   newcfg->trust_root = NULL;
   newcfg->cookie_lifespan = 0;
+  newcfg->secure_cookie = false;
   newcfg->server_name = NULL;
   newcfg->auth_program = NULL;
   newcfg->use_auth_program = false;
@@ -118,6 +120,12 @@ static const char *set_modauthopenid_usecookie(cmd_parms *parms, void *mconfig, 
 static const char *set_modauthopenid_cookie_lifespan(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->cookie_lifespan = atoi(arg);
+  return NULL;
+}
+
+static const char *set_modauthopenid_secure_cookie(cmd_parms *parms, void *mconfig, int flag) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->secure_cookie = (bool) flag;
   return NULL;
 }
 
@@ -179,6 +187,8 @@ static const command_rec mod_authopenid_cmds[] = {
 		"AuthOpenIDCookiePath <path of cookie to use>"), 
   AP_INIT_FLAG("AuthOpenIDUseCookie", (CMD_HAND_TYPE) set_modauthopenid_usecookie, NULL, OR_AUTHCFG,
 	       "AuthOpenIDUseCookie <On | Off> - use session auth?"),
+  AP_INIT_FLAG("AuthOpenIDSecureCookie", (CMD_HAND_TYPE) set_modauthopenid_secure_cookie, NULL, OR_AUTHCFG,
+	       "AuthOpenIDSecureCookie <On | Off> - restrict session cookie to HTTPS connections"),
   AP_INIT_ITERATE("AuthOpenIDTrusted", (CMD_HAND_TYPE) add_modauthopenid_trusted, NULL, OR_AUTHCFG,
 		  "AuthOpenIDTrusted <a list of trusted identity providers>"),
   AP_INIT_ITERATE("AuthOpenIDDistrusted", (CMD_HAND_TYPE) add_modauthopenid_distrusted, NULL, OR_AUTHCFG,
@@ -403,7 +413,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
   else 
     modauthopenid::base_dir(std::string(r->uri), path); 
   modauthopenid::make_rstring(32, session_id);
-  modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan); 
+  modauthopenid::make_cookie_value(cookie_value, std::string(s_cfg->cookie_name), session_id, path, s_cfg->cookie_lifespan, s_cfg->secure_cookie); 
   APDEBUG(r, "Setting cookie after authentication of user %s", identity.c_str());
   apr_table_set(r->err_headers_out, "Set-Cookie", cookie_value.c_str());
   hostname = std::string(r->hostname);

@@ -261,17 +261,19 @@ namespace modauthopenid {
     return p;
   };
 
-  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan) {
-    if(cookie_lifespan == 0) {
-      cookie_value = name + "=" + session_id + "; path=" + path + "; HttpOnly";
-    } else {
+  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan, bool secure_cookie) {
+    cookie_value = name + "=" + session_id + "; path=" + path + "; HttpOnly";
+    if(cookie_lifespan != 0) {
       time_t t;
       t = time(NULL) + cookie_lifespan;
       struct tm *tmp;
       tmp = gmtime(&t);
       char expires[200];
       strftime(expires, sizeof(expires), "%a, %d-%b-%Y %H:%M:%S GMT", tmp);
-      cookie_value = name + "=" + session_id + "; expires=" + string(expires) + "; path=" + path + "; HttpOnly";
+      cookie_value += "; expires=" + string(expires);
+    }
+    if (secure_cookie) {
+      cookie_value += "; Secure";
     }
   };
 
