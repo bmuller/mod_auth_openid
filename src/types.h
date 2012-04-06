@@ -38,6 +38,7 @@ namespace modauthopenid {
     string hostname; // name of server (this is in case there are virtual hosts on this server)
     string path;
     string identity;
+    string username; // optional - set by AuthOpenIDAXUsername
     int expires_on; // exact moment it expires
   } session_t;
 

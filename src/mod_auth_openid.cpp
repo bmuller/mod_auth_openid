@@ -51,6 +51,8 @@ typedef struct {
   apr_array_header_t *ax_attrs;
   apr_table_t *ax_attr_uris;
   apr_table_t *ax_attr_patterns;
+  bool use_ax_username;
+  char *ax_username_attr;
   bool use_single_idp;
   char *single_idp_url;
 } modauthopenid_config;
@@ -76,6 +78,8 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->ax_attrs = apr_array_make(p, 5, sizeof(char *));
   newcfg->ax_attr_uris = apr_table_make(p, 5);
   newcfg->ax_attr_patterns = apr_table_make(p, 5);
+  newcfg->use_ax_username = false;
+  newcfg->ax_username_attr = NULL;
   newcfg->use_single_idp = false;
   newcfg->single_idp_url = NULL;
   return (void *) newcfg;
@@ -165,6 +169,13 @@ static const char *set_modauthopenid_ax_require(cmd_parms *parms, void *mconfig,
   return NULL;
 }
 
+static const char *set_modauthopenid_ax_username(cmd_parms *parms, void *mconfig, const char *arg) {
+  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
+  s_cfg->use_ax_username = true;
+  s_cfg->ax_username_attr = (char *) arg;
+  return NULL;
+}
+
 static const char *set_modauthopenid_single_idp(cmd_parms *parms, void *mconfig, const char *arg) {
   modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
   s_cfg->use_single_idp = true;
@@ -199,6 +210,8 @@ static const command_rec mod_authopenid_cmds[] = {
 		"AuthOpenIDUserProgram <full path to authentication program>"),
   AP_INIT_TAKE3("AuthOpenIDAXRequire", (CMD_HAND_TYPE) set_modauthopenid_ax_require, NULL, OR_AUTHCFG,
 		"Add AuthOpenIDAXRequire <alias> <URI> <regex>"),
+  AP_INIT_TAKE1("AuthOpenIDAXUsername", (CMD_HAND_TYPE) set_modauthopenid_ax_username, NULL, OR_AUTHCFG,
+		"AuthOpenIDAXUsername <alias>"),
   AP_INIT_TAKE1("AuthOpenIDSingleIdP", (CMD_HAND_TYPE) set_modauthopenid_single_idp, NULL, OR_AUTHCFG,
 		"AuthOpenIDSingleIdP <IdP URL>"),
   {NULL}
@@ -317,14 +330,16 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
     sm.close();
 
     // if session found 
-    if(std::string(session.identity) != "") {
+    if(session.identity != "") {
       std::string uri_path;
       modauthopenid::base_dir(std::string(r->uri), uri_path);
       std::string valid_path(session.path);
       // if found session has a valid path
-      if(valid_path == uri_path.substr(0, valid_path.size()) && apr_strnatcmp(session.hostname.c_str(), r->hostname)==0) {
-        const char* idchar = std::string(session.identity).c_str();
-        APDEBUG(r, "setting REMOTE_USER to \"%s\"", idchar);
+      if(valid_path == uri_path.substr(0, valid_path.size()) && strcmp(session.hostname.c_str(), r->hostname)==0) {
+        const char* idchar = s_cfg->use_ax_username
+          ? session.username.c_str()
+          : session.identity.c_str();
+        APDEBUG(r, "setting REMOTE_USER to %s", idchar);
         r->user = apr_pstrdup(r->pool, idchar);
         return true;
       } else {
@@ -405,7 +420,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
 };
 
 
-static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, std::string identity) {
+static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, std::string identity, std::string username) {
   // now set auth cookie, if we're doing session based auth
   std::string session_id, hostname, path, cookie_value, redirect_location, args;
   if(s_cfg->cookie_path != NULL) 
@@ -420,7 +435,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
 
   // save session values
   modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
-  sm.store_session(session_id, hostname, path, identity, s_cfg->cookie_lifespan);
+  sm.store_session(session_id, hostname, path, identity, username, s_cfg->cookie_lifespan);
   sm.close();
 
   opkele::params_t ext_params;
@@ -452,6 +467,7 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     }
     
     // if we did an AX query, check the result
+    std::string ax_username;
     if(s_cfg->use_ax) {
       // get the AX namespace alias
       std::string ns_pfx = "openid.ns.";
@@ -478,22 +494,35 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
         const char *attr = APR_ARRAY_IDX(s_cfg->ax_attrs, i, const char *);
         std::string param_name = ax_value_pfx + attr;
         std::map<std::string, std::string>::iterator param = params.find(param_name);
-        if (param == params.end())
+        if(param == params.end())
         {
           APERR(r, "AX: attribute %s not found", attr);
           consumer.close();
           return show_input(r, s_cfg, modauthopenid::ax_bad_response);
         }
+        std::string& value = param->second;
         std::string pattern = apr_table_get(s_cfg->ax_attr_patterns, attr);
         pcre *re = modauthopenid::make_regex(pattern);
-        bool match = modauthopenid::regex_match(param->second, re);
+        bool match = modauthopenid::regex_match(value, re);
         pcre_free(re);
-        if (!match) {
+        if(!match) {
           consumer.close();
-          APERR(r, "AX: %s attribute %s didn't match %s", attr, param->second.c_str(), pattern.c_str());
-          return show_input(r, s_cfg, modauthopenid::unauthorized); 
+          APERR(r, "AX: %s attribute %s didn't match %s", attr, value.c_str(), pattern.c_str());
+          return show_input(r, s_cfg, modauthopenid::unauthorized);
         } else {
-          APDEBUG(r, "AX: %s attribute %s matched %s", attr, param->second.c_str(), pattern.c_str());
+          APDEBUG(r, "AX: %s attribute %s matched %s", attr, value.c_str(), pattern.c_str());
+          if(s_cfg->use_ax_username && strcmp(attr, s_cfg->ax_username_attr) == 0) {
+            ax_username = value;
+          }
+        }
+      }
+      if(s_cfg->use_ax_username) {
+        if(ax_username.empty()) {
+          consumer.close();
+          APERR(r, "AX: username attribute %s not found", s_cfg->ax_username_attr);
+          return show_input(r, s_cfg, modauthopenid::unauthorized);
+        } else {
+          APDEBUG(r, "AX: username = %s", ax_username.c_str());
         }
       }
     }
@@ -520,11 +549,14 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     consumer.close();
 
     if(s_cfg->use_cookie) 
-      return set_session_cookie(r, s_cfg, params, identity);
-      
+      return set_session_cookie(r, s_cfg, params, identity, ax_username);
+    
+    std::string remote_user = s_cfg->use_ax_username
+      ? ax_username
+      : identity;
     // if we're not setting cookie - don't redirect, just show page
-    APERR(r, "Setting REMOTE_USER to %s", identity.c_str());
-    r->user = apr_pstrdup(r->pool, identity.c_str());
+    APDEBUG(r, "Setting REMOTE_USER to %s", remote_user.c_str());
+    r->user = apr_pstrdup(r->pool, remote_user.c_str());
     return DECLINED;
   } catch(opkele::exception &e) {
     APERR(r, "Error in authentication: %s", e.what());

@@ -37,14 +37,14 @@ namespace modauthopenid {
       return;
     sqlite3_busy_timeout(db, 5000);
     string query = "CREATE TABLE IF NOT EXISTS sessionmanager "
-      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), expires_on INT)";
+      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), username VARCHAR(255), expires_on INT)";
     rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
     test_result(rc, "problem creating table if it didn't exist already");
   };
 
   void SessionManager::get_session(const string& session_id, session_t& session) {
     ween_expired();
-    const char *query = "SELECT session_id,hostname,path,identity,expires_on FROM sessionmanager WHERE session_id=%Q LIMIT 1";
+    const char *query = "SELECT session_id,hostname,path,identity,username,expires_on FROM sessionmanager WHERE session_id=%Q LIMIT 1";
     char *sql = sqlite3_mprintf(query, session_id.c_str());
     int nr, nc;
     char **table;
@@ -55,11 +55,12 @@ namespace modauthopenid {
       session.identity = "";
       debug("could not find session id " + session_id + " in db: session probably just expired");
     } else {
-      session.session_id = string(table[5]);
-      session.hostname = string(table[6]);
-      session.path = string(table[7]);
-      session.identity = string(table[8]);
-      session.expires_on = strtol(table[9], 0, 0);
+      session.session_id = string(table[6]);
+      session.hostname = string(table[7]);
+      session.path = string(table[8]);
+      session.identity = string(table[9]);
+      session.username = string(table[10]);
+      session.expires_on = strtol(table[11], 0, 0);
     }
     sqlite3_free_table(table);
   };
@@ -75,7 +76,7 @@ namespace modauthopenid {
     return true;
   };
 
-  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity, int lifespan) {
+  void SessionManager::store_session(const string& session_id, const string& hostname, const string& path, const string& identity, const string& username, int lifespan) {
     ween_expired();
     time_t rawtime;
     time (&rawtime);
@@ -83,12 +84,12 @@ namespace modauthopenid {
     // lifespan will be 0 if not specified by user in config - so lasts as long as browser is open.  In this case, make it last for up to a day.
     int expires_on = (lifespan == 0) ? (rawtime + 86400) : (rawtime + lifespan);
 
-    const char* url = "INSERT INTO sessionmanager (session_id,hostname,path,identity,expires_on) VALUES(%Q,%Q,%Q,%Q,%d)";
-    char *query = sqlite3_mprintf(url, session_id.c_str(), hostname.c_str(), path.c_str(), identity.c_str(), expires_on);
+    const char* url = "INSERT INTO sessionmanager (session_id,hostname,path,identity,username,expires_on) VALUES(%Q,%Q,%Q,%Q,%Q,%d)";
+    char *query = sqlite3_mprintf(url, session_id.c_str(), hostname.c_str(), path.c_str(), identity.c_str(), username.c_str(), expires_on);
     debug(query);
     int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem inserting session into db");    
+    test_result(rc, "problem inserting session into db");
   };
 
   void SessionManager::ween_expired() {
