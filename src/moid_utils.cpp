@@ -81,6 +81,10 @@ namespace modauthopenid {
       short_string = "unauthorized";
       long_string = "User is not authorized to access this location.";
       break;
+    case ax_bad_response:
+      short_string = "ax_bad_response";
+      long_string = "Error while reading user profile data.";
+      break;
     default: // unspecified
       short_string = "unspecified";
       long_string = "There has been an error while attempting to authenticate.";

@@ -264,7 +264,10 @@ static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url, re
       APERR(r, "regex compilation failed for regex: %s", trusted_sites[i]);
     } else if(modauthopenid::regex_match(base_url, re)) {
       modauthopenid::debug(base_url + " is a trusted identity provider");
+      pcre_free(re);
       return true;
+    } else {
+      pcre_free(re);
     }
   }
   APWARN(r, "%s is NOT a trusted identity provider", base_url.c_str());
@@ -282,7 +285,10 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url,
       APERR(r, "regex compilation failed for regex: %s", distrusted_sites[i]);
     } else if(modauthopenid::regex_match(base_url, re)) {
       APWARN(r, "%s is a distrusted (on black list) identity provider", base_url.c_str());
+      pcre_free(re);
       return true;
+    } else {
+      pcre_free(re);
     }
   }
   APDEBUG(r, "%s is NOT a distrusted identity provider (not blacklisted)", base_url.c_str());
@@ -434,6 +440,53 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       consumer.close();
       return show_input(r, s_cfg, modauthopenid::invalid_nonce); 
     }
+    
+    // if we did an AX query, check the result
+    if(s_cfg->use_ax) {
+      // get the AX namespace alias
+      std::string ns_pfx = "openid.ns.";
+      std::string ax_value_pfx;
+      for(opkele::params_t::iterator iter = params.begin(); iter != params.end(); ++iter) {
+        if(iter->second == AX_NAMESPACE) {
+          size_t pos = iter->first.find(ns_pfx);
+          if (pos == 0) {
+            ax_value_pfx = "openid." + iter->first.substr(pos + ns_pfx.length()) + ".value.";
+            break;
+          }
+        }
+      }
+      if (ax_value_pfx.empty()) {
+        APERR(r, "No AX namespace alias found in response%s", "");
+        consumer.close();
+        return show_input(r, s_cfg, modauthopenid::ax_bad_response);
+      } else {
+        APDEBUG(r, "AX value param name prefix: %s", ax_value_pfx.c_str());
+      }
+      
+      // try to find and validate value params for each attribute in our config
+      for(int i = 0; i < s_cfg->ax_attrs->nelts; ++i) {
+        const char *attr = APR_ARRAY_IDX(s_cfg->ax_attrs, i, const char *);
+        std::string param_name = ax_value_pfx + attr;
+        std::map<std::string, std::string>::iterator param = params.find(param_name);
+        if (param == params.end())
+        {
+          APERR(r, "AX: attribute %s not found", attr);
+          consumer.close();
+          return show_input(r, s_cfg, modauthopenid::ax_bad_response);
+        }
+        std::string pattern = apr_table_get(s_cfg->ax_attr_patterns, attr);
+        pcre *re = modauthopenid::make_regex(pattern);
+        bool match = modauthopenid::regex_match(param->second, re);
+        pcre_free(re);
+        if (!match) {
+          consumer.close();
+          APERR(r, "AX: %s attribute %s didn't match %s", attr, param->second.c_str(), pattern.c_str());
+          return show_input(r, s_cfg, modauthopenid::unauthorized); 
+        } else {
+          APDEBUG(r, "AX: %s attribute %s matched %s", attr, param->second.c_str(), pattern.c_str());
+        }
+      }
+    }
 
     // if we should be using a user specified auth program, run it to see if user is authorized
     if(s_cfg->use_auth_program) {
@@ -441,12 +494,12 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       std::string progname = std::string(s_cfg->auth_program);
       modauthopenid::exec_result_t eresult = modauthopenid::exec_auth(progname, username);
       if(eresult != modauthopenid::id_accepted) {
-		std::string error = modauthopenid::exec_error_to_string(eresult, progname, username);
-		APERR(r, "Error in authentication: %s", error.c_str());	
-		consumer.close();
-		return show_input(r, s_cfg, modauthopenid::unauthorized);       
+        std::string error = modauthopenid::exec_error_to_string(eresult, progname, username);
+        APERR(r, "Error in authentication: %s", error.c_str());
+        consumer.close();
+        return show_input(r, s_cfg, modauthopenid::unauthorized);       
       } else {
-		APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());	
+        APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());	
       }
     }
 
