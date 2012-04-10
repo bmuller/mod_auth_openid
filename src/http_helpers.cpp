@@ -262,7 +262,7 @@ namespace modauthopenid {
 
   void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan) {
     if(cookie_lifespan == 0) {
-      cookie_value = name + "=" + session_id + "; path=" + path;
+      cookie_value = name + "=" + session_id + "; path=" + path + "; HttpOnly";
     } else {
       time_t t;
       t = time(NULL) + cookie_lifespan;
@@ -270,7 +270,7 @@ namespace modauthopenid {
       tmp = gmtime(&t);
       char expires[200];
       strftime(expires, sizeof(expires), "%a, %d-%b-%Y %H:%M:%S GMT", tmp);
-      cookie_value = name + "=" + session_id + "; expires=" + string(expires) + "; path=" + path;
+      cookie_value = name + "=" + session_id + "; expires=" + string(expires) + "; path=" + path + "; HttpOnly";
     }
   };
 
