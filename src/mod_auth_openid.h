@@ -76,6 +76,10 @@ Created by bmuller <bmuller@butterfat.net>
 /* Header enctype for POSTed form data */
 #define DEFAULT_POST_ENCTYPE "application/x-www-form-urlencoded"
 
+/* Attribute Exchange */
+#define AX_NAMESPACE "http://openid.net/srv/ax/1.0"
+#define DEFAULT_AX_NAMESPACE_ALIAS "ax"
+
 /* mod_auth_openid includes */
 #include "config.h"
 #include "types.h"

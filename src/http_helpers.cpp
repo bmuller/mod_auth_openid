@@ -139,15 +139,15 @@ namespace modauthopenid {
     for(string::size_type i = 0; i < pairs.size(); i++) {
       vector<string> pair = explode(pairs[i], "=");
       if(pair.size() == 2) {
-	string key = pair[0];
-	strip(key);
-	string value = pair[1];
-	strip(value);
-	debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
-	if(key == cookie_name) {
-	  session_id = pair[1];
-	  return;
-	}
+        string key = pair[0];
+        strip(key);
+        string value = pair[1];
+        strip(value);
+        debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
+        if(key == cookie_name) {
+          session_id = pair[1];
+          return;
+        }
       }
     }
   };
@@ -180,17 +180,16 @@ namespace modauthopenid {
   };
 
   void remove_openid_vars(params_t& params) {
-    map<string,string>::iterator iter;
-    for(iter = params.begin(); iter != params.end(); iter++) {
+    map<string,string>::iterator iter, iter_next;
+    for(iter = params.begin(); iter != params.end(); ) {
+      iter_next = iter;
+      ++iter_next;
       string param_key(iter->first);
       // if starts with openid. or modauthopenid. (for the nonce) or openid_identifier (the login) remove it
       if((param_key.substr(0, 7) == "openid." || param_key.substr(0, 14) == "modauthopenid." || param_key == "openid_identifier")) {
-        params.erase(param_key);
-        // stupid map iterator screws up if we just continue the iteration... 
-	// so recursion to the rescue - we'll delete them one at a time    
-	remove_openid_vars(params);
-        return;
+        params.erase(iter); // invalidates iter, but its successor iter_next is still valid
       }
+      iter = iter_next;
     }
   };
 
@@ -203,7 +202,7 @@ namespace modauthopenid {
       // if there is more than one "." in the param name then we're 
       // dealing with an extension parameter
       if(parts.size() > 2)
-	extparams[param_key] = params[param_key];
+	    extparams[param_key] = params[param_key];
     }
   };
 
@@ -219,6 +218,8 @@ namespace modauthopenid {
   // This isn't a true html_escape function, but rather escapes just enough to get by for
   // quoted values - <blah name="stuff to be escaped">  
   string html_escape(string s) {
+    s = str_replace("&", "&amp;", s);
+    s = str_replace("'", "&#39;", s);
     s = str_replace("\"", "&quot;", s);
     s = str_replace("<", "&lt;", s);
     s = str_replace(">", "&gt;", s);
@@ -226,7 +227,7 @@ namespace modauthopenid {
   };
 
   string url_decode(const string& str) {
-    // if +'s aren't replaced with %20's then curl won't unescape to spaces propperly
+    // if +'s aren't replaced with %20's then curl won't unescape to spaces properly
     string url = str_replace("+", "%20", str);
 
     CURL *curl = curl_easy_init();
@@ -260,17 +261,19 @@ namespace modauthopenid {
     return p;
   };
 
-  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan) {
-    if(cookie_lifespan == 0) {
-      cookie_value = name + "=" + session_id + "; path=" + path;
-    } else {
+  void make_cookie_value(string& cookie_value, const string& name, const string& session_id, const string& path, int cookie_lifespan, bool secure_cookie) {
+    cookie_value = name + "=" + session_id + "; path=" + path + "; HttpOnly";
+    if(cookie_lifespan != 0) {
       time_t t;
       t = time(NULL) + cookie_lifespan;
       struct tm *tmp;
       tmp = gmtime(&t);
       char expires[200];
       strftime(expires, sizeof(expires), "%a, %d-%b-%Y %H:%M:%S GMT", tmp);
-      cookie_value = name + "=" + session_id + "; expires=" + string(expires) + "; path=" + path;
+      cookie_value += "; expires=" + string(expires);
+    }
+    if (secure_cookie) {
+      cookie_value += "; Secure";
     }
   };
 
@@ -294,26 +297,26 @@ namespace modauthopenid {
 
       apr_bucket *bucket; 
       for(bucket=APR_BRIGADE_FIRST(bb); bucket!=APR_BRIGADE_SENTINEL(bb); bucket=APR_BUCKET_NEXT(bucket)) { 
-	apr_size_t len; 
-	const char *data; 
-	if(APR_BUCKET_IS_EOS(bucket)) { 
-	  seen_eos = 1; 
-	  break; 
-	}
-	if(APR_BUCKET_IS_FLUSH(bucket)) 
-	  continue;
-	if(child_stopped_reading)
-	  continue; 
-
-	ret = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ); 
-	if(ret != APR_SUCCESS) {
-	  child_stopped_reading = 1;
-	} else {
-	  if (query_string == NULL) 
-	    query_string = apr_pstrndup(r->pool, data, len);
-	  else 
-	    query_string = apr_pstrcat(r->pool, query_string, apr_pstrndup(r->pool, data, len), NULL);
-	}
+        apr_size_t len; 
+        const char *data; 
+        if(APR_BUCKET_IS_EOS(bucket)) { 
+          seen_eos = 1; 
+          break; 
+        }
+        if(APR_BUCKET_IS_FLUSH(bucket)) 
+          continue;
+        if(child_stopped_reading)
+          continue; 
+    
+        ret = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ); 
+        if(ret != APR_SUCCESS) {
+          child_stopped_reading = 1;
+        } else {
+          if (query_string == NULL) 
+            query_string = apr_pstrndup(r->pool, data, len);
+          else 
+            query_string = apr_pstrcat(r->pool, query_string, apr_pstrndup(r->pool, data, len), NULL);
+        }
       } 
       apr_brigade_cleanup(bb); 
     } while (!seen_eos); 

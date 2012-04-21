@@ -15,10 +15,14 @@ AM_PROG_LIBTOOL
 AC_HEADER_STDC
 
 # provide flag --enable-debug
-AC_ARG_ENABLE(debug, 
-  AC_HELP_STRING([[--enable-debug]], [enable debugging output to Apache error log]),
-  AM_CONDITIONAL(DEBUG, test x$enableval = xyes)
-)
+AC_ARG_ENABLE([debug],
+    [  --enable-debug    Enable debugging output to Apache error log],
+    [case "${enableval}" in
+        yes) debug=true ;;
+        no)  debug=false ;;
+        *) AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
+     esac],[debug=false])
+AM_CONDITIONAL([DEBUG], [test x$debug = xtrue])
 
 # this will look for apxs command - put it in $APXS, fail on failure
 AX_WITH_APXS()

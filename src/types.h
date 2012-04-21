@@ -30,7 +30,7 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  enum error_result_t { no_idp_found, invalid_id, idp_not_trusted, invalid_nonce, canceled, unspecified, unauthorized };
+  enum error_result_t { no_idp_found, invalid_id, idp_not_trusted, invalid_nonce, canceled, unspecified, unauthorized, ax_bad_response };
   enum exec_result_t { id_accepted, fork_failed, child_no_return, id_refused };
 
   typedef struct session {
@@ -38,6 +38,7 @@ namespace modauthopenid {
     string hostname; // name of server (this is in case there are virtual hosts on this server)
     string path;
     string identity;
+    string username; // optional - set by AuthOpenIDAXUsername
     int expires_on; // exact moment it expires
   } session_t;
 
