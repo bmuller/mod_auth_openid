@@ -79,6 +79,10 @@ AuthOpenIDCookieLifespan          3600 # one hour
 AuthOpenIDServerName              http://example.com
 AuthOpenIDUserProgram             /path/to/authorization/program
 AuthOpenIDCookiePath              /path/to/protect
+AuthOpenIDSingleIdP               https://www.google.com/accounts/o8/id # use Google's OpenID
+AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$ # users from example.com Apps domain only
+AuthOpenIDAXUsername              email # username is email address
+AuthOpenIDSecureCookie            On    # always for production sites!
 {% endhighlight %}
 
  * **AuthOpenIDDBLocation**: Specifies the place the BDB file should be stored.  *Default:* /tmp/mod_auth_openid.db.
@@ -92,6 +96,11 @@ AuthOpenIDCookiePath              /path/to/protect
  * **AuthOpenIDServerName**: If mod_auth_openid is being used behind a proxy, this option can be used to specify a hostname that will be used to create redirection URLs.
  * **AuthOpenIDUserProgram**: A user specified program for authorization functions.  Please please oh please read [the documentation](authuserprogram.html) before using this.
  * **AuthOpenIDCookiePath**: Explicitly set the path of the auth cookie (for instance, if you want to explicitly grant access to a location other than the one the user is trying to access).
+ * **AuthOpenIDSingleIdP**: In general, OpenID users can directly enter the identity they want to claim, or they can enter the identity of their provider, and then the provider can show some UI for choosing an identity to claim. If your site only allows a single provider, as will be the case if you're using Google's OpenID for authenticating users to internal sites, use the `AuthOpenIDSingleIdP <provider URL>` directive to preset it and mod_auth_openid will skip the login form entirely. Your users won't need to remember Google's OpenID provider identity, and they'll have less clicking to do.
+ * **AuthOpenIDAXRequire**: When you claim an OpenID through Google's IdP, the returned OpenID looks like `https://www.google.com/accounts/o8/id?id=ABig4324Blob_ofLetters90_8And43Numbers`, which doesn't tell you which Google Apps domain they logged in from. If you want to find out who a user is for authorization purposes, you need to use the [Attribute Exchange (AX) extension to OpenID](http://openid.net/specs/openid-attribute-exchange-1_0.html) to ask the IdP for something you can check against. In the case of Google Apps, you can get their Apps username and domain by requesting their email address. The `AuthOpenIDAXRequire <alias> <URI> <regex>` lets you require [some attributes identified by URIs](http://openid.net/specs/openid-attribute-properties-list-1_0-01.html) to be returned with an OpenID response, and then validate the returned attribute against a regex. If the attribute isn't returned with the response, or if it doesn't match the regex, validation fails. You can have more than one `AuthOpenIDAXRequire` directive; all must pass for successful authentication.
+ * **AuthOpenIDAXUsername**: As noted above, OpenIDs are not required to be pretty or even readable. You can use `AuthOpenIDAXUsername <alias>` to set Apache's `REMOTE_USER` variable to the AX attribute with that alias. This is what shows up in log files, and it's also accessible to whatever application you're wrapping with OpenID authentication. 
+ * **AuthOpenIDSecureCookie**: `AuthOpenIDSecureCookie <On|Off>` controls whether the `Secure` attribute is set on your session cookies. If you're not using HTTPS for protecting authentication information in transit (ideally for *everything*), you're doing it wrong, so I was tempted to make this feature always on. However, sometimes I'm too lazy to set up SSL/TLS on local-only development boxes.
+
 Next, restart apache:
 {% highlight bash %}
 /path/to/apache2/bin/apachectl stop
