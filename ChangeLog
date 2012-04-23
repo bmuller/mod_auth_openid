@@ -5,6 +5,13 @@
 Unstable
 	Fixed issue #13 - issue with handling POST data
 	Fixed issue #10 - curl_unescape deprecated / libcurl doesn't unescape '+' as a space
+	Fixed "configure: error: conditional "DEBUG" was never defined." message when running autogen.sh.
+	Single OP mode
+	Set HttpOnly on session-scoped cookies too
+	Can now validate AX attrs by regex
+	Added AuthOpenIDSecureCookie directive to limit session cookie retrieval to HTTPS connections
+	Implemented AuthOpenIDAXUsername and AuthOpenIDSecureCookie
+	Described functionality of AuthOpenIDSingleIdP, AuthOpenIDAXRequire, AuthOpenIDAXUsername, AuthOpenIDSecureCookie
 	
 Version 0.6
 	Now a true authorization module (using ap_hook_check_user_id) (issue 79)
