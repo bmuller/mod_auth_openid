@@ -33,7 +33,10 @@ namespace modauthopenid {
  
   MoidConsumer::MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl) :
                              asnonceid(_asnonceid), serverurl(_serverurl), is_closed(false), endpoint_set(false), normalized_id("") {
+    // open db file as user rw only
+    ::mode_t old = umask(S_IRWXO|S_IRWXG);
     int rc = sqlite3_open(storage_location.c_str(), &db);
+    umask(old);
     if(!test_result(rc, "problem opening database"))
       return;
     sqlite3_busy_timeout(db, 5000);

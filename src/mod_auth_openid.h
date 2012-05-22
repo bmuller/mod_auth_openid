@@ -53,6 +53,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 
 #include <algorithm>
 #include <string>

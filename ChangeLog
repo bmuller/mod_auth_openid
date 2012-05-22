@@ -2,7 +2,7 @@
 
 # Some issue references are from an old Trac installation.  New bugs can be found
 # at http://github.com/bmuller/mod_auth_openid/issues and are prefixed with a #
-Unstable
+Version 0.7
 	Fixed issue #13 - issue with handling POST data
 	Fixed issue #10 - curl_unescape deprecated / libcurl doesn't unescape '+' as a space
 	Fixed "configure: error: conditional "DEBUG" was never defined." message when running autogen.sh.
@@ -12,6 +12,7 @@ Unstable
 	Added AuthOpenIDSecureCookie directive to limit session cookie retrieval to HTTPS connections
 	Implemented AuthOpenIDAXUsername and AuthOpenIDSecureCookie
 	Described functionality of AuthOpenIDSingleIdP, AuthOpenIDAXRequire, AuthOpenIDAXUsername, AuthOpenIDSecureCookie
+	Fixed security vulnerability - sqlite DB should not be world readable
 	
 Version 0.6
 	Now a true authorization module (using ap_hook_check_user_id) (issue 79)

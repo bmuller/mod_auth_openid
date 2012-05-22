@@ -32,7 +32,10 @@ namespace modauthopenid {
 
   SessionManager::SessionManager(const string& storage_location) {
     is_closed = false;
+    // open db file as user rw only
+    ::mode_t old = umask(S_IRWXO|S_IRWXG);
     int rc = sqlite3_open(storage_location.c_str(), &db);
+    umask(old);
     if(!test_result(rc, "problem opening database"))
       return;
     sqlite3_busy_timeout(db, 5000);
