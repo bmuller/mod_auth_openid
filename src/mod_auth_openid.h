@@ -42,6 +42,10 @@ Created by bmuller <bmuller@butterfat.net>
 #include "apr_general.h"
 #include "apr_time.h"
 
+#ifdef APLOG_USE_MODULE
+APLOG_USE_MODULE(authopenid_module);
+#endif
+
 /* other general lib includes */
 #include <curl/curl.h>
 #include <pcre.h>
