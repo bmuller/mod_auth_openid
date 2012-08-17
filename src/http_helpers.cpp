@@ -334,6 +334,11 @@ namespace modauthopenid {
     } else if(r->method_number == M_POST && get_post_data(r, query)) {
       debug("Request POST params: " + query);
       params = parse_query_string(query);
+      if (r->args != NULL) {
+        params_t get_params;
+        get_params = parse_query_string(string(r->args));
+        merge_params(get_params, params);
+      }
     }
   };
   
