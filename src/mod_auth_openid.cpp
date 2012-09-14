@@ -31,6 +31,10 @@ Created by bmuller <bmuller@butterfat.net>
 #define APWARN(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_WARNING, 0, r, msg, __VA_ARGS__);
 #define APERR(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, msg, __VA_ARGS__);
 
+#ifndef APR_ARRAY_IDX
+#define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
+#endif
+
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
