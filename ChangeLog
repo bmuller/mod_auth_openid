@@ -2,6 +2,9 @@
 
 # Some issue references are from an old Trac installation.  New bugs can be found
 # at http://github.com/bmuller/mod_auth_openid/issues and are prefixed with a #
+Unstable
+	Fixed issue with str_replace causing segfault on empty string
+
 Version 0.7
 	Fixed issue #13 - issue with handling POST data
 	Fixed issue #10 - curl_unescape deprecated / libcurl doesn't unescape '+' as a space

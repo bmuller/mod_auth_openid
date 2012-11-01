@@ -96,9 +96,11 @@ namespace modauthopenid {
   string str_replace(string needle, string replacement, string haystack) {
     vector<string> v = explode(haystack, needle);
     string r = "";
-    for(vector<string>::size_type i=0; i < v.size()-1; i++)
-      r += v[i] + replacement;
-    r += v[v.size()-1];
+    if(v.size()) {
+      for(vector<string>::size_type i=0; i < v.size()-1; i++)
+	r += v[i] + replacement;
+      r += v[v.size()-1];
+    }
     return r;
   };
 
