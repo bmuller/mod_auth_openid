@@ -46,8 +46,26 @@ namespace modauthopenid {
   class modauthopenid_message_t : public params_t {
   public:
     modauthopenid_message_t(params_t& _bom) { bom = _bom; };
-    bool has_field(const string& n) const { return bom.has_param("openid."+n); };
-    const string& get_field(const string& n) const { return bom.get_param("openid."+n); };
+    bool has_field(const string& n) const {
+      string mprefix = "modauthopenid.";
+      string oprefix = "openid.";
+      string param;
+      if(n.compare(0, mprefix.size(), mprefix) == 0 || n.compare(0, oprefix.size(), oprefix) == 0)
+        param = n;
+      else
+        param = "openid." + n;
+      return bom.has_param(param);
+    };
+    const string& get_field(const string& n) const {
+      string mprefix = "modauthopenid.";
+      string oprefix = "openid.";
+      string param;
+      if(n.compare(0, mprefix.size(), mprefix) == 0 || n.compare(0, oprefix.size(), oprefix) == 0)
+	param = n;
+      else
+        param = "openid." + n;
+      return bom.get_param(param);
+    };
     bool has_ns(const string& uri) const { return bom.has_ns(uri); };
     string get_ns(const string& uri) const { return bom.get_ns(uri); };
     fields_iterator fields_begin() const { return bom.fields_begin(); };
