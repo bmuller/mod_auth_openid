@@ -319,7 +319,7 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url,
 };
 
 static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
-  // test for valid session - if so, return DECLINED
+  // test for valid session
   std::string session_id = "";
   modauthopenid::get_session_id(r, std::string(s_cfg->cookie_name), session_id);
   if(session_id != "" && s_cfg->use_cookie) {
@@ -557,7 +557,7 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     // if we're not setting cookie - don't redirect, just show page
     APDEBUG(r, "Setting REMOTE_USER to %s", remote_user.c_str());
     r->user = apr_pstrdup(r->pool, remote_user.c_str());
-    return DECLINED;
+    return OK;
   } catch(opkele::exception &e) {
     APERR(r, "Error in authentication: %s", e.what());
     consumer.close();

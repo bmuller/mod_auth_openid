@@ -4,6 +4,7 @@
 # at http://github.com/bmuller/mod_auth_openid/issues and are prefixed with a #
 Unstable
 	Fixed issue with str_replace causing segfault on empty string
+	Fixed issue preventing valid authentication when session cookie wasn't being used
 
 Version 0.7
 	Fixed issue #13 - issue with handling POST data
