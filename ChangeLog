@@ -16,7 +16,7 @@ Version 0.7
 	Added AuthOpenIDSecureCookie directive to limit session cookie retrieval to HTTPS connections
 	Implemented AuthOpenIDAXUsername and AuthOpenIDSecureCookie
 	Described functionality of AuthOpenIDSingleIdP, AuthOpenIDAXRequire, AuthOpenIDAXUsername, AuthOpenIDSecureCookie
-	Fixed security vulnerability - sqlite DB should not be world readable
+	Fixed security vulnerability - sqlite DB should not be world readable - CVE-2012-2760
 	
 Version 0.6
 	Now a true authorization module (using ap_hook_check_user_id) (issue 79)
