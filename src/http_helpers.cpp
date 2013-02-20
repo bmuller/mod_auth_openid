@@ -82,7 +82,7 @@ namespace modauthopenid {
     } else {
       debug("Redirecting via HTTP_MOVED_TEMPORARILY to: " + location);
       apr_table_set(r->headers_out, "Location", location.c_str());
-      apr_table_setn(r->headers_out, "Cache-Control", "no-cache");
+      apr_table_setn(r->err_headers_out, "Cache-Control", "no-cache");
       return HTTP_MOVED_TEMPORARILY;
     }
   };
