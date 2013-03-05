@@ -25,7 +25,8 @@ AM_CXXFLAGS += -DDEBUG
 endif
 
 install-exec-local:
-	${APXS} -i -a -n 'authopenid' mod_auth_openid.la
+	-mkdir -p $(DESTDIR)$(shell $(APXS) -q LIBEXECDIR)
+	${APXS} -i -S LIBEXECDIR=$(DESTDIR)$(shell $(APXS) -q LIBEXECDIR) -n 'authopenid' mod_auth_openid.la
 
 mod_auth_openid.la: libmodauthopenid.la
 	${APXS} -c -o $@ $< ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${OPKELE_LIBS} \
