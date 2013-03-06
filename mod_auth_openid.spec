@@ -2,7 +2,7 @@ Summary: The OpenID module for Apache
 Name: mod_auth_openid
 Version: 0.7
 Release: 1
-License: BSD
+License: MIT
 Group: System Environment/Daemons
 URL: https://github.com/bmuller/mod_auth_openid
 Source0: %{name}-%{version}.tar.gz
