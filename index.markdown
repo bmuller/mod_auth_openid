@@ -13,10 +13,12 @@ Most people want to see an example first:
  * [http://butterfat.net/mod_auth_openid/secret](http://butterfat.net/mod_auth_openid/secret) (uses [custom login page][custompage])
 
 # Installation 
-*These docs assume that you have [Apache 2] installed and running already.*
+*These docs assume that you have [Apache 2] installed and running already.  Linux is the only officially supported operating system.  YMMV on OSX/Irix/Solaris/etc.*
 ## Prerequisites 
  * libopkele (>= 2.0): a C++ implementation of important OpenID functions - [http://kin.klever.net/libopkele/](http://kin.klever.net/libopkele/)
  * libsqlite: SQLite C libs - [http://www.sqlite.org](http://www.sqlite.org)
+ * libpcre: You probably already have this if you're running apache - [http://www.pcre.org/](pcre.org)
+ * libcurl: You also probably have this if you're running apache - [http://curl.haxx.se/](curl.haxx.se)
 
 ## Get The Source 
 You can download the current stable release from [the releases page](releases.html) or use git to get a development release:
