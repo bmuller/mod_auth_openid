@@ -2,7 +2,12 @@
 layout: base
 title: mod_auth_openid - The Apache OpenID Module
 ---
-# Introduction : The Apache OpenID Module 
+# Introduction : The Apache OpenID Module
+
+<div style="color: #c03; margin-top: 20px; background-color: #eee; border: 1px solid #aaa; padding: 10px;">
+  <i>I'm looking for additional contributers to either take this project over or help me migrate the code to Apache 2.4.2.  Email me (I'm bamuller on gmail) if you can help out.  Thanks!</i>
+</div>
+
 **mod_auth_openid** is an authentication module for the [Apache 2] webserver.  It handles the functions of an [OpenID](http://openid.net) consumer as specified in the [OpenID 2.0 specification](http://openid.net/specs/openid-authentication-2_0.html).  See the [FAQ][faq] for more information.  Download the current release from the [the releases page](releases.html).
 
 You can, now, specify an external program for authorization.  That is, after a user has authenticated themselves their identity can be passed to an external program that then returns a value that either authorize them or not to see the resource being protected.  See [AuthUserProgram](authuserprogram.html) for more information.
