@@ -614,6 +614,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
   }
 }
 
+#if AP_MODULE_MAGIC_AT_LEAST(20080403,1)
 static int mod_authopenid_check_user_access(request_rec *r) {
   modauthopenid_config *s_cfg;
   s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
@@ -655,6 +656,7 @@ static int mod_authopenid_check_user_access(request_rec *r) {
   ap_note_auth_failure(r);
   return HTTP_UNAUTHORIZED;
 }
+#else
 
 static authz_status user_check_authorization(request_rec *r,
                                              const char *require_args,
@@ -702,6 +704,7 @@ static const authz_provider authz_validuser_provider =
     &validuser_check_authorization,
     NULL,
 };
+#endif
 
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
 #if AP_MODULE_MAGIC_AT_LEAST(20080403,1)
