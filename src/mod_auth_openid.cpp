@@ -26,8 +26,9 @@ Created by bmuller <bmuller@butterfat.net>
 */
 
 #include "mod_auth_openid.h"
+#ifdef AP_DECLADE_MODULE
 AP_DECLARE_MODULE(authopenid_module);
-
+#endif
 
 #define APDEBUG(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, msg, __VA_ARGS__);
 #define APWARN(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_WARNING, 0, r, msg, __VA_ARGS__);
