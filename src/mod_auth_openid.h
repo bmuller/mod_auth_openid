@@ -41,6 +41,8 @@ Created by bmuller <bmuller@butterfat.net>
 #include "apr.h"
 #include "apr_general.h"
 #include "apr_time.h"
+/* Needed for Apache 2.4 */
+#include "mod_auth.h"
 
 /* other general lib includes */
 #include <curl/curl.h>

@@ -26,7 +26,6 @@ Created by bmuller <bmuller@butterfat.net>
 */
 
 #include "mod_auth_openid.h"
-if
 AP_DECLARE_MODULE(authopenid_module);
 
 
@@ -739,4 +738,3 @@ module AP_MODULE_DECLARE_DATA authopenid_module = {
 	mod_authopenid_cmds,
 	mod_authopenid_register_hooks,
 };
-AP_MODULE_DECLARE(authopenid_module);
