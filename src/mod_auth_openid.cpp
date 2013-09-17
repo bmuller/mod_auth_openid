@@ -26,6 +26,9 @@ Created by bmuller <bmuller@butterfat.net>
 */
 
 #include "mod_auth_openid.h"
+if
+AP_DECLARE_MODULE(authopenid_module);
+
 
 #define APDEBUG(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, msg, __VA_ARGS__);
 #define APWARN(r, msg, ...) ap_log_rerror(APLOG_MARK, APLOG_WARNING, 0, r, msg, __VA_ARGS__);
@@ -654,9 +657,76 @@ static int mod_authopenid_check_user_access(request_rec *r) {
   return HTTP_UNAUTHORIZED;
 }
 
+static authz_status user_check_authorization(request_rec *r,
+                                             const char *require_args,
+                                             const void *parsed_require_args)
+{
+    const char *t, *w;
+
+    if (!r->user) {
+        return AUTHZ_DENIED_NO_USER;
+    }
+
+    t = require_args;
+    while ((w = ap_getword_conf(r->pool, &t)) && w[0]) {
+        if (!strcmp(r->user, w)) {
+            return AUTHZ_GRANTED;
+        }
+    }
+
+    ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, APLOGNO(01663)
+                  "access to %s failed, reason: user '%s' does not meet "
+                  "'require'ments for user to be allowed access",
+                  r->uri, r->user);
+
+    return AUTHZ_DENIED;
+}
+
+static authz_status validuser_check_authorization(request_rec *r,
+                                                  const char *require_line,
+                                                  const void *parsed_require_line)
+{
+    if (!r->user) {
+        return AUTHZ_DENIED_NO_USER;
+    }
+
+    return AUTHZ_GRANTED;
+}
+
+static const authz_provider authz_user_provider =
+{
+    &user_check_authorization,
+    NULL,
+};
+static const authz_provider authz_validuser_provider =
+{
+    &validuser_check_authorization,
+    NULL,
+};
+
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
+#if AP_MODULE_MAGIC_AT_LEAST(20080403,1)
   ap_hook_check_user_id(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
   ap_hook_auth_checker(mod_authopenid_check_user_access, NULL, NULL, APR_HOOK_MIDDLE);
+#else
+  ap_hook_check_authn(mod_authopenid_method_handler,
+                                NULL,
+                                NULL,
+                                APR_HOOK_MIDDLE,
+                                AP_AUTH_INTERNAL_PER_CONF);
+  ap_register_auth_provider(p,
+                                AUTHZ_PROVIDER_GROUP,
+                                "valid-user",
+                                AUTHZ_PROVIDER_VERSION,
+                                &authz_validuser_provider,
+                                AP_AUTH_INTERNAL_PER_CONF);
+  ap_register_auth_provider(p,
+                                AUTHZ_PROVIDER_GROUP,
+                                "user",
+                                AUTHZ_PROVIDER_VERSION,
+                                &authz_user_provider,
+                                AP_AUTH_INTERNAL_PER_CONF);
+#endif
 }
 
 //module AP_MODULE_DECLARE_DATA 
@@ -669,3 +739,4 @@ module AP_MODULE_DECLARE_DATA authopenid_module = {
 	mod_authopenid_cmds,
 	mod_authopenid_register_hooks,
 };
+AP_MODULE_DECLARE(authopenid_module);
