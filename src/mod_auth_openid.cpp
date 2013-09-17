@@ -615,49 +615,6 @@ static int mod_authopenid_method_handler(request_rec *r) {
 }
 
 #if AP_MODULE_MAGIC_AT_LEAST(20080403,1)
-static int mod_authopenid_check_user_access(request_rec *r) {
-  modauthopenid_config *s_cfg;
-  s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
-  char *user = r->user;
-  int m = r->method_number;
-  int required_user = 0;
-  register int x;
-  const char *t, *w;
-  const apr_array_header_t *reqs_arr = ap_requires(r);
-  require_line *reqs;
-
-  if (!reqs_arr) 
-    return DECLINED;
-  
-  reqs = (require_line *)reqs_arr->elts;
-  for (x = 0; x < reqs_arr->nelts; x++) {
-    if (!(reqs[x].method_mask & (AP_METHOD_BIT << m))) 
-      continue;
-
-    t = reqs[x].requirement;
-    w = ap_getword_white(r->pool, &t);
-    if (!strcasecmp(w, "valid-user"))
-      return OK;
-
-    if (!strcasecmp(w, "user")) {
-      required_user = 1;
-      while (t[0]) {
-        w = ap_getword_conf(r->pool, &t);
-        if (!strcmp(user, w))
-          return OK;
-      }
-    }
-  }
-
-  if (!required_user)
-    return DECLINED;
-
-  APERR(r, "Access to %s failed: user '%s' invalid", r->uri, user);
-  ap_note_auth_failure(r);
-  return HTTP_UNAUTHORIZED;
-}
-#else
-
 static authz_status user_check_authorization(request_rec *r,
                                              const char *require_args,
                                              const void *parsed_require_args)
@@ -704,13 +661,52 @@ static const authz_provider authz_validuser_provider =
     &validuser_check_authorization,
     NULL,
 };
+#else
+static int mod_authopenid_check_user_access(request_rec *r) {
+  modauthopenid_config *s_cfg;
+  s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
+  char *user = r->user;
+  int m = r->method_number;
+  int required_user = 0;
+  register int x;
+  const char *t, *w;
+  const apr_array_header_t *reqs_arr = ap_requires(r);
+  require_line *reqs;
+
+  if (!reqs_arr) 
+    return DECLINED;
+  
+  reqs = (require_line *)reqs_arr->elts;
+  for (x = 0; x < reqs_arr->nelts; x++) {
+    if (!(reqs[x].method_mask & (AP_METHOD_BIT << m))) 
+      continue;
+
+    t = reqs[x].requirement;
+    w = ap_getword_white(r->pool, &t);
+    if (!strcasecmp(w, "valid-user"))
+      return OK;
+
+    if (!strcasecmp(w, "user")) {
+      required_user = 1;
+      while (t[0]) {
+        w = ap_getword_conf(r->pool, &t);
+        if (!strcmp(user, w))
+          return OK;
+      }
+    }
+  }
+
+  if (!required_user)
+    return DECLINED;
+
+  APERR(r, "Access to %s failed: user '%s' invalid", r->uri, user);
+  ap_note_auth_failure(r);
+  return HTTP_UNAUTHORIZED;
+}
 #endif
 
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
 #if AP_MODULE_MAGIC_AT_LEAST(20080403,1)
-  ap_hook_check_user_id(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
-  ap_hook_auth_checker(mod_authopenid_check_user_access, NULL, NULL, APR_HOOK_MIDDLE);
-#else
   ap_hook_check_authn(mod_authopenid_method_handler,
                                 NULL,
                                 NULL,
@@ -728,6 +724,9 @@ static void mod_authopenid_register_hooks (apr_pool_t *p) {
                                 AUTHZ_PROVIDER_VERSION,
                                 &authz_user_provider,
                                 AP_AUTH_INTERNAL_PER_CONF);
+#else
+  ap_hook_check_user_id(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
+  ap_hook_auth_checker(mod_authopenid_check_user_access, NULL, NULL, APR_HOOK_MIDDLE);
 #endif
 }
 
