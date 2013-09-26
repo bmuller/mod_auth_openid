@@ -92,7 +92,7 @@ AuthOpenIDAXUsername              email # username is email address
 AuthOpenIDSecureCookie            On    # always for production sites!
 {% endhighlight %}
 
- * **AuthOpenIDDBLocation**: Specifies the place the BDB file should be stored.  *Default:* /tmp/mod_auth_openid.db.
+ * **AuthOpenIDDBLocation**: Specifies the place the SQLite file should be stored.  *Default:* /tmp/mod_auth_openid.db.
  * **AuthOpenIDTrusted**: If specified, only users using providers that match one of the (Perl compatible) regular expressions listed will be allowed to authenticate.  *Default:* Trust all providers.
  * **AuthOpenIDDistrusted**: If specified, only users using providers that do not match one of the (Perl compatible) regular expressions listed will be allowed to authenticate.  You can use this in combination with AuthOpenIDTrusted; in that case, only a domain that is listed as trusted and not listed as distrusted can be used.  *Default:* No providers are distrusted.
  * **AuthOpenIDUseCookie**: If "Off", then a session cookie will not be set on the client upon successful authentication.  The page will load once; if reloaded or if the user visits it again it will ask the user to reauthenticate.  *Default:* On
