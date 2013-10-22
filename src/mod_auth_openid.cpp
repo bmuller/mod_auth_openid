@@ -26,7 +26,7 @@ Created by bmuller <bmuller@butterfat.net>
 */
 
 #include "mod_auth_openid.h"
-#ifdef AP_DECLADE_MODULE
+#ifdef AP_DECLARE_MODULE
 AP_DECLARE_MODULE(authopenid_module);
 #endif
 
