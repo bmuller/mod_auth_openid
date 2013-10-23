@@ -6,18 +6,24 @@ First, you'll need a few prerequisites.
  * libsqlite from http://www.sqlite.org (SQLite C libs)
 
 Next, run:
+
      ./configure
+
 or 
+
      ./configure --help
+
 to see additional options that can be specified.
 
 Next, run:
+
      make
      su root
      make install
 
 Make sure that the file /tmp/mod_auth_openid.db is owned by the user running Apache.
 You can do this by (assuming www-data is the user running apache):
+
      su root
      touch /tmp/mod_auth_openid.db
      chown www-data /tmp/mod_auth_openid.db
@@ -30,7 +36,7 @@ privieges on (see the docs for the AuthOpenIDDBLocation directive on the homepag
 In either a Directory, Location, or File directive in httpd.conf, place the following directive:
 
      AuthType            OpenID
-     Require           valid-user
+     Require             valid-user
 
 There are also additional, optional directives.  See the homepage for a list and docs.
 
