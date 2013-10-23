@@ -87,7 +87,8 @@ AuthOpenIDServerName              http://example.com
 AuthOpenIDUserProgram             /path/to/authorization/program
 AuthOpenIDCookiePath              /path/to/protect
 AuthOpenIDSingleIdP               https://www.google.com/accounts/o8/id # use Google's OpenID
-AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$ # users from example.com Apps domain only
+# users from example.com Apps domain would be the only allowed identities w/ next line
+AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$ 
 AuthOpenIDAXUsername              email # username is email address
 AuthOpenIDSecureCookie            On    # always for production sites!
 {% endhighlight %}
