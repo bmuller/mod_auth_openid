@@ -2,7 +2,9 @@
 
 # Some issue references are from an old Trac installation.  New bugs can be found
 # at http://github.com/bmuller/mod_auth_openid/issues and are prefixed with a #
-Unstable
+
+Version 0.8
+	Added support for Apache 2.4
 	Fixed issue with str_replace causing segfault on empty string
 	Fixed issue preventing valid authentication when session cookie wasn't being used
 
@@ -17,16 +19,16 @@ Version 0.7
 	Implemented AuthOpenIDAXUsername and AuthOpenIDSecureCookie
 	Described functionality of AuthOpenIDSingleIdP, AuthOpenIDAXRequire, AuthOpenIDAXUsername, AuthOpenIDSecureCookie
 	Fixed security vulnerability - sqlite DB should not be world readable
-	
+
 Version 0.6
 	Now a true authorization module (using ap_hook_check_user_id) (issue 79)
 	Because now using propper hook, REMOTE_USER now accessible to mod_rewrite (issue #2)
 	Now using integrated apache logging rather than logging directly to apache log with printing to stderr
 	Fixed error that caused openid_identifier to leak into return_to, causes cancel messages to fail (issue 92)
 	Fixed problem with module not always recognizing when locked URL was using https (issue 83)
-	
+
 Version 0.5
-	Added support for HTML form submission (POSTs) per the 2.0 spec (issue 52) 
+	Added support for HTML form submission (POSTs) per the 2.0 spec (issue 52)
 	Created AuthOpenIDCookiePath option (issue 76)
 	Nonce is now more secure (issue 77)
 
