@@ -74,7 +74,7 @@ require valid-user
 The *valid-user* constraint can be replaced with *require user http://myopenid.com/myusername/* if you want to restrict access to a specific user.
 
 The following are optional:
-{% highlight apache %}
+{% highlight apacheconf %}
 AuthOpenIDDBLocation              /some/location/my_file.db
 AuthOpenIDTrusted                 ^http://myopenid.com/server$ ^http://someprovider.com/idp$
 AuthOpenIDDistrusted              ^http://hackerdomain ^http://openid.microsoft.com$ 
@@ -87,8 +87,7 @@ AuthOpenIDServerName              http://example.com
 AuthOpenIDUserProgram             /path/to/authorization/program
 AuthOpenIDCookiePath              /path/to/protect
 AuthOpenIDSingleIdP               https://www.google.com/accounts/o8/id # use Google's OpenID
-# users from example.com Apps domain would be the only allowed identities w/ next line
-AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$ 
+AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$ # only *@example.com allowed
 AuthOpenIDAXUsername              email # username is email address
 AuthOpenIDSecureCookie            On    # always for production sites!
 {% endhighlight %}
