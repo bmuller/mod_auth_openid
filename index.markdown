@@ -5,7 +5,7 @@ title: mod_auth_openid - The Apache OpenID Module
 # Introduction : The Apache OpenID Module
 
 <div style="color: #c03; margin-top: 20px; background-color: #eee; border: 1px solid #aaa; padding: 10px;">
-  <i>I'm looking for additional contributers to either take this project over or help me migrate the code to Apache 2.4.2.  Email me (I'm bamuller on gmail) if you can help out.  Thanks!</i>
+  <i>I'm looking for additional contributers to take this project over!  Email me (I'm bamuller on gmail) if you can help out.  Thanks!</i>
 </div>
 
 **mod_auth_openid** is an authentication module for the [Apache 2] webserver.  It handles the functions of an [OpenID](http://openid.net) consumer as specified in the [OpenID 2.0 specification](http://openid.net/specs/openid-authentication-2_0.html).  See the [FAQ][faq] for more information.  Download the current release from the [the releases page](releases.html).
@@ -87,7 +87,7 @@ AuthOpenIDServerName              http://example.com
 AuthOpenIDUserProgram             /path/to/authorization/program
 AuthOpenIDCookiePath              /path/to/protect
 AuthOpenIDSingleIdP               https://www.google.com/accounts/o8/id # use Google's OpenID
-AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$ # only *@example.com allowed
+AuthOpenIDAXRequire               email http://axschema.org/contact/email @example\.com$
 AuthOpenIDAXUsername              email # username is email address
 AuthOpenIDSecureCookie            On    # always for production sites!
 {% endhighlight %}
