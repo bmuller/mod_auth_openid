@@ -30,19 +30,17 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  SessionManager::SessionManager(const string& storage_location) {
+  SessionManager::SessionManager(const ap_dbd_t* _dbd) {
     is_closed = false;
-    // open db file as user rw only
-    ::mode_t old = umask(S_IRWXO|S_IRWXG);
-    int rc = sqlite3_open(storage_location.c_str(), &db);
-    umask(old);
-    if(!test_result(rc, "problem opening database"))
-      return;
-    sqlite3_busy_timeout(db, 5000);
+    dbd = _dbd;
+
+    int rc;     // return code for APR DBD functions
+    int n_rows; // rows affected by query: not used here, but can't be NULL
+
     string query = "CREATE TABLE IF NOT EXISTS sessionmanager "
       "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), identity VARCHAR(255), username VARCHAR(255), expires_on INT)";
-    rc = sqlite3_exec(db, query.c_str(), 0, 0, 0);
-    test_result(rc, "problem creating table if it didn't exist already");
+    rc = apr_dbd_query(dbd->driver, dbd->handle, &n_rows, query.c_str());
+    test_result(rc, "problem creating sessionmanager table if it didn't exist already");
   };
 
   void SessionManager::get_session(const string& session_id, session_t& session) {
@@ -69,11 +67,9 @@ namespace modauthopenid {
   };
 
   bool SessionManager::test_result(int result, const string& context) {
-    if(result != SQLITE_OK){
-      string msg = "SQLite Error in Session Manager - " + context + ": %s\n";
-      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
-      sqlite3_close(db);
-      is_closed = true;
+    if (result != DBD_SUCCESS){
+      fprintf(stderr, "DBD Error in SessionManager - %s: %s\n",
+        context.c_str(), apr_dbd_error(dbd->driver, dbd->handle, result));
       return false;
     }
     return true;
@@ -107,7 +103,7 @@ namespace modauthopenid {
   // This is a method to be used by a utility program, never the apache module                 
   void SessionManager::print_table() {
     ween_expired();
-    print_sqlite_table(db, "sessionmanager");
+    print_sql_table(dbd, "sessionmanager");
   };
 
   void SessionManager::close() {

@@ -41,6 +41,8 @@ Created by bmuller <bmuller@butterfat.net>
 #include "apr.h"
 #include "apr_general.h"
 #include "apr_time.h"
+#include "apr_dbd.h"
+#include "mod_dbd.h"
 /* Needed for Apache 2.4 */
 #include "mod_auth.h"
 
@@ -82,6 +84,12 @@ Created by bmuller <bmuller@butterfat.net>
 /* Attribute Exchange */
 #define AX_NAMESPACE "http://openid.net/srv/ax/1.0"
 #define DEFAULT_AX_NAMESPACE_ALIAS "ax"
+
+/* DBD defines */
+#define DBD_SUCCESS           0
+#define DBD_LINEAR_ACCESS     0
+#define DBD_NEXT_ROW         -1
+#define DBD_NO_MORE_ROWS     -1
 
 /* mod_auth_openid includes */
 #include "config.h"

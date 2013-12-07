@@ -27,6 +27,9 @@ AM_CONDITIONAL([DEBUG], [test x$debug = xtrue])
 # this will look for apxs command - put it in $APXS, fail on failure
 AX_WITH_APXS()
 
+
+# begin APR config
+
 # find apr-config binary
 AC_ARG_WITH(apr_config, AC_HELP_STRING([[--with-apr-config=FILE]], [Path to apr-config program]),
 			[ apr_config="$withval" ],
@@ -46,13 +49,43 @@ if test "$?" != "0"; then
   AC_MSG_ERROR($apr_config is not a valid apr-config program)
 fi
 
+APR_LDFLAGS="`${apr_config} --link-ld --libs`"
+AC_SUBST(APR_LDFLAGS)
+
+# end APR config
+
+
+# begin APR util config
+
+# find apu-config binary
+AC_ARG_WITH(apu_config, AC_HELP_STRING([[--with-apu-config=FILE]], [Path to apu-config program]),
+      [ apu_config="$withval" ],
+      [AC_PATH_PROGS(apu_config,
+        [apu-config apu-0-config apu-1-config], 
+        [no], 
+        [$PATH:/usr/sbin/:/usr/local/apache2/bin]
+      )]
+)
+
+if test "$apu_config" = "no"; then
+   AC_MSG_ERROR(Could not find the apu-config program.  You can specify a location with the --with-apu-config=FILE option.  It may be named apu-0-config or apu-1-config and can be found in your apache2 bin directory.)
+fi
+
+$apu_config --link-ld --libs &> /dev/null
+if test "$?" != "0"; then
+  AC_MSG_ERROR($apu_config is not a valid apu-config program)
+fi
+
+APU_LDFLAGS="`${apu_config} --link-ld --libs`"
+AC_SUBST(APU_LDFLAGS)
+
+# end APR util config
+
+
 AX_LIB_SQLITE3([3.3.0])
 if test "$SQLITE3_VERSION" == ""; then
   AC_MSG_ERROR([No sqlite 3 (http://www.sqlite.org) library found.])
 fi
-
-APR_LDFLAGS="`${apr_config} --link-ld --libs`"
-AC_SUBST(APR_LDFLAGS)
 
 APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)

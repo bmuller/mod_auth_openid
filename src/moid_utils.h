@@ -55,8 +55,8 @@ namespace modauthopenid {
   // make a random string of size size
   void make_rstring(int size, string& s);
 
-  // print an sqlite table to stdout
-  void print_sqlite_table(sqlite3 *db, string tablename);
+  // print a SQL table to stdout
+  void print_sql_table(const ap_dbd_t* dbd, string tablename);
 
   // test a sqlite return value, print error if there is one to stdout and return false, 
   // return true on no error

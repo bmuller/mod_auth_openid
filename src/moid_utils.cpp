@@ -59,7 +59,7 @@ namespace modauthopenid {
     case no_idp_found:
       short_string = "no_idp_found";
       long_string = "There was either no identity provider found for the identity given"
-	" or there was trouble connecting to it.";
+        " or there was trouble connecting to it.";
       break;
     case invalid_id:
       short_string = "invalid_id";
@@ -98,7 +98,7 @@ namespace modauthopenid {
     string r = "";
     if(v.size()) {
       for(vector<string>::size_type i=0; i < v.size()-1; i++)
-	r += v[i] + replacement;
+        r += v[i] + replacement;
       r += v[v.size()-1];
     }
     return r;
@@ -142,21 +142,37 @@ namespace modauthopenid {
       s += cs[true_random()%62];
   }
 
-  void print_sqlite_table(sqlite3 *db, string tablename) {
-    fprintf(stdout, "Printing table: %s.  ", tablename.c_str());
+  void print_sql_table(const ap_dbd_t* dbd, string tablename) {
+    printf("Printing table: %s.\n", tablename.c_str());
     string sql = "SELECT * FROM " + tablename;
-    int rc, nr, nc, size;
-    char **table;
-    rc = sqlite3_get_table(db, sql.c_str(), &table, &nr, &nc, 0);
-    fprintf(stdout, "There are %d rows.\n", nr);    
-    size = (nr * nc) + nc;
-    for(int i=0; i<size; i++) {
-      fprintf(stdout, "%s\t", table[i]);
-      if(((i+1) % nc) == 0) 
-	fprintf(stdout, "\n");
+    int rc, nr, nc;
+    apr_dbd_results_t *results = NULL;
+    rc = apr_dbd_select(dbd->driver, dbd->pool, dbd->handle, &results, sql.c_str(), DBD_LINEAR_ACCESS);
+    if (rc != DBD_SUCCESS) {
+      printf("Couldn't fetch contents. DBD error %d: %s\n\n",
+             rc, apr_dbd_error(dbd->driver, dbd->handle, rc));
+      return;
     }
-    fprintf(stdout, "\n");
-    sqlite3_free_table(table);
+
+    nc = apr_dbd_num_cols(dbd->driver, results);
+    for (int col = 0; col < nc; col++) {
+      const char *name = apr_dbd_get_name(dbd->driver, results, col);
+      printf("%s\t", name);
+    }
+    printf("\n");
+
+    apr_dbd_row_t *row = NULL;
+    nr = 0; // apr_dbd_num_tuples() row count function doesn't work with "async"/linear row access mode
+    while (apr_dbd_get_row(dbd->driver, dbd->pool, results, &row, DBD_NEXT_ROW) != DBD_NO_MORE_ROWS) {
+      nr++;
+      for (int col = 0; col < nc; col++) {
+        const char *value = apr_dbd_get_entry(dbd->driver, row, col);
+        printf("%s\t", value);
+      }
+      printf("\n");
+    }
+    
+    printf("There are %d rows.\n\n", nr);
   };
 
   bool test_sqlite_return(sqlite3 *db, int result, const string& context) {
@@ -211,9 +227,9 @@ namespace modauthopenid {
     default:
       // you're an adult parent, act responsibly
       if(waitpid(pid, &rvalue, 0) == -1) 
-	result = child_no_return;
+        result = child_no_return;
       else
-	result = (rvalue == 0) ? id_accepted : id_refused;
+        result = (rvalue == 0) ? id_accepted : id_refused;
       break;
     }
     return result;

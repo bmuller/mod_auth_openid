@@ -32,8 +32,8 @@ namespace modauthopenid {
   // This class keeps track of cookie based sessions
   class SessionManager {
   public:
-    // storage_location is db location
-    SessionManager(const string& storage_location);
+    // _dbd is a DB connection usually provided by mod_dbd
+    SessionManager(const ap_dbd_t* _dbd);
     ~SessionManager() { close(); };
 
     // get session with id session_id and set values in session
@@ -51,7 +51,8 @@ namespace modauthopenid {
     // close database
     void close();
   private:
-    sqlite3 *db;
+    sqlite3 *db; // DEBUG
+    const ap_dbd_t* dbd;
     
     // delete all expired sessions
     void ween_expired();

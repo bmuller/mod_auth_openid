@@ -192,35 +192,35 @@ static const char *set_modauthopenid_single_idp(cmd_parms *parms, void *mconfig,
 
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDCookieLifespan", (CMD_HAND_TYPE) set_modauthopenid_cookie_lifespan, NULL, OR_AUTHCFG,
-		"AuthOpenIDCookieLifespan <number seconds>"),
+                "AuthOpenIDCookieLifespan <number seconds>"),
   AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, OR_AUTHCFG,
-		"AuthOpenIDDBLocation <string>"),
+                "AuthOpenIDDBLocation <string>"),
   AP_INIT_TAKE1("AuthOpenIDLoginPage", (CMD_HAND_TYPE) set_modauthopenid_login_page, NULL, OR_AUTHCFG,
-		"AuthOpenIDLoginPage <url string>"),
+                "AuthOpenIDLoginPage <url string>"),
   AP_INIT_TAKE1("AuthOpenIDTrustRoot", (CMD_HAND_TYPE) set_modauthopenid_trust_root, NULL, OR_AUTHCFG,
-		"AuthOpenIDTrustRoot <trust root to use>"),
+                "AuthOpenIDTrustRoot <trust root to use>"),
   AP_INIT_TAKE1("AuthOpenIDCookieName", (CMD_HAND_TYPE) set_modauthopenid_cookie_name, NULL, OR_AUTHCFG,
-		"AuthOpenIDCookieName <name of cookie to use>"),
+                "AuthOpenIDCookieName <name of cookie to use>"),
   AP_INIT_TAKE1("AuthOpenIDCookiePath", (CMD_HAND_TYPE) set_modauthopenid_cookie_path, NULL, OR_AUTHCFG, 
-		"AuthOpenIDCookiePath <path of cookie to use>"), 
+                "AuthOpenIDCookiePath <path of cookie to use>"), 
   AP_INIT_FLAG("AuthOpenIDUseCookie", (CMD_HAND_TYPE) set_modauthopenid_usecookie, NULL, OR_AUTHCFG,
-	       "AuthOpenIDUseCookie <On | Off> - use session auth?"),
+               "AuthOpenIDUseCookie <On | Off> - use session auth?"),
   AP_INIT_FLAG("AuthOpenIDSecureCookie", (CMD_HAND_TYPE) set_modauthopenid_secure_cookie, NULL, OR_AUTHCFG,
-	       "AuthOpenIDSecureCookie <On | Off> - restrict session cookie to HTTPS connections"),
+               "AuthOpenIDSecureCookie <On | Off> - restrict session cookie to HTTPS connections"),
   AP_INIT_ITERATE("AuthOpenIDTrusted", (CMD_HAND_TYPE) add_modauthopenid_trusted, NULL, OR_AUTHCFG,
-		  "AuthOpenIDTrusted <a list of trusted identity providers>"),
+                  "AuthOpenIDTrusted <a list of trusted identity providers>"),
   AP_INIT_ITERATE("AuthOpenIDDistrusted", (CMD_HAND_TYPE) add_modauthopenid_distrusted, NULL, OR_AUTHCFG,
-		  "AuthOpenIDDistrusted <a blacklist list of identity providers>"),
+                  "AuthOpenIDDistrusted <a blacklist list of identity providers>"),
   AP_INIT_TAKE1("AuthOpenIDServerName", (CMD_HAND_TYPE) set_modauthopenid_server_name, NULL, OR_AUTHCFG,
-		"AuthOpenIDServerName <server name and port prefix>"),
+                "AuthOpenIDServerName <server name and port prefix>"),
   AP_INIT_TAKE1("AuthOpenIDUserProgram", (CMD_HAND_TYPE) set_modauthopenid_auth_program, NULL, OR_AUTHCFG,
-		"AuthOpenIDUserProgram <full path to authentication program>"),
+                "AuthOpenIDUserProgram <full path to authentication program>"),
   AP_INIT_TAKE3("AuthOpenIDAXRequire", (CMD_HAND_TYPE) set_modauthopenid_ax_require, NULL, OR_AUTHCFG,
-		"Add AuthOpenIDAXRequire <alias> <URI> <regex>"),
+                "Add AuthOpenIDAXRequire <alias> <URI> <regex>"),
   AP_INIT_TAKE1("AuthOpenIDAXUsername", (CMD_HAND_TYPE) set_modauthopenid_ax_username, NULL, OR_AUTHCFG,
-		"AuthOpenIDAXUsername <alias>"),
+                "AuthOpenIDAXUsername <alias>"),
   AP_INIT_TAKE1("AuthOpenIDSingleIdP", (CMD_HAND_TYPE) set_modauthopenid_single_idp, NULL, OR_AUTHCFG,
-		"AuthOpenIDSingleIdP <IdP URL>"),
+                "AuthOpenIDSingleIdP <IdP URL>"),
   {NULL}
 };
 
@@ -325,14 +325,14 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url,
   return false;
 };
 
-static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
+static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd) {
   // test for valid session
   std::string session_id = "";
   modauthopenid::get_session_id(r, std::string(s_cfg->cookie_name), session_id);
   if(session_id != "" && s_cfg->use_cookie) {
     modauthopenid::debug("found session_id in cookie: " + session_id);
     modauthopenid::session_t session;
-    modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
+    modauthopenid::SessionManager sm(dbd);
     sm.get_session(session_id, session);
     sm.close();
 
@@ -357,8 +357,8 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg) {
   return false;
 };
 
-static int start_authentication_session(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, 
-					                    std::string& return_to, std::string& trust_root) {
+static int start_authentication_session(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd,
+                                        opkele::params_t& params, std::string& return_to, std::string& trust_root) {
   // remove all openid GET query params (openid.*) - we don't want that maintained through
   // the redirection process.  We do, however, want to keep all other GET params.
   // also, add a nonce for security 
@@ -370,10 +370,9 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
   opkele::params_t ext_params;
   modauthopenid::get_extension_params(ext_params, params);
   modauthopenid::remove_openid_vars(params);
-  
+
   // if attribute directives are set, add AX stuff to extension params
-  if(s_cfg->use_ax)
-  {
+  if (s_cfg->use_ax) {
     ext_params["openid.ns." DEFAULT_AX_NAMESPACE_ALIAS] = AX_NAMESPACE;
     ext_params["openid." DEFAULT_AX_NAMESPACE_ALIAS ".mode"] = "fetch_request";
     std::string required = "";
@@ -382,7 +381,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
       std::string alias = APR_ARRAY_IDX(s_cfg->ax_attrs, i, const char *);
       std::string uri = apr_table_get(s_cfg->ax_attr_uris, alias.c_str());
       ext_params["openid." DEFAULT_AX_NAMESPACE_ALIAS ".type." + alias] = uri;
-      if(first_alias) {
+      if (first_alias) {
         first_alias = false;
       } else {
         required += ',';
@@ -395,7 +394,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
   // add a nonce and reset what return_to is
   std::string nonce, re_direct;
   modauthopenid::make_rstring(10, nonce);
-  modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), nonce, return_to);    
+  modauthopenid::MoidConsumer consumer(dbd, nonce, return_to);    
   params["modauthopenid.nonce"] = nonce;
   full_uri(r, return_to, s_cfg, true);
   return_to = params.append_query(return_to, "");
@@ -426,8 +425,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
   return modauthopenid::http_redirect(r, re_direct);
 };
 
-
-static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, std::string identity, std::string username) {
+static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd, opkele::params_t& params, std::string identity, std::string username) {
   // now set auth cookie, if we're doing session based auth
   std::string session_id, hostname, path, cookie_value, redirect_location, args;
   if(s_cfg->cookie_path != NULL) 
@@ -441,7 +439,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
   hostname = std::string(r->hostname);
 
   // save session values
-  modauthopenid::SessionManager sm(std::string(s_cfg->db_location));
+  modauthopenid::SessionManager sm(dbd);
   sm.store_session(session_id, hostname, path, identity, username, s_cfg->cookie_lifespan);
   sm.close();
 
@@ -458,12 +456,12 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, opkel
   return modauthopenid::http_redirect(r, redirect_location);
 };
 
-static int validate_authentication_session(request_rec *r, modauthopenid_config *s_cfg, opkele::params_t& params, std::string& return_to) {
+static int validate_authentication_session(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd, opkele::params_t& params, std::string& return_to) {
   // make sure nonce is present
   if(!params.has_param("modauthopenid.nonce")) 
     return show_input(r, s_cfg, modauthopenid::invalid_nonce);
 
-  modauthopenid::MoidConsumer consumer(std::string(s_cfg->db_location), params.get_param("modauthopenid.nonce"), return_to);
+  modauthopenid::MoidConsumer consumer(dbd, params.get_param("modauthopenid.nonce"), return_to);
   try {
     consumer.id_res(modauthopenid::modauthopenid_message_t(params));
     
@@ -545,7 +543,7 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
         consumer.close();
         return show_input(r, s_cfg, modauthopenid::unauthorized);       
       } else {
-        APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());	
+        APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());    
       }
     }
 
@@ -556,7 +554,7 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     consumer.close();
 
     if(s_cfg->use_cookie) 
-      return set_session_cookie(r, s_cfg, params, identity, ax_username);
+      return set_session_cookie(r, s_cfg, dbd, params, identity, ax_username);
     
     std::string remote_user = s_cfg->use_ax_username
       ? ax_username
@@ -583,9 +581,17 @@ static int mod_authopenid_method_handler(request_rec *r) {
 
   // make a record of our being called
   APDEBUG(r, "*** %s module has been called ***", PACKAGE_STRING);
-  
+
+  // get a DBD connection
+  APR_OPTIONAL_FN_TYPE(ap_dbd_acquire) *ap_dbd_acquire = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_acquire);
+  if (ap_dbd_acquire == NULL) {
+    APERR(r, "Couldn't get optional function ap_dbd_acquire(). Make sure mod_dbd is loaded.%s", "");
+    return DECLINED;
+  }
+  const ap_dbd_t *dbd = ap_dbd_acquire(r);
+
   // if user has a valid session, they are authorized (OK)
-  if(has_valid_session(r, s_cfg))
+  if(has_valid_session(r, s_cfg, dbd))
     return OK;
 
   // parse the get/post params
@@ -602,13 +608,13 @@ static int mod_authopenid_method_handler(request_rec *r) {
 
   if(params.has_param("openid.assoc_handle")) { 
     // user has been redirected, authenticate them and set cookie
-    return validate_authentication_session(r, s_cfg, params, return_to);
+    return validate_authentication_session(r, s_cfg, dbd, params, return_to);
   } else if(params.has_param("openid.mode") && params.get_param("openid.mode") == "cancel") {
     // authentication cancelled, display message
     return show_input(r, s_cfg, modauthopenid::canceled);
   } else if(params.has_param("openid_identifier") || s_cfg->use_single_idp) {
     // user is posting id URL, or we're in single OP mode and already have one, so try to authenticate
-    return start_authentication_session(r, s_cfg, params, return_to, trust_root);
+    return start_authentication_session(r, s_cfg, dbd, params, return_to, trust_root);
   } else {
     // display an input form
     return show_input(r, s_cfg);
@@ -733,11 +739,11 @@ static void mod_authopenid_register_hooks (apr_pool_t *p) {
 
 //module AP_MODULE_DECLARE_DATA 
 module AP_MODULE_DECLARE_DATA authopenid_module = {
-	STANDARD20_MODULE_STUFF,
-	create_modauthopenid_config,
-	NULL, // config merge function - default is to override
-	NULL,
-	NULL,
-	mod_authopenid_cmds,
-	mod_authopenid_register_hooks,
+        STANDARD20_MODULE_STUFF,
+        create_modauthopenid_config,
+        NULL, // config merge function - default is to override
+        NULL,
+        NULL,
+        mod_authopenid_cmds,
+        mod_authopenid_register_hooks,
 };

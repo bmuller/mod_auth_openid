@@ -34,9 +34,9 @@ namespace modauthopenid {
   // the params list
   class MoidConsumer : public prequeue_RP {
   public:
-    // storage location is db location, _asnonceid is the association session nonce, and serverurl is 
+    // _dbd is a DB connection usually provided by mod_dbd, _asnonceid is the association session nonce, and serverurl is 
     // the return to value (url initially requested by user)
-    MoidConsumer(const string& storage_location, const string& _asnonceid, const string& _serverurl);
+    MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid, const string& _serverurl);
     virtual ~MoidConsumer() { close(); };
 
     // store a new assocation
@@ -89,12 +89,13 @@ namespace modauthopenid {
     // delete session with given session nonce id in constructor param list
     void kill_session();
   private:
-    sqlite3 *db;
+    sqlite3 *db; // DEBUG
+    const ap_dbd_t* dbd;
 
     // delete all expired sessions
     void ween_expired();
 
-    // test result from sqlite query - print error to stderr if there is one
+    // test result from DBD query - print error to stderr if there is one
     bool test_result(int result, const string& context);
 
     // strings for the nonce based authentication session and the server's url (the originally 
@@ -103,7 +104,7 @@ namespace modauthopenid {
 
     // booleans for the database state and whether any endpoint has been set yet
     bool is_closed, endpoint_set;
-    
+
     // The normalized id the user has attempted to use
     mutable string normalized_id;
 
