@@ -41,7 +41,7 @@ AP_DECLARE_MODULE(authopenid_module);
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
-  const char *db_location;
+  const char *db_location; // DEBUG: remove with other SQLite-specific stuff, replaced by mod_dbd config
   char *trust_root;
   const char *cookie_name;
   char *login_page;
@@ -90,6 +90,63 @@ static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   newcfg->use_single_idp = false;
   newcfg->single_idp_url = NULL;
   return (void *) newcfg;
+}
+
+/*
+ * Optional functions provided by other modules.
+ * These will be looked up by the post-config hook.
+ */
+
+/**
+ * Determine whether we are looking at an https URL.
+ * Provided by mod_ssl or mod_gnutls.
+ */
+static APR_OPTIONAL_FN_TYPE(ssl_is_https)   *moid_ssl_is_https = NULL;
+
+/**
+ * Prepare a statement for use with DBD.
+ * Provided by mod_dbd.
+ */
+static APR_OPTIONAL_FN_TYPE(ap_dbd_prepare) *moid_ap_dbd_prepare = NULL;
+
+/**
+ * Get a request-scoped connection from the DBD pool.
+ * Provided by mod_dbd.
+ */
+static APR_OPTIONAL_FN_TYPE(ap_dbd_acquire) *moid_ap_dbd_acquire = NULL;
+
+/**
+ * Post-config hook:
+ *     * Load optional functions
+ *     * Prepare SQL statements
+ */
+static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
+                                      apr_pool_t *ptemp, server_rec *s)
+{
+  // load optional functions
+  if (moid_ssl_is_https   == NULL) {
+    moid_ssl_is_https   = APR_RETRIEVE_OPTIONAL_FN(ssl_is_https);
+  }
+  if (moid_ap_dbd_prepare == NULL) {
+    moid_ap_dbd_prepare = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_prepare);
+  }
+  if (moid_ap_dbd_acquire == NULL) {
+    moid_ap_dbd_acquire = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_acquire);
+  }
+
+  // collect all SQL statements used by our classes
+  apr_array_header_t* statements = apr_array_make(pconf, 10 /* initial size */, sizeof(modauthopenid::labeled_statement_t));
+  modauthopenid::MoidConsumer  ::append_statements(statements);
+  modauthopenid::SessionManager::append_statements(statements);
+
+  // for each server config:
+  for (server_rec* sp = s; sp; sp = sp->next) {
+    for (int i = 0; i < statements->nelts; i++) {
+      modauthopenid::labeled_statement_t* statement = &APR_ARRAY_IDX(statements, i, modauthopenid::labeled_statement_t);
+      // prepare the statement
+      moid_ap_dbd_prepare(sp, statement->code, statement->label);
+    }
+  }
 }
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
@@ -230,9 +287,7 @@ static void full_uri(request_rec *r, std::string& result, modauthopenid_config *
   std::string hostname(r->hostname);
   std::string uri(r->uri);
   apr_port_t i_port = ap_get_server_port(r);
-  // Fetch the APR function for determining if we are looking at an https URL
-  APR_OPTIONAL_FN_TYPE(ssl_is_https) *using_https = APR_RETRIEVE_OPTIONAL_FN(ssl_is_https);
-  std::string prefix = (using_https != NULL && using_https(r->connection)) ? "https://" : "http://";
+  std::string prefix = (moid_ssl_is_https != NULL && moid_ssl_is_https(r->connection)) ? "https://" : "http://";
   char *port = apr_psprintf(r->pool, "%lu", (unsigned long) i_port);
   std::string s_port = (i_port == 80 || i_port == 443) ? "" : ":" + std::string(port);
 
@@ -334,7 +389,6 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg, const
     modauthopenid::session_t session;
     modauthopenid::SessionManager sm(dbd);
     sm.get_session(session_id, session);
-    sm.close();
 
     // if session found 
     if(session.identity != "") {
@@ -406,20 +460,15 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
     re_direct = consumer.checkid_(cm, opkele::mode_checkid_setup, return_to, trust_root).append_query(consumer.get_endpoint().uri);
     re_direct = ext_params.append_query(re_direct, "");
   } catch (opkele::failed_xri_resolution &e) {
-    consumer.close();
     return show_input(r, s_cfg, modauthopenid::invalid_id);
   } catch (opkele::failed_discovery &e) {
-    consumer.close();
     return show_input(r, s_cfg, modauthopenid::invalid_id);
   } catch (opkele::bad_input &e) {
-    consumer.close();
     return show_input(r, s_cfg, modauthopenid::invalid_id);
   } catch (opkele::exception &e) {
-    consumer.close();
     APERR(r, "Error while fetching idP location: %s", e.what());
     return show_input(r, s_cfg, modauthopenid::no_idp_found);
   }
-  consumer.close();
   if(!is_trusted_provider(s_cfg , re_direct, r) || is_distrusted_provider(s_cfg, re_direct, r))
     return show_input(r, s_cfg, modauthopenid::idp_not_trusted);
   return modauthopenid::http_redirect(r, re_direct);
@@ -441,7 +490,6 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, const
   // save session values
   modauthopenid::SessionManager sm(dbd);
   sm.store_session(session_id, hostname, path, identity, username, s_cfg->cookie_lifespan);
-  sm.close();
 
   opkele::params_t ext_params;
   modauthopenid::get_extension_params(ext_params, params);
@@ -467,8 +515,7 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     
     // if no exception raised, check nonce
     if(!consumer.session_exists()) {
-      consumer.close();
-      return show_input(r, s_cfg, modauthopenid::invalid_nonce); 
+      return show_input(r, s_cfg, modauthopenid::invalid_nonce);
     }
     
     // if we did an AX query, check the result
@@ -488,7 +535,6 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       }
       if (ax_value_pfx.empty()) {
         APERR(r, "No AX namespace alias found in response%s", "");
-        consumer.close();
         return show_input(r, s_cfg, modauthopenid::ax_bad_response);
       } else {
         APDEBUG(r, "AX value param name prefix: %s", ax_value_pfx.c_str());
@@ -502,7 +548,6 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
         if(param == params.end())
         {
           APERR(r, "AX: attribute %s not found", attr);
-          consumer.close();
           return show_input(r, s_cfg, modauthopenid::ax_bad_response);
         }
         std::string& value = param->second;
@@ -511,7 +556,6 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
         bool match = modauthopenid::regex_match(value, re);
         pcre_free(re);
         if(!match) {
-          consumer.close();
           APERR(r, "AX: %s attribute %s didn't match %s", attr, value.c_str(), pattern.c_str());
           return show_input(r, s_cfg, modauthopenid::unauthorized);
         } else {
@@ -523,7 +567,6 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       }
       if(s_cfg->use_ax_username) {
         if(ax_username.empty()) {
-          consumer.close();
           APERR(r, "AX: username attribute %s not found", s_cfg->ax_username_attr);
           return show_input(r, s_cfg, modauthopenid::unauthorized);
         } else {
@@ -540,10 +583,9 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
       if(eresult != modauthopenid::id_accepted) {
         std::string error = modauthopenid::exec_error_to_string(eresult, progname, username);
         APERR(r, "Error in authentication: %s", error.c_str());
-        consumer.close();
         return show_input(r, s_cfg, modauthopenid::unauthorized);       
       } else {
-        APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());    
+        APDEBUG(r, "Authenticated %s using %s", username.c_str(), progname.c_str());
       }
     }
 
@@ -551,7 +593,6 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     // this will be different than openid_identifier GET param
     std::string identity = consumer.get_claimed_id();
     consumer.kill_session();
-    consumer.close();
 
     if(s_cfg->use_cookie) 
       return set_session_cookie(r, s_cfg, dbd, params, identity, ax_username);
@@ -565,7 +606,6 @@ static int validate_authentication_session(request_rec *r, modauthopenid_config 
     return OK;
   } catch(opkele::exception &e) {
     APERR(r, "Error in authentication: %s", e.what());
-    consumer.close();
     return show_input(r, s_cfg, modauthopenid::unspecified);
   }
 };
@@ -583,12 +623,11 @@ static int mod_authopenid_method_handler(request_rec *r) {
   APDEBUG(r, "*** %s module has been called ***", PACKAGE_STRING);
 
   // get a DBD connection
-  APR_OPTIONAL_FN_TYPE(ap_dbd_acquire) *ap_dbd_acquire = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_acquire);
-  if (ap_dbd_acquire == NULL) {
+  if (moid_ap_dbd_acquire == NULL) {
     APERR(r, "Couldn't get optional function ap_dbd_acquire(). Make sure mod_dbd is loaded.%s", "");
     return DECLINED;
   }
-  const ap_dbd_t *dbd = ap_dbd_acquire(r);
+  const ap_dbd_t *dbd = moid_ap_dbd_acquire(r);
 
   // if user has a valid session, they are authorized (OK)
   if(has_valid_session(r, s_cfg, dbd))
@@ -626,47 +665,47 @@ static authz_status user_check_authorization(request_rec *r,
                                              const char *require_args,
                                              const void *parsed_require_args)
 {
-    const char *t, *w;
+  const char *t, *w;
 
-    if (!r->user) {
-        return AUTHZ_DENIED_NO_USER;
+  if (!r->user) {
+    return AUTHZ_DENIED_NO_USER;
+  }
+
+  t = require_args;
+  while ((w = ap_getword_conf(r->pool, &t)) && w[0]) {
+    if (!strcmp(r->user, w)) {
+      return AUTHZ_GRANTED;
     }
+  }
 
-    t = require_args;
-    while ((w = ap_getword_conf(r->pool, &t)) && w[0]) {
-        if (!strcmp(r->user, w)) {
-            return AUTHZ_GRANTED;
-        }
-    }
+  ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, APLOGNO(01663)
+                "access to %s failed, reason: user '%s' does not meet "
+                "'require'ments for user to be allowed access",
+                r->uri, r->user);
 
-    ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, APLOGNO(01663)
-                  "access to %s failed, reason: user '%s' does not meet "
-                  "'require'ments for user to be allowed access",
-                  r->uri, r->user);
-
-    return AUTHZ_DENIED;
+  return AUTHZ_DENIED;
 }
 
 static authz_status validuser_check_authorization(request_rec *r,
                                                   const char *require_line,
                                                   const void *parsed_require_line)
 {
-    if (!r->user) {
-        return AUTHZ_DENIED_NO_USER;
-    }
+  if (!r->user) {
+    return AUTHZ_DENIED_NO_USER;
+  }
 
-    return AUTHZ_GRANTED;
+  return AUTHZ_GRANTED;
 }
 
 static const authz_provider authz_user_provider =
 {
-    &user_check_authorization,
-    NULL,
+  &user_check_authorization,
+  NULL,
 };
 static const authz_provider authz_validuser_provider =
 {
-    &validuser_check_authorization,
-    NULL,
+  &validuser_check_authorization,
+  NULL,
 };
 #else
 static int mod_authopenid_check_user_access(request_rec *r) {
@@ -713,24 +752,29 @@ static int mod_authopenid_check_user_access(request_rec *r) {
 #endif
 
 static void mod_authopenid_register_hooks (apr_pool_t *p) {
+  ap_hook_post_config(mod_authopenid_post_config,
+                      NULL,
+                      NULL,
+                      APR_HOOK_MIDDLE);
+
 #if AP_MODULE_MAGIC_AT_LEAST(20080403,1)
   ap_hook_check_authn(mod_authopenid_method_handler,
-                                NULL,
-                                NULL,
-                                APR_HOOK_MIDDLE,
-                                AP_AUTH_INTERNAL_PER_CONF);
+                      NULL,
+                      NULL,
+                      APR_HOOK_MIDDLE,
+                      AP_AUTH_INTERNAL_PER_CONF);
   ap_register_auth_provider(p,
-                                AUTHZ_PROVIDER_GROUP,
-                                "valid-user",
-                                AUTHZ_PROVIDER_VERSION,
-                                &authz_validuser_provider,
-                                AP_AUTH_INTERNAL_PER_CONF);
+                            AUTHZ_PROVIDER_GROUP,
+                            "valid-user",
+                            AUTHZ_PROVIDER_VERSION,
+                            &authz_validuser_provider,
+                            AP_AUTH_INTERNAL_PER_CONF);
   ap_register_auth_provider(p,
-                                AUTHZ_PROVIDER_GROUP,
-                                "user",
-                                AUTHZ_PROVIDER_VERSION,
-                                &authz_user_provider,
-                                AP_AUTH_INTERNAL_PER_CONF);
+                            AUTHZ_PROVIDER_GROUP,
+                            "user",
+                            AUTHZ_PROVIDER_VERSION,
+                            &authz_user_provider,
+                            AP_AUTH_INTERNAL_PER_CONF);
 #else
   ap_hook_check_user_id(mod_authopenid_method_handler, NULL, NULL, APR_HOOK_MIDDLE);
   ap_hook_auth_checker(mod_authopenid_check_user_access, NULL, NULL, APR_HOOK_MIDDLE);
@@ -739,11 +783,11 @@ static void mod_authopenid_register_hooks (apr_pool_t *p) {
 
 //module AP_MODULE_DECLARE_DATA 
 module AP_MODULE_DECLARE_DATA authopenid_module = {
-        STANDARD20_MODULE_STUFF,
-        create_modauthopenid_config,
-        NULL, // config merge function - default is to override
-        NULL,
-        NULL,
-        mod_authopenid_cmds,
-        mod_authopenid_register_hooks,
+  STANDARD20_MODULE_STUFF,
+  create_modauthopenid_config,
+  NULL, // config merge function - default is to override
+  NULL,
+  NULL,
+  mod_authopenid_cmds,
+  mod_authopenid_register_hooks,
 };

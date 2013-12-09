@@ -37,7 +37,6 @@ namespace modauthopenid {
     // _dbd is a DB connection usually provided by mod_dbd, _asnonceid is the association session nonce, and serverurl is 
     // the return to value (url initially requested by user)
     MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid, const string& _serverurl);
-    virtual ~MoidConsumer() { close(); };
 
     // store a new assocation
     assoc_t store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in);
@@ -83,11 +82,11 @@ namespace modauthopenid {
     // print all tables to stdout
     void print_tables();
 
-    // close db
-    void close();
-
     // delete session with given session nonce id in constructor param list
     void kill_session();
+
+    // append names and SQL for prepared statements used by this class to the provided array
+    static void append_statements(apr_array_header_t *statements);
   private:
     sqlite3 *db; // DEBUG
     const ap_dbd_t* dbd;

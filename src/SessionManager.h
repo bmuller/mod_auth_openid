@@ -29,40 +29,68 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  // This class keeps track of cookie based sessions
+  /**
+   * This class keeps track of cookie-based sessions.
+   */
   class SessionManager {
   public:
-    // _dbd is a DB connection usually provided by mod_dbd
+    /**
+     * Constructor also creates any missing tables.
+     * @param _dbd A DBD connection usually provided by mod_dbd.
+     */
     SessionManager(const ap_dbd_t* _dbd);
-    ~SessionManager() { close(); };
 
-    // get session with id session_id and set values in session
-    // if session doesn't exist, don't do anything
-    void get_session(const string& session_id, session_t& session);
+    /**
+     * Get session with id session_id and set values in session.
+     * If session doesn't exist in DB, session.identity will be set to an empty string.
+     * Also deletes expired sessions.
+     * @param now Optional time parameter for tests. If omitted, current time will be used.
+     * @return true iff session was loaded successfully.
+     */
+    bool get_session(const string& session_id, session_t& session, time_t now = 0);
 
-    // store given session information in a new session entry
-    // if lifespan is 0, let it expire in a day.  otherwise, expire in "lifespan" seconds
-    // See issue 16 - http://trac.butterfat.net/public/mod_auth_openid/ticket/16
-    void store_session(const string& session_id, const string& hostname, const string& path, const string& identity, const string& username, int lifespan);
+    /**
+     * Store given session information in a new session row in the DB.
+     * If lifespan is 0, let it expire in a day. Otherwise, expire in lifespan seconds.
+     * Also deletes expired sessions.
+     * @see http://trac.butterfat.net/public/mod_auth_openid/ticket/16
+     * @param now Optional time parameter for tests. If omitted, current time will be used.
+     * @return true iff session was stored successfully.
+     */
+    bool store_session(const string& session_id, const string& hostname, const string& path,
+                       const string& identity, const string& username, int lifespan,
+                       time_t now = 0);
 
-    // print session table to stdout
+    /**
+     * Print session table to stdout.
+     * This will only be called from command-line utilities, not the Apache module itself.
+     */
     void print_table();
-    
-    // close database
-    void close();
+
+    /**
+     * Append names and SQL for prepared statements used by this class to the provided array.
+     * @param statements APR array of labeled_statement_t.
+     */
+    static void append_statements(apr_array_header_t* statements);
+
+    /**
+     * Delete all expired sessions.
+     */
+    void delete_expired(time_t now);
   private:
-    sqlite3 *db; // DEBUG
     const ap_dbd_t* dbd;
-    
-    // delete all expired sessions
-    void ween_expired();
 
-    // db status
-    bool is_closed;
+    /**
+     * Get a prepared statement by name.
+     */
+    apr_dbd_prepared_t* get_prepared(const char* name);
 
-    // test sqlite query result - print any errors to stderr
-    bool test_result(int result, const string& context);
+    /**
+     * Test DBD result code, and print error message to stderr for errors.
+     * @param rc Result code from a DBD function.
+     * @param context Extra info for error message.
+     * @return true iff the operation was a success.
+     */
+    bool test_result(int rc, const string& context);
   };
 }
-
-

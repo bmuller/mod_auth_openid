@@ -57,6 +57,9 @@ namespace modauthopenid {
 
   // print a SQL table to stdout
   void print_sql_table(const ap_dbd_t* dbd, string tablename);
+  
+  // consume the unused part of a result set so that DBD can close it
+  void consume_results(const ap_dbd_t* dbd, apr_dbd_results_t* results, apr_dbd_row_t** row);
 
   // test a sqlite return value, print error if there is one to stdout and return false, 
   // return true on no error

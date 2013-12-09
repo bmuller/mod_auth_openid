@@ -308,19 +308,14 @@ namespace modauthopenid {
 
   // This is a method to be used by a utility program, never the apache module
   void MoidConsumer::print_tables() {
-    ween_expired();
     print_sql_table(dbd, "authentication_sessions");
     print_sql_table(dbd, "response_nonces");
     print_sql_table(dbd, "associations");
   };
 
-  void MoidConsumer::close() {
-    if(is_closed)
-      return;
-    is_closed = true;
-    test_result(sqlite3_close(db), "problem closing database");
+  void MoidConsumer::append_statements(apr_array_header_t *statements)
+  {
+    labeled_statement_t* statement;
+    // TODO
   };
 }
-
-
-

@@ -174,6 +174,12 @@ namespace modauthopenid {
     
     printf("There are %d rows.\n\n", nr);
   };
+  
+  void consume_results(const ap_dbd_t* dbd, apr_dbd_results_t* results, apr_dbd_row_t** row) {
+    while (apr_dbd_get_row(dbd->driver, dbd->pool, results, row, DBD_NEXT_ROW) != DBD_NO_MORE_ROWS) {
+      // do nothing
+    }
+  }
 
   bool test_sqlite_return(sqlite3 *db, int result, const string& context) {
     if(result != SQLITE_OK){

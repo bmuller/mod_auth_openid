@@ -39,7 +39,7 @@ namespace modauthopenid {
     string path;
     string identity;
     string username; // optional - set by AuthOpenIDAXUsername
-    int expires_on; // exact moment it expires
+    apr_int64_t expires_on; // exact moment it expires
   } session_t;
 
   // Wrapper for basic_openid_message - just so it works with openid namespace
@@ -59,7 +59,14 @@ namespace modauthopenid {
   private:
     params_t bom;
   };
-
+  
+  /**
+   * SQL statement to prepare at module init time.
+   */
+  typedef struct labeled_statement {
+    const char* label;
+    const char* code;
+  } labeled_statement_t;
 }
 
 

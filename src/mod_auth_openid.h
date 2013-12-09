@@ -32,6 +32,7 @@ Created by bmuller <bmuller@butterfat.net>
 #include "http_config.h"
 #include "http_request.h"
 #include "apr_strings.h"
+#include "apr_tables.h"
 #include "http_protocol.h"
 #include "http_main.h"
 #include "util_script.h"
@@ -85,7 +86,7 @@ Created by bmuller <bmuller@butterfat.net>
 #define AX_NAMESPACE "http://openid.net/srv/ax/1.0"
 #define DEFAULT_AX_NAMESPACE_ALIAS "ax"
 
-/* DBD defines */
+/* DBD constants */
 #define DBD_SUCCESS           0
 #define DBD_LINEAR_ACCESS     0
 #define DBD_NEXT_ROW         -1
