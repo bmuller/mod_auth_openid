@@ -36,7 +36,7 @@ namespace modauthopenid {
     int rc;     // return code for APR DBD functions
     int n_rows; // rows affected by query: not used here, but can't be NULL
 
-    const char* query = "CREATE TABLE IF NOT EXISTS session "
+    const char* query = "CREATE TABLE IF NOT EXISTS sessionmanager "
                         "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), "
                         "identity VARCHAR(255), username VARCHAR(255), expires_on BIGINT)";
     rc = apr_dbd_query(dbd->driver, dbd->handle, &n_rows, query);
@@ -120,11 +120,11 @@ namespace modauthopenid {
     int rc = apr_dbd_pvbquery(dbd->driver, dbd->pool, dbd->handle,
                               &n_rows, statement,
                               &now);
-    test_result(rc, "problem weening expired sessions from table");
+    test_result(rc, "problem deleting expired sessions from table");
   };
 
   void SessionManager::print_table() {
-    print_sql_table(dbd, "session");
+    print_sql_table(dbd, "sessionmanager");
   };
 
   apr_dbd_prepared_t* SessionManager::get_prepared(const char* label) {
@@ -138,16 +138,16 @@ namespace modauthopenid {
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "SessionManager_get_session";
     statement->code  = "SELECT session_id,hostname,path,identity,username,expires_on "
-                       "FROM session WHERE session_id=%s LIMIT 1";
+                       "FROM sessionmanager WHERE session_id=%s LIMIT 1";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "SessionManager_store_session";
-    statement->code  = "INSERT INTO session "
+    statement->code  = "INSERT INTO sessionmanager "
                        "(session_id,hostname,path,identity,username,expires_on) "
                        "VALUES(%s,%s,%s,%s,%s,%lld)";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "SessionManager_delete_expired";
-    statement->code  = "DELETE FROM session WHERE %lld >= expires_on";
+    statement->code  = "DELETE FROM sessionmanager WHERE %lld >= expires_on";
   };
 }
