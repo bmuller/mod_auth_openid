@@ -33,16 +33,29 @@ namespace modauthopenid {
   enum error_result_t { no_idp_found, invalid_id, idp_not_trusted, invalid_nonce, canceled, unspecified, unauthorized, ax_bad_response };
   enum exec_result_t { id_accepted, fork_failed, child_no_return, id_refused };
 
+  /**
+   * A persistent cookie-based mod_auth_openid session.
+   * Note that these are distinct from the ephemeral "authentication sessions"
+   * used during OpenID login and stored in MoidConsumer's authentication_sessions table.
+   */
   typedef struct session {
+    /// Randomly generated session ID.
     string session_id;
-    string hostname; // name of server (this is in case there are virtual hosts on this server)
+    /// Name of server (this is in case there are virtual hosts on this server).
+    string hostname;
+    /// Session cookie path.
     string path;
+    /// Claimed OpenID identity.
     string identity;
-    string username; // optional - set by AuthOpenIDAXUsername
-    apr_int64_t expires_on; // exact moment it expires
+    /// Set by AuthOpenIDAXUsername. Optional: may be empty.
+    string username;
+  /// Exact moment the session expires.
+    apr_int64_t expires_on;
   } session_t;
 
-  // Wrapper for basic_openid_message - just so it works with openid namespace
+  /**
+   * Wrapper for basic_openid_message - just so it works with openid namespace.
+   */
   class modauthopenid_message_t : public params_t {
   public:
     modauthopenid_message_t(params_t& _bom) { bom = _bom; };
@@ -64,9 +77,9 @@ namespace modauthopenid {
    * SQL statement to prepare at module init time.
    */
   typedef struct labeled_statement {
+    /// Label used to retrieve statement.
     const char* label;
+    /// SQL code for statement, using APR DBD printf-style parameters.
     const char* code;
   } labeled_statement_t;
 }
-
-
