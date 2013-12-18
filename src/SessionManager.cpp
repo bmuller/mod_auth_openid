@@ -137,14 +137,14 @@ namespace modauthopenid {
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "SessionManager_get_session";
-    statement->code  = "SELECT session_id,hostname,path,identity,username,expires_on "
-                       "FROM sessionmanager WHERE session_id=%s LIMIT 1";
+    statement->code  = "SELECT session_id, hostname, path, identity, username, expires_on "
+                       "FROM sessionmanager WHERE session_id = %s LIMIT 1";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "SessionManager_store_session";
     statement->code  = "INSERT INTO sessionmanager "
-                       "(session_id,hostname,path,identity,username,expires_on) "
-                       "VALUES(%s,%s,%s,%s,%s,%lld)";
+                       "(session_id, hostname, path, identity, username, expires_on) "
+                       "VALUES (%s, %s, %s, %s, %s, %lld)";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "SessionManager_delete_expired";
