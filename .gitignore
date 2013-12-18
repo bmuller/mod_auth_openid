@@ -33,3 +33,4 @@ install-sh
 *.lo
 *.o
 *.la
+doc/*
