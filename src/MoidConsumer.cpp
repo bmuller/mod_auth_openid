@@ -57,12 +57,13 @@ namespace modauthopenid {
 
   assoc_t MoidConsumer::store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in) {
     debug("Storing association for \"" + server + "\" and handle \"" + handle + "\" in db");
-    ween_expired();
+    delete_expired();
 
     time_t rawtime;
     time (&rawtime);
     int expires_on = rawtime + expires_in;
 
+    // MoidConsumer_store_assoc
     const char *query = "INSERT INTO associations (server, handle, secret, expires_on, encryption_type) VALUES(%Q,%Q,%Q,%d,%Q)";
     char *sql = sqlite3_mprintf(query, 
 				server.c_str(), 
@@ -78,9 +79,10 @@ namespace modauthopenid {
   };
 
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle) {
-    ween_expired();
+    delete_expired();
     debug("looking up association: server = " + server + " handle = " + handle);
-
+    
+    // MoidConsumer_retrieve_assoc
     const char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q AND handle=%Q LIMIT 1";
     char *sql = sqlite3_mprintf(query, server.c_str(), handle.c_str());
     int nr, nc;
@@ -105,6 +107,7 @@ namespace modauthopenid {
 
   void MoidConsumer::invalidate_assoc(const string& server,const string& handle) {
     debug("invalidating association: server = " + server + " handle = " + handle);
+    // MoidConsumer_invalidate_assoc
     char *query = sqlite3_mprintf("DELETE FROM associations WHERE server=%Q AND handle=%Q", server.c_str(), handle.c_str());
     int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
@@ -112,7 +115,7 @@ namespace modauthopenid {
   };
 
   assoc_t MoidConsumer::find_assoc(const string& server) {
-    ween_expired();
+    delete_expired();
     debug("looking up association: server = " + server);
 
     const char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q LIMIT 1";
@@ -148,30 +151,33 @@ namespace modauthopenid {
     return true;
   };
 
-  void MoidConsumer::ween_expired() {
+  void MoidConsumer::delete_expired() {
     time_t rawtime;
     time (&rawtime);
+    // MoidConsumer_delete_expired_associations
     char *query = sqlite3_mprintf("DELETE FROM associations WHERE %d > expires_on", rawtime);
     int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem weening expired associations from table");
+    test_result(rc, "problem deleting expired associations from table");
 
+    // MoidConsumer_delete_expired_authentication_sessions
     query = sqlite3_mprintf("DELETE FROM authentication_sessions WHERE %d > expires_on", rawtime);
     rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem weening expired authentication sessions from table");
+    test_result(rc, "problem deleting expired authentication sessions from table");
 
+    // MoidConsumer_delete_expired_response_nonces
     query = sqlite3_mprintf("DELETE FROM response_nonces WHERE %d > expires_on", rawtime);
     rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem weening expired response nonces from table");
+    test_result(rc, "problem deleting expired response nonces from table");
   };
 
 
   void MoidConsumer::check_nonce(const string& server, const string& nonce) {
-    debug("checking nonce " + nonce);
-    int nr, nc;
     char **table;
+    int nr, nc;
+    // MoidConsumer_check_nonce_find
     char *query = sqlite3_mprintf("SELECT nonce FROM response_nonces WHERE server=%Q AND response_nonce=%Q", server.c_str(), nonce.c_str());
     int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
     sqlite3_free(query);
@@ -184,14 +190,16 @@ namespace modauthopenid {
 
     // so, old nonce not found, insert it into nonces table.  Expiration time will be based on association
     int expires_on = find_assoc(server)->expires_in() + time(0);
+    // MoidConsumer_check_nonce_insert
     const char *sql = "INSERT INTO response_nonces (server,response_nonce,expires_on) VALUES(%Q,%Q,%d)";
     query = sqlite3_mprintf(sql, server.c_str(), nonce.c_str(), expires_on);
     rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem adding new nonce to resposne_nonces table");
+    test_result(rc, "problem adding new nonce to response_nonces table");
   };
 
   bool MoidConsumer::session_exists() {
+    // MoidConsumer_session_exists
     char *query = sqlite3_mprintf("SELECT nonce FROM authentication_sessions WHERE nonce=%Q LIMIT 1", asnonceid.c_str());
     int nr, nc;
     char **table;
@@ -209,10 +217,11 @@ namespace modauthopenid {
 
   void MoidConsumer::begin_queueing() {
     endpoint_set = false;
+    // MoidConsumer_begin_queueing
     char *query = sqlite3_mprintf("DELETE FROM authentication_sessions WHERE nonce=%Q", asnonceid.c_str());
     int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem reseting authentication session");
+    test_result(rc, "problem resetting authentication session");
   };
 
   void MoidConsumer::queue_endpoint(const openid_endpoint_t& ep) {
@@ -221,6 +230,7 @@ namespace modauthopenid {
       time_t rawtime;
       time (&rawtime);
       int expires_on = rawtime + 3600;  // allow nonce to exist for up to one hour without being returned
+      // MoidConsumer_queue_endpoint
       const char *query = "INSERT INTO authentication_sessions (nonce,uri,claimed_id,local_id,expires_on) VALUES(%Q,%Q,%Q,%Q,%d)";
       char *sql = sqlite3_mprintf(query, asnonceid.c_str(), ep.uri.c_str(), ep.claimed_id.c_str(), ep.local_id.c_str(), expires_on);
       debug(string(sql));
@@ -233,6 +243,7 @@ namespace modauthopenid {
 
   const openid_endpoint_t& MoidConsumer::get_endpoint() const {
     debug("Fetching endpoint");
+    // MoidConsumer_get_endpoint
     char *query = sqlite3_mprintf("SELECT uri,claimed_id,local_id FROM authentication_sessions WHERE nonce=%Q LIMIT 1", asnonceid.c_str());
     int nr, nc;
     char **table;
@@ -256,14 +267,12 @@ namespace modauthopenid {
 
   void MoidConsumer::next_endpoint() {
     debug("Clearing all session information - we're only storing one endpoint, can't get next one, cause we didn't store it.");
-    char *query = sqlite3_mprintf("DELETE FROM authentication_sessions WHERE nonce=%Q", asnonceid.c_str());
-    int rc = sqlite3_exec(db, query, 0, 0, 0);
-    sqlite3_free(query);
-    test_result(rc, "problem in next_endpoint()");
+    kill_session();
     endpoint_set = false;
   };
 
   void MoidConsumer::kill_session() {
+    // MoidConsumer_kill_session
     char *query = sqlite3_mprintf("DELETE FROM authentication_sessions WHERE nonce=%Q", asnonceid.c_str());
     int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
@@ -273,11 +282,12 @@ namespace modauthopenid {
   void MoidConsumer::set_normalized_id(const string& nid) {
     debug("Set normalized id to: " + nid);
     normalized_id = nid;
+    // MoidConsumer_set_normalized_id
     char *query = sqlite3_mprintf("UPDATE authentication_sessions SET normalized_id=%Q WHERE nonce=%Q", normalized_id.c_str(), asnonceid.c_str());
     debug(string(query));
     int rc = sqlite3_exec(db, query, 0, 0, 0);
     sqlite3_free(query);
-    test_result(rc, "problem settting normalized id");
+    test_result(rc, "problem setting normalized id");
   };
 
   const string MoidConsumer::get_normalized_id() const {
@@ -316,6 +326,82 @@ namespace modauthopenid {
   void MoidConsumer::append_statements(apr_array_header_t *statements)
   {
     labeled_statement_t* statement;
-    // TODO
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_store_assoc";
+    statement->code  = "INSERT INTO associations "
+                       "(server, handle, secret, expires_on, encryption_type) "
+                       "VALUES (%s, %s, %s, %lld, %s)";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_retrieve_assoc";
+    statement->code  = "SELECT server, handle, secret, expires_on, encryption_type "
+                       "FROM associations WHERE server = %s AND handle = %s LIMIT 1";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_invalidate_assoc";
+    statement->code  = "DELETE FROM associations WHERE server = %s AND handle = %s";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_find_assoc";
+    statement->code  = "SELECT server, handle, secret, expires_on, encryption_type "
+                       "FROM associations WHERE server = %s LIMIT 1";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_delete_expired_associations";
+    statement->code  = "DELETE FROM associations WHERE %lld > expires_on";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_delete_expired_authentication_sessions";
+    statement->code  = "DELETE FROM authentication_sessions WHERE %lld > expires_on";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_delete_expired_authentication_sessions";
+    statement->code  = "DELETE FROM response_nonces WHERE %lld > expires_on";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_check_nonce_find";
+    statement->code  = "SELECT nonce FROM response_nonces "
+                       "WHERE server = %s AND response_nonce = %s";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_check_nonce_insert";
+    statement->code  = "INSERT INTO response_nonces "
+                       "(server, response_nonce, expires_on) "
+                       "VALUES (%s, %s, %lld)";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_session_exists";
+    statement->code  = "SELECT nonce FROM authentication_sessions "
+                       "WHERE nonce = %s LIMIT 1";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_begin_queueing";
+    statement->code  = "DELETE FROM authentication_sessions WHERE nonce = %s";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_queue_endpoint";
+    statement->code  = "INSERT INTO authentication_sessions "
+                       "(nonce, uri, claimed_id, local_id, expires_on) "
+                       "VALUES (%s, %s, %s, %s, %d)";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_get_endpoint";
+    statement->code  = "SELECT uri, claimed_id, local_id "
+                       "FROM authentication_sessions WHERE nonce = %s LIMIT 1";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_kill_session";
+    statement->code  = "DELETE FROM authentication_sessions WHERE nonce = %s";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_set_normalized_id";
+    statement->code  = "UPDATE authentication_sessions "
+                       "SET normalized_id = %s WHERE nonce = %s";
+
+    statement = (labeled_statement_t *)apr_array_push(statements);
+    statement->label = "MoidConsumer_get_normalized_id";
+    statement->code  = "SELECT normalized_id "
+                       "FROM authentication_sessions WHERE nonce = %s LIMIT 1";
   };
 }

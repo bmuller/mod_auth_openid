@@ -92,7 +92,7 @@ namespace modauthopenid {
     const ap_dbd_t* dbd;
 
     // delete all expired sessions
-    void ween_expired();
+    void delete_expired();
 
     // test result from DBD query - print error to stderr if there is one
     bool test_result(int result, const string& context);

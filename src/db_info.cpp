@@ -74,7 +74,7 @@ void create_tables(const ap_dbd_t* dbd) {
  * Adds successfully prepared statements to dbd->prepared hashtable.
  */
 void prepare_statements(const ap_dbd_t* dbd) {
-  apr_array_header_t *statements = apr_array_make(dbd->pool, 10 /* initial size */, sizeof(labeled_statement_t));
+  apr_array_header_t *statements = apr_array_make(dbd->pool, 19 /* initial size */, sizeof(labeled_statement_t));
   MoidConsumer  ::append_statements(statements);
   SessionManager::append_statements(statements);
 
