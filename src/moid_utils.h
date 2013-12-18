@@ -29,51 +29,76 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  // get the appropriate error string for the given error
+  /**
+   * Get the appropriate error string for the given OpenID error.
+   * @return value in the style of OpenID get params - short, no space, ...
+   */
   string error_to_string(error_result_t e, bool use_short_string);
 
-  // explode string s into parts, split based on occurance of e
+  /**
+   * Explode string s into parts, split based on occurrences of e.
+   */
   vector<string> explode(string s, string e);
 
-  // replace needle with replacement in haystack
+  /**
+   * Replace needle with replacement in haystack.
+   */
   string str_replace(string needle, string replacement, string haystack);
 
-  // Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around..... 
-  // gag....  I'm just assuming that if you're going to be debugging it shouldn't really matter, since
-  // apache redirects stderr to the error log anyway.
+  /**
+   * Write a debug message to the error log.
+   * Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around.
+   * I'm just assuming that if you're going to be debugging it shouldn't really matter, since
+   * Apache redirects stderr to the error log anyway.
+   */
   void debug(string s);
 
-  // return true if pattern found in subject
+  /**
+   * @return true iff pattern found in subject.
+   */
   bool regex_match(string subject, pcre * re);
 
-  // create a regular expression from the given pattern
+  /**
+   * Create a regular expression from the given pattern.
+   */
   pcre * make_regex(string pattern);
 
-  // strip any spaces before or after actual string in s
+  /**
+   * Strip any spaces before or after actual string in s.
+   */
   void strip(string& s);
 
-  // make a random string of size size
+  /**
+   * Make a random string.
+   * @param size Size of string.
+   */
   void make_rstring(int size, string& s);
 
-  // print a SQL table to stdout
+  /**
+   * Print a SQL table to stdout.
+   */
   void print_sql_table(const ap_dbd_t* dbd, string tablename);
   
-  // consume the unused part of a result set so that DBD can close it
+  /**
+   * Consume the unused part of a result set so that DBD can close it.
+   */
   void consume_results(const ap_dbd_t* dbd, apr_dbd_results_t* results, apr_dbd_row_t** row);
 
-  // test a sqlite return value, print error if there is one to stdout and return false, 
-  // return true on no error
-  bool test_sqlite_return(sqlite3 *db, int result, const string& context);
-
-  // Exec a program located at exec_location with a single parameter of username
-  // program should return a exec_result_t value.
-  // NOTE: if program hangs, so does apache
+  /** 
+   * Exec a program located at exec_location with a single parameter of username.
+   * program should return a exec_result_t value.
+   * @attention: if program hangs, so does Apache.
+   */
   exec_result_t exec_auth(string exec_location, string username);
 
-  // convert a exec_result_t value to a meaningful error message
+  /**
+   * Convert a exec_result_t value to a meaningful error message.
+   */
   string exec_error_to_string(exec_result_t e, string exec_location, string id);
 
-  // Generate a random integer - taken from getuuid.c file in apr-util program
+  /** 
+   * Generate a random integer.
+   */
   int true_random();
 }
 
