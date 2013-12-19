@@ -41,6 +41,12 @@ namespace modauthopenid {
     SessionManager(const ap_dbd_t* _dbd);
 
     /**
+     * Append names and SQL for prepared statements used by this class to the provided array.
+     * @param statements APR array of labeled_statement_t.
+     */
+    static void append_statements(apr_array_header_t* statements);
+
+    /**
      * Get session with id session_id and set values in session.
      * If session doesn't exist in DB, session.identity will be set to an empty string.
      * Also deletes expired sessions.
@@ -62,35 +68,11 @@ namespace modauthopenid {
                        time_t now = 0);
 
     /**
-     * Print session table to stdout.
-     * This will only be called from command-line utilities, not the Apache module itself.
-     */
-    void print_table();
-
-    /**
-     * Append names and SQL for prepared statements used by this class to the provided array.
-     * @param statements APR array of labeled_statement_t.
-     */
-    static void append_statements(apr_array_header_t* statements);
-
-    /**
      * Delete all expired sessions.
      */
     void delete_expired(time_t now);
+
   private:
-    const ap_dbd_t* dbd;
-
-    /**
-     * Get a prepared statement by name.
-     */
-    apr_dbd_prepared_t* get_prepared(const char* name);
-
-    /**
-     * Test DBD result code, and print error message to stderr for errors.
-     * @param rc Result code from a DBD function.
-     * @param context Extra info for error message.
-     * @return true iff the operation was a success.
-     */
-    bool test_result(int rc, const string& context);
+    Dbd dbd;
   };
 }

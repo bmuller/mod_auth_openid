@@ -51,8 +51,6 @@ namespace modauthopenid {
 #endif
   };
 
-  // get a descriptive string for an error; a short string is used as a GET param
-  // value in the style of OpenID get params - short, no space, ...
   string error_to_string(error_result_t e, bool use_short_string) {
     string short_string, long_string;
     switch(e) {
@@ -181,15 +179,6 @@ namespace modauthopenid {
     }
   }
 
-  bool test_sqlite_return(sqlite3 *db, int result, const string& context) {
-    if(result != SQLITE_OK){
-      string msg = "SQLite Error - " + context + ": %s\n";
-      fprintf(stderr, msg.c_str(), sqlite3_errmsg(db));
-      return false;
-    }
-    return true;
-  };
-
   string exec_error_to_string(exec_result_t e, string exec_location, string id) {
     string error;
     switch(e) {
@@ -241,7 +230,6 @@ namespace modauthopenid {
     return result;
   };
 
-  /* true_random -- generate a crypto-quality random number. Taken from apr-util's getuuid.c file */
   int true_random() {
 #if APR_HAS_RANDOM
     unsigned char buf[2];
@@ -253,5 +241,4 @@ namespace modauthopenid {
     return rand() & 0x0FFFF;
   };
 
-} // end namespace
-
+}

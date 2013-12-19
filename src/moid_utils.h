@@ -50,6 +50,7 @@ namespace modauthopenid {
    * Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around.
    * I'm just assuming that if you're going to be debugging it shouldn't really matter, since
    * Apache redirects stderr to the error log anyway.
+   * @attention Only does anything if you build with -DDEBUG.
    */
   void debug(string s);
 
@@ -73,16 +74,6 @@ namespace modauthopenid {
    * @param size Size of string.
    */
   void make_rstring(int size, string& s);
-
-  /**
-   * Print a SQL table to stdout.
-   */
-  void print_sql_table(const ap_dbd_t* dbd, string tablename);
-  
-  /**
-   * Consume the unused part of a result set so that DBD can close it.
-   */
-  void consume_results(const ap_dbd_t* dbd, apr_dbd_results_t* results, apr_dbd_row_t** row);
 
   /** 
    * Exec a program located at exec_location with a single parameter of username.

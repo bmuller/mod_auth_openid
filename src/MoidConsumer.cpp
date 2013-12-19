@@ -143,7 +143,7 @@ namespace modauthopenid {
   };
 
   bool MoidConsumer::test_result(int result, const string& context) {
-    if (result != DBD_SUCCESS){
+    if (result != DBD_SUCCESS) {
       fprintf(stderr, "DBD Error in MoidConsumer - %s: %s\n",
         context.c_str(), apr_dbd_error(dbd->driver, dbd->handle, result));
       return false;
