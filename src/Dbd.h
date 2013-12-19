@@ -1,6 +1,6 @@
-#include "mod_auth_openid.h"
-
 namespace modauthopenid {
+  using namespace std;
+
   /**
    * Convenience wrapper for an APR DBD connection.
    */
@@ -27,7 +27,7 @@ namespace modauthopenid {
      * Logs error message on failure.
      * @return true iff successful.
      */
-    bool pbquery(string& label, const void** args);
+    bool pbquery(const char* label, const void** args);
 
     /**
      * Wrapper for apr_dbd_pvbselect().
@@ -37,7 +37,7 @@ namespace modauthopenid {
      * Logs error message on failure.
      * @return true iff successful.
      */
-    bool pbselect1(string& label, apr_dbd_results_t** results, apr_dbd_row_t** row,
+    bool pbselect1(const char* label, apr_dbd_results_t** results, apr_dbd_row_t** row,
                    const void** args);
 
     /**
@@ -64,7 +64,7 @@ namespace modauthopenid {
      * Print the contents of a table to stdout.
      * If there's an error, prints an error message to stdout instead of the table contents.
      */
-    void print_table(string& tablename);
+    void print_table(const char* tablename);
 
   private:
     /**
@@ -89,5 +89,5 @@ namespace modauthopenid {
      * Fetch a previously prepared statement by label.
      */
     apr_dbd_prepared_t* get_prepared(const char* label);
-  }
+  };
 }

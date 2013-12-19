@@ -247,9 +247,9 @@ namespace modauthopenid {
     char *query = sqlite3_mprintf("SELECT uri,claimed_id,local_id FROM authentication_sessions WHERE nonce=%Q LIMIT 1", asnonceid.c_str());
     int nr, nc;
     char **table;
-    int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
+    /*int rc = */sqlite3_get_table(db, query, &table, &nr, &nc, 0);
     sqlite3_free(query);
-    test_sqlite_return(db, rc, "problem fetching authentication session");
+    //test_sqlite_return(db, rc, "problem fetching authentication session");
     if(nr==0) {
       debug("could not find an endpoint for authentication session \"" + asnonceid + "\" in db.");
       sqlite3_free_table(table);
@@ -298,9 +298,9 @@ namespace modauthopenid {
     char *query = sqlite3_mprintf("SELECT normalized_id FROM authentication_sessions WHERE nonce=%Q LIMIT 1", asnonceid.c_str());
     int nr, nc;
     char **table;
-    int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
+    /*int rc = */sqlite3_get_table(db, query, &table, &nr, &nc, 0);
     sqlite3_free(query);
-    test_sqlite_return(db, rc, "problem fetching authentication session");
+    //test_sqlite_return(db, rc, "problem fetching authentication session");
     if(nr==0) {
       debug("could not find an normalized_id for authentication session \"" + asnonceid + "\" in db.");
       sqlite3_free_table(table);
@@ -318,9 +318,9 @@ namespace modauthopenid {
 
   // This is a method to be used by a utility program, never the apache module
   void MoidConsumer::print_tables() {
-    print_sql_table(dbd, "authentication_sessions");
-    print_sql_table(dbd, "response_nonces");
-    print_sql_table(dbd, "associations");
+    //print_sql_table(dbd, "authentication_sessions");
+    //print_sql_table(dbd, "response_nonces");
+    //print_sql_table(dbd, "associations");
   };
 
   void MoidConsumer::append_statements(apr_array_header_t *statements)

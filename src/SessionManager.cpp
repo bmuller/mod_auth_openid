@@ -30,15 +30,10 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  SessionManager::SessionManager(const ap_dbd_t* _dbd) {
-    dbd = Dbd(_dbd);
-
-    int rc;     // return code for APR DBD functions
-    int n_rows; // rows affected by query: not used here, but can't be NULL
-
-    string ddl = string("CREATE TABLE IF NOT EXISTS sessionmanager "
-                        "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), "
-                        "identity VARCHAR(255), username VARCHAR(255), expires_on BIGINT)");
+  SessionManager::SessionManager(const ap_dbd_t* _dbd) : dbd(_dbd) {
+    const char* ddl = "CREATE TABLE IF NOT EXISTS sessionmanager "
+                      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), "
+                      "identity VARCHAR(255), username VARCHAR(255), expires_on BIGINT)";
     dbd.query(ddl);
   }
 
@@ -50,8 +45,10 @@ namespace modauthopenid {
     session.identity = "";
 
     // try to find the session
-    bool success = dbd.pbselect1("SessionManager_get_session", &results, &row,
-                                 {session_id.c_str()});
+    apr_dbd_results_t* results;
+    apr_dbd_row_t* row;
+    const void* args[] = {session_id.c_str()};
+    bool success = dbd.pbselect1("SessionManager_get_session", &results, &row, args);
     if (!success) {
       debug("could not find session id " + session_id + " in db: session probably just expired");
       return false;
@@ -69,15 +66,6 @@ namespace modauthopenid {
     return true;
   }
 
-  bool SessionManager::test_result(int rc, const string& context) {
-    if (rc != DBD_SUCCESS) {
-      fprintf(stderr, "DBD Error in SessionManager - %s: %s\n",
-              context.c_str(), apr_dbd_error(dbd->driver, dbd->handle, rc));
-      return false;
-    }
-    return true;
-  }
-
   bool SessionManager::store_session(const string& session_id, const string& hostname,
                                      const string& path, const string& identity,
                                      const string& username, int lifespan,
@@ -88,35 +76,30 @@ namespace modauthopenid {
     // lifespan will be 0 if not specified by user in config - so lasts as long as browser is open.  In this case, make it last for up to a day.
     apr_int64_t expires_on = (lifespan == 0) ? (now + 86400) : (now + lifespan);
 
-    apr_dbd_prepared_t *statement = get_prepared("SessionManager_store_session");
-    int n_rows;
-    int rc = apr_dbd_pvbquery(dbd->driver, dbd->pool, dbd->handle,
-                              &n_rows, statement,
-                              session_id.c_str(),
-                              hostname.c_str(),
-                              path.c_str(),
-                              identity.c_str(),
-                              username.c_str(),
-                              &expires_on);
-    return test_result(rc, "problem inserting session into db");
+    const void* args[] = {session_id.c_str(),
+                          hostname.c_str(),
+                          path.c_str(),
+                          identity.c_str(),
+                          username.c_str(),
+                          &expires_on};
+    bool success = dbd.pbquery("SessionManager_store_session", args);
+    if (!success) {
+      debug("problem inserting session into db");
+      return false;
+    }
+    return true;
   }
 
   void SessionManager::delete_expired(time_t now) {
-    apr_dbd_prepared_t* statement = get_prepared("SessionManager_delete_expired");
-    int n_rows;
-    int rc = apr_dbd_pvbquery(dbd->driver, dbd->pool, dbd->handle,
-                              &n_rows, statement,
-                              &now);
-    test_result(rc, "problem deleting expired sessions from table");
+    const void* args[] = {&now};
+    bool success = dbd.pbquery("SessionManager_store_session", args);
+    if (!success) {
+      debug("problem deleting expired sessions from table");
+    }
   }
 
   void SessionManager::print_table() {
-    print_sql_table(dbd, "sessionmanager");
-  }
-
-  apr_dbd_prepared_t* SessionManager::get_prepared(const char* label)
-  {
-    return (apr_dbd_prepared_t *)apr_hash_get(dbd->prepared, label, APR_HASH_KEY_STRING);
+    dbd.print_table("sessionmanager");
   }
 
   void SessionManager::append_statements(apr_array_header_t* statements)

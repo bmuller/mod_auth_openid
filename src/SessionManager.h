@@ -41,12 +41,6 @@ namespace modauthopenid {
     SessionManager(const ap_dbd_t* _dbd);
 
     /**
-     * Append names and SQL for prepared statements used by this class to the provided array.
-     * @param statements APR array of labeled_statement_t.
-     */
-    static void append_statements(apr_array_header_t* statements);
-
-    /**
      * Get session with id session_id and set values in session.
      * If session doesn't exist in DB, session.identity will be set to an empty string.
      * Also deletes expired sessions.
@@ -66,6 +60,18 @@ namespace modauthopenid {
     bool store_session(const string& session_id, const string& hostname, const string& path,
                        const string& identity, const string& username, int lifespan,
                        time_t now = 0);
+
+    /**
+     * Print session table to stdout.
+     * This will only be called from command-line utilities, not the Apache module itself.
+     */
+    void print_table();
+
+    /**
+     * Append names and SQL for prepared statements used by this class to the provided array.
+     * @param statements APR array of labeled_statement_t.
+     */
+    static void append_statements(apr_array_header_t* statements);
 
     /**
      * Delete all expired sessions.

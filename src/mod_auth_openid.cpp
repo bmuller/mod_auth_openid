@@ -147,6 +147,7 @@ static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
       moid_ap_dbd_prepare(sp, statement->code, statement->label);
     }
   }
+  return OK;
 }
 
 static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
@@ -709,8 +710,6 @@ static const authz_provider authz_validuser_provider =
 };
 #else
 static int mod_authopenid_check_user_access(request_rec *r) {
-  modauthopenid_config *s_cfg;
-  s_cfg = (modauthopenid_config *) ap_get_module_config(r->per_dir_config, &authopenid_module);
   char *user = r->user;
   int m = r->method_number;
   int required_user = 0;

@@ -97,5 +97,6 @@ Created by bmuller <bmuller@butterfat.net>
 #include "types.h"
 #include "http_helpers.h"
 #include "moid_utils.h"
+#include "Dbd.h"
 #include "SessionManager.h"
 #include "MoidConsumer.h"

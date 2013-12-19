@@ -7,7 +7,7 @@ AM_LDFLAGS = ${OPKELE_LIBS} ${SQLITE3_LDFLAGS} ${PCRE_LIBS} ${CURL_LIBS} ${APR_L
 
 libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cpp http_helpers.cpp \
 	SessionManager.cpp config.h  http_helpers.h  mod_auth_openid.h  MoidConsumer.h  moid_utils.h \
-	SessionManager.h  types.h
+	SessionManager.h  types.h  Dbd.h  Dbd.cpp
 
 db_info_SOURCES = db_info.cpp
 db_info_LDFLAGS = -lmodauthopenid
