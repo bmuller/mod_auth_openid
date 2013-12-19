@@ -178,7 +178,7 @@ namespace modauthopenid {
     char **table;
     int nr, nc;
     // MoidConsumer_check_nonce_find
-    char *query = sqlite3_mprintf("SELECT nonce FROM response_nonces WHERE server=%Q AND response_nonce=%Q", server.c_str(), nonce.c_str());
+    char *query = sqlite3_mprintf("SELECT response_nonce FROM response_nonces WHERE server=%Q AND response_nonce=%Q", server.c_str(), nonce.c_str());
     int rc = sqlite3_get_table(db, query, &table, &nr, &nc, 0);
     sqlite3_free(query);
     if(nr != 0) {
@@ -361,7 +361,7 @@ namespace modauthopenid {
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "MoidConsumer_check_nonce_find";
-    statement->code  = "SELECT nonce FROM response_nonces "
+    statement->code  = "SELECT response_nonce FROM response_nonces "
                        "WHERE server = %s AND response_nonce = %s";
 
     statement = (labeled_statement_t *)apr_array_push(statements);

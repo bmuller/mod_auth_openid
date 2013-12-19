@@ -63,7 +63,13 @@ void print_dbd_err(const ap_dbd_t* dbd, int rc, const char * tag)
   }
 }
 
-void create_tables(const ap_dbd_t* dbd) {
+void drop_tables(const ap_dbd_t* dbd)
+{
+
+}
+
+void create_tables(const ap_dbd_t* dbd)
+{
   SessionManager s(dbd);
   MoidConsumer c(dbd, "blah", "balh");
   // TODO: make this an external utility's problem
@@ -71,10 +77,13 @@ void create_tables(const ap_dbd_t* dbd) {
 
 /**
  * Try to prepare the SQL statements we use.
- * Adds successfully prepared statements to dbd->prepared hashtable.
+ * @attention: Run this before other tests. Adds successfully prepared statements to dbd->prepared hashtable.
  */
-void prepare_statements(const ap_dbd_t* dbd) {
-  apr_array_header_t *statements = apr_array_make(dbd->pool, 19 /* initial size */, sizeof(labeled_statement_t));
+bool test_prepare_statements(const ap_dbd_t* dbd) {
+  int num_statements = 19;
+  int num_successes = 0;
+
+  apr_array_header_t *statements = apr_array_make(dbd->pool, num_statements /* initial size */, sizeof(labeled_statement_t));
   MoidConsumer  ::append_statements(statements);
   SessionManager::append_statements(statements);
 
@@ -87,6 +96,7 @@ void prepare_statements(const ap_dbd_t* dbd) {
     print_dbd_err(dbd, rc, statement->label);
     if (rc != DBD_SUCCESS) continue;
     apr_hash_set(dbd->prepared, statement->label, APR_HASH_KEY_STRING, prepared_statement);
+    num_successes++;
   }
   
   printf("Successfully prepared statements:\n");
@@ -95,7 +105,13 @@ void prepare_statements(const ap_dbd_t* dbd) {
     apr_hash_this(hi, (const void **)&key, NULL, NULL);
     printf("\t%s\n", key);
   }
-  printf("\n");
+
+  if (num_successes != num_statements) {
+    printf("Failed to prepare %d statements:\n", num_statements - num_successes);
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -190,14 +206,21 @@ bool test_sessionmanager(const ap_dbd_t* dbd) {
   return true;
 }
 
-void do_stuff(ap_dbd_t* dbd) {
+void run_tests(ap_dbd_t* dbd) {
 
   //print_databases(dbd);
-  
+
+  bool all_pass = true;
   bool pass;
-  
+
+  printf("test_prepare_statements: starting...\n\n");
+  pass = test_prepare_statements(dbd);
+  all_pass &= pass;
+  printf("\ntest_prepare_statements: %s.\n\n", pass ? "passed" : "FAILED");
+
   printf("test_sessionmanager: starting...\n\n");
   pass = test_sessionmanager(dbd);
+  all_pass &= pass;
   printf("\ntest_sessionmanager: %s.\n\n", pass ? "passed" : "FAILED");
 }
 
@@ -247,8 +270,7 @@ int main(int argc, const char * const * argv) {
   exit_on_err(rc, "apr_dbd_open_ex");
 
   create_tables(&dbd);
-  prepare_statements(&dbd);
-  do_stuff(&dbd);
+  run_tests(&dbd);
 
   // close the SQL connection
   rc = apr_dbd_close(dbd.driver, dbd.handle);
