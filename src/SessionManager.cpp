@@ -30,11 +30,13 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  SessionManager::SessionManager(const ap_dbd_t* _dbd) : dbd(_dbd) {
-    const char* ddl = "CREATE TABLE IF NOT EXISTS sessionmanager "
-                      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), "
-                      "identity VARCHAR(255), username VARCHAR(255), expires_on BIGINT)";
-    dbd.query(ddl);
+  SessionManager::SessionManager(const ap_dbd_t* _dbd) : dbd(_dbd)
+  {
+    const char* ddl_sessionmanager =
+      "CREATE TABLE IF NOT EXISTS sessionmanager "
+      "(session_id VARCHAR(33), hostname VARCHAR(255), path VARCHAR(255), "
+      "identity VARCHAR(255), username VARCHAR(255), expires_on BIGINT)";
+    dbd.query(ddl_sessionmanager);
   }
 
   bool SessionManager::get_session(const string& session_id, session_t& session, time_t now) {
@@ -69,19 +71,22 @@ namespace modauthopenid {
   bool SessionManager::store_session(const string& session_id, const string& hostname,
                                      const string& path, const string& identity,
                                      const string& username, int lifespan,
-                                     time_t now) {
+                                     time_t now)
+  {
     now = now ? now : time(NULL);
     delete_expired(now);
 
     // lifespan will be 0 if not specified by user in config - so lasts as long as browser is open.  In this case, make it last for up to a day.
     apr_int64_t expires_on = (lifespan == 0) ? (now + 86400) : (now + lifespan);
 
-    const void* args[] = {session_id.c_str(),
-                          hostname.c_str(),
-                          path.c_str(),
-                          identity.c_str(),
-                          username.c_str(),
-                          &expires_on};
+    const void* args[] = {
+      session_id.c_str(),
+      hostname.c_str(),
+      path.c_str(),
+      identity.c_str(),
+      username.c_str(),
+      &expires_on,
+    };
     bool success = dbd.pbquery("SessionManager_store_session", args);
     if (!success) {
       debug("problem inserting session into db");

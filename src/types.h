@@ -49,7 +49,7 @@ namespace modauthopenid {
     string identity;
     /// Set by AuthOpenIDAXUsername. Optional: may be empty.
     string username;
-  /// Exact moment the session expires.
+    /// Exact moment the session expires.
     apr_int64_t expires_on;
   } session_t;
 

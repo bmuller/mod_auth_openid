@@ -39,10 +39,14 @@ namespace modauthopenid {
     MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid, const string& _serverurl);
 
     // store a new assocation
-    assoc_t store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in);
+    assoc_t store_assoc(const string& server, const string& handle, const string& type,
+                        const secret_t& secret, int expires_in);
+    assoc_t store_assoc(const string& server, const string& handle, const string& type,
+                        const secret_t& secret, int expires_in, time_t now = 0);
 
     // retrieve an association
-    assoc_t retrieve_assoc(const string& server,const string& handle);
+    assoc_t retrieve_assoc(const string& server, const string& handle);
+    assoc_t retrieve_assoc(const string& server, const string& handle, time_t now = 0);
 
     // invalidate assocation - deletes from db
     void invalidate_assoc(const string& server,const string& handle);
@@ -87,15 +91,18 @@ namespace modauthopenid {
 
     // append names and SQL for prepared statements used by this class to the provided array
     static void append_statements(apr_array_header_t *statements);
-  private:
-    sqlite3 *db; // DEBUG
-    const ap_dbd_t* dbd;
 
-    // delete all expired sessions
-    void delete_expired();
+    /**
+     * Delete all expired sessions.
+     */
+    void delete_expired(time_t now = 0); // TODO: make param mandatory
+
+  private:
+    sqlite3 *db; // TODO: drop this when Dbd conversion is done
+    Dbd dbd;
 
     // test result from DBD query - print error to stderr if there is one
-    bool test_result(int result, const string& context);
+    bool test_result(int result, const string& context); // TODO: drop this when Dbd conversion is done
 
     // strings for the nonce based authentication session and the server's url (the originally 
     // requested url)

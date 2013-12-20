@@ -32,78 +32,96 @@ namespace modauthopenid {
   using namespace opkele;
  
   MoidConsumer::MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid, const string& _serverurl) :
-                             asnonceid(_asnonceid), serverurl(_serverurl), is_closed(false), endpoint_set(false), normalized_id("") {
-    dbd = _dbd;
+                             dbd(_dbd), asnonceid(_asnonceid), serverurl(_serverurl),
+                             is_closed(false), endpoint_set(false), normalized_id("")
+  {
+    const char* ddl_authentication_sessions = 
+      "CREATE TABLE IF NOT EXISTS authentication_sessions "
+      "(nonce VARCHAR(255), uri VARCHAR(255), claimed_id VARCHAR(255), local_id VARCHAR(255), "
+      "normalized_id VARCHAR(255), expires_on INT)";
+    dbd.query(ddl_authentication_sessions);
 
-    int rc;     // return code for APR DBD functions
-    int n_rows; // rows affected by query: not used here, but can't be NULL
+    const char* ddl_assocations = 
+      "CREATE TABLE IF NOT EXISTS associations "
+      "(server VARCHAR(255), handle VARCHAR(100), encryption_type VARCHAR(50), secret VARCHAR(30), "
+      "expires_on INT)";
+    dbd.query(ddl_assocations);
 
-    string query = "CREATE TABLE IF NOT EXISTS authentication_sessions "
-      "(nonce VARCHAR(255), uri VARCHAR(255), claimed_id VARCHAR(255), local_id VARCHAR(255), normalized_id VARCHAR(255), expires_on INT)";
-    rc = apr_dbd_query(dbd->driver, dbd->handle, &n_rows, query.c_str());
-    test_result(rc, "problem creating authentication_sessions table if it didn't exist already");
-
-    query = "CREATE TABLE IF NOT EXISTS associations "
-      "(server VARCHAR(255), handle VARCHAR(100), encryption_type VARCHAR(50), secret VARCHAR(30), expires_on INT)";
-    rc = apr_dbd_query(dbd->driver, dbd->handle, &n_rows, query.c_str());
-    test_result(rc, "problem creating associations table if it didn't exist already");
-
-    query = "CREATE TABLE IF NOT EXISTS response_nonces "
+    const char* ddl_response_nonces = 
+      "CREATE TABLE IF NOT EXISTS response_nonces "
       "(server VARCHAR(255), response_nonce VARCHAR(100), expires_on INT)";
-    rc = apr_dbd_query(dbd->driver, dbd->handle, &n_rows, query.c_str());
-    test_result(rc, "problem creating response_nonces table if it didn't exist already");
-  };
+    dbd.query(ddl_response_nonces);
+  }
 
+  assoc_t MoidConsumer::store_assoc(const string& server, const string& handle, const string& type,
+                                    const secret_t& secret, int expires_in)
+  {
+    return store_assoc(server, handle, type, secret, expires_in, 0);
+  }
 
-  assoc_t MoidConsumer::store_assoc(const string& server,const string& handle,const string& type,const secret_t& secret,int expires_in) {
+  assoc_t MoidConsumer::store_assoc(const string& server, const string& handle, const string& type,
+                                    const secret_t& secret, int expires_in, time_t now)
+  {
     debug("Storing association for \"" + server + "\" and handle \"" + handle + "\" in db");
-    delete_expired();
 
-    time_t rawtime;
-    time (&rawtime);
-    int expires_on = rawtime + expires_in;
+    now = now ? now : time(NULL);
+    delete_expired(now);
 
-    // MoidConsumer_store_assoc
-    const char *query = "INSERT INTO associations (server, handle, secret, expires_on, encryption_type) VALUES(%Q,%Q,%Q,%d,%Q)";
-    char *sql = sqlite3_mprintf(query, 
-				server.c_str(), 
-				handle.c_str(), 
-				util::encode_base64(&(secret.front()),secret.size()).c_str(),
-				expires_on,
-				type.c_str());
-    int rc = sqlite3_exec(db, sql, 0, 0, 0);
-    sqlite3_free(sql);
-    test_result(rc, "problem storing association in associations table");
+    apr_int64_t expires_on = now + expires_in;
 
+    const void* args[] = {
+      server.c_str(), 
+      handle.c_str(), 
+      util::encode_base64(&(secret.front()), secret.size()).c_str(),
+      &expires_on,
+      type.c_str(),
+    };
+    bool success = dbd.pbquery("", args);
+    if (!success) {
+      debug("problem storing association in associations table");
+      // TODO: return sentinel value for invalid assoc_t?
+    }
     return assoc_t(new association(server, handle, type, secret, expires_on, false));
-  };
+  }
 
-  assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle) {
-    delete_expired();
+  assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle)
+  {
+    return retrieve_assoc(server, handle, 0);
+  }
+
+  assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle, time_t now)
+  {
     debug("looking up association: server = " + server + " handle = " + handle);
-    
-    // MoidConsumer_retrieve_assoc
-    const char *query = "SELECT server,handle,secret,expires_on,encryption_type FROM associations WHERE server=%Q AND handle=%Q LIMIT 1";
-    char *sql = sqlite3_mprintf(query, server.c_str(), handle.c_str());
-    int nr, nc;
-    char **table;
-    int rc = sqlite3_get_table(db, sql, &table, &nr, &nc, 0);
-    sqlite3_free(sql);
-    test_result(rc, "problem fetching association");
-    if(nr ==0) {
+
+    now = now ? now : time(NULL);
+    delete_expired(now);
+
+    apr_dbd_results_t* results;
+    apr_dbd_row_t* row;
+    const void* args[] = {
+      server.c_str(),
+      handle.c_str(),
+    };
+    bool success = dbd.pbselect1("MoidConsumer_retrieve_assoc", &results, &row, args);
+    if (!success) {
       debug("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
-      sqlite3_free_table(table);
       throw failed_lookup(OPKELE_CP_ "Could not find association.");
     }
-    // resulting row has table indexes: 
-    // server  handle  secret  expires_on  encryption_type
-    // 5       6       7       8           9
-    secret_t secret; 
-    util::decode_base64(table[7], secret);
-    assoc_t result = assoc_t(new association(table[5], table[6], table[9], secret, strtol(table[8], 0, 0), false));
-    sqlite3_free_table(table);
-    return result;
-  };
+    string server_from_db, handle_from_db, secret_base64, encryption_type;
+    apr_int64_t expires_on;
+    dbd.getcol_string(row, 0, server_from_db);
+    dbd.getcol_string(row, 1, handle_from_db);
+    dbd.getcol_string(row, 2, secret_base64);
+    dbd.getcol_int64 (row, 3, expires_on);
+    dbd.getcol_string(row, 4, encryption_type);
+
+    dbd.close(results, &row);
+
+    secret_t secret;
+    util::decode_base64(secret_base64, secret);
+    return assoc_t(new association(server_from_db, handle_from_db, encryption_type, secret,
+                                   expires_on, false));
+  }
 
   void MoidConsumer::invalidate_assoc(const string& server,const string& handle) {
     debug("invalidating association: server = " + server + " handle = " + handle);
@@ -143,15 +161,11 @@ namespace modauthopenid {
   };
 
   bool MoidConsumer::test_result(int result, const string& context) {
-    if (result != DBD_SUCCESS) {
-      fprintf(stderr, "DBD Error in MoidConsumer - %s: %s\n",
-        context.c_str(), apr_dbd_error(dbd->driver, dbd->handle, result));
-      return false;
-    }
-    return true;
+    fprintf(stderr, "TODO: remove test_result\n");
+    return false;
   };
 
-  void MoidConsumer::delete_expired() {
+  void MoidConsumer::delete_expired(time_t now) {
     time_t rawtime;
     time (&rawtime);
     // MoidConsumer_delete_expired_associations
