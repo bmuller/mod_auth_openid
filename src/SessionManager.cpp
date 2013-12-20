@@ -92,7 +92,7 @@ namespace modauthopenid {
 
   void SessionManager::delete_expired(time_t now) {
     const void* args[] = {&now};
-    bool success = dbd.pbquery("SessionManager_store_session", args);
+    bool success = dbd.pbquery("SessionManager_delete_expired", args);
     if (!success) {
       debug("problem deleting expired sessions from table");
     }

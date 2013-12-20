@@ -63,16 +63,25 @@ void print_dbd_err(const ap_dbd_t* dbd, int rc, const char * tag)
   }
 }
 
-void drop_tables(const ap_dbd_t* dbd)
+/**
+ * TODO: move this to storage classes
+ */
+void drop_tables(const ap_dbd_t* _dbd)
 {
-
+  Dbd dbd(_dbd);
+  dbd.query("DROP TABLE IF EXISTS sessionmanager");
+  dbd.query("DROP TABLE IF EXISTS authentication_sessions");
+  dbd.query("DROP TABLE IF EXISTS associations");
+  dbd.query("DROP TABLE IF EXISTS response_nonces");
 }
 
+/**
+ * TODO: make this an external utility's problem
+ */
 void create_tables(const ap_dbd_t* dbd)
 {
   SessionManager s(dbd);
   MoidConsumer c(dbd, "blah", "balh");
-  // TODO: make this an external utility's problem
 }
 
 /**
@@ -269,6 +278,7 @@ int main(int argc, const char * const * argv) {
   }
   exit_on_err(rc, "apr_dbd_open_ex");
 
+  drop_tables(&dbd);
   create_tables(&dbd);
   run_tests(&dbd);
 

@@ -25,7 +25,7 @@ namespace modauthopenid {
     }
 
     int n_rows; // ignored
-    int rc = apr_dbd_pvbquery(dbd->driver, dbd->pool, dbd->handle,
+    int rc = apr_dbd_pbquery(dbd->driver, dbd->pool, dbd->handle,
                               &n_rows, statement, args);
     string tag("Prepared query failed: " + string(label));
     return test_dbd(rc, tag);
@@ -41,7 +41,7 @@ namespace modauthopenid {
     }
 
     *results = NULL;
-    int rc = apr_dbd_pvbselect(dbd->driver, dbd->pool, dbd->handle,
+    int rc = apr_dbd_pbselect(dbd->driver, dbd->pool, dbd->handle,
                                results, statement, DBD_LINEAR_ACCESS, args);
     string tag_select_failed("Prepared select failed: " + string(label));
     if (!test_dbd(rc, tag_select_failed)) {
