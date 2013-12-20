@@ -67,7 +67,7 @@ namespace modauthopenid {
 
   bool Dbd::getcol_int64(apr_dbd_row_t* row, int col, apr_int64_t& data)
   {
-    int rc = apr_dbd_datum_get(dbd->driver, row, col, APR_DBD_TYPE_LONGLONG, (void*)data);
+    int rc = apr_dbd_datum_get(dbd->driver, row, col, APR_DBD_TYPE_LONGLONG, (void*)&data);
     string tag("Couldn't fetch column as int64");
     return test_apr(rc, tag);
   }
