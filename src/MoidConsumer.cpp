@@ -63,7 +63,7 @@ namespace modauthopenid {
   assoc_t MoidConsumer::store_assoc(const string& server, const string& handle, const string& type,
                                     const secret_t& secret, int expires_in, time_t now)
   {
-    debug("Storing association for \"" + server + "\" and handle \"" + handle + "\" in db");
+    MOID_DEBUG("Storing association for \"" + server + "\" and handle \"" + handle + "\" in db");
 
     delete_expired(now);
 
@@ -78,7 +78,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbquery("", args);
     if (!success) {
-      debug("problem storing association in associations table");
+      MOID_DEBUG("problem storing association in associations table");
     }
     return assoc_t(new association(server, handle, type, secret, expires_on, false));
   }
@@ -109,7 +109,7 @@ namespace modauthopenid {
 
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle, time_t now)
   {
-    debug("looking up association: server = " + server + " handle = " + handle);
+    MOID_DEBUG("looking up association: server = " + server + " handle = " + handle);
 
     delete_expired(now);
 
@@ -121,7 +121,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("MoidConsumer_retrieve_assoc", &results, &row, args);
     if (!success) {
-      debug("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
+      MOID_DEBUG("could not find server \"" + server + "\" and handle \"" + handle + "\" in db.");
       throw failed_lookup(OPKELE_CP_ "Could not find association.");
     }
 
@@ -130,14 +130,14 @@ namespace modauthopenid {
 
   void MoidConsumer::invalidate_assoc(const string& server, const string& handle)
   {
-    debug("invalidating association: server = " + server + " handle = " + handle);
+    MOID_DEBUG("invalidating association: server = " + server + " handle = " + handle);
     const void* args[] = {
       server.c_str(),
       handle.c_str(),
     };
     bool success = dbd.pbquery("MoidConsumer_invalidate_assoc", args);
     if (!success) {
-      debug("problem invalidating assocation for server \"" +
+      MOID_DEBUG("problem invalidating assocation for server \"" +
             server + "\" and handle \"" + handle + "\"");
     }
   }
@@ -149,7 +149,7 @@ namespace modauthopenid {
 
   assoc_t MoidConsumer::find_assoc(const string& server, time_t now)
   {
-    debug("looking up association: server = " + server);
+    MOID_DEBUG("looking up association: server = " + server);
 
     delete_expired(now);
 
@@ -160,11 +160,11 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("MoidConsumer_find_assoc", &results, &row, args);
     if (!success) {
-      debug("could not find handle for server \"" + server + "\" in db.");
+      MOID_DEBUG("could not find handle for server \"" + server + "\" in db.");
       throw failed_lookup(OPKELE_CP_ "Could not find association.");
     }
 
-    debug("found a handle for server \"" + server + "\" in db.");
+    MOID_DEBUG("found a handle for server \"" + server + "\" in db.");
     return load_assoc(results, &row);
   }
 
@@ -176,17 +176,17 @@ namespace modauthopenid {
 
     success = dbd.pbquery("MoidConsumer_delete_expired_associations", args);
     if (!success) {
-      debug("problem deleting expired associations from table");
+      MOID_DEBUG("problem deleting expired associations from table");
     }
 
     success = dbd.pbquery("MoidConsumer_delete_expired_authentication_sessions", args);
     if (!success) {
-      debug("problem deleting expired authentication sessions from table");
+      MOID_DEBUG("problem deleting expired authentication sessions from table");
     }
 
     success = dbd.pbquery("MoidConsumer_delete_expired_response_nonces", args);
     if (!success) {
-      debug("problem deleting expired response nonces from table");
+      MOID_DEBUG("problem deleting expired response nonces from table");
     }
   }
 
@@ -210,7 +210,7 @@ namespace modauthopenid {
     dbd.close(results, &row);
     if (success) {
       // result set contains at least one row
-      debug("found preexisting nonce - could be a replay attack");
+      MOID_DEBUG("found preexisting nonce - could be a replay attack");
       throw opkele::id_res_bad_nonce(OPKELE_CP_ "old nonce used again - possible replay attack");
     }
 
@@ -224,7 +224,7 @@ namespace modauthopenid {
     };
     success = dbd.pbquery("MoidConsumer_check_nonce_insert", insert_args);
     if (!success) {
-      debug("problem adding new nonce to response_nonces table");
+      MOID_DEBUG("problem adding new nonce to response_nonces table");
     }
   }
 
@@ -238,7 +238,7 @@ namespace modauthopenid {
     success = dbd.pbselect1("MoidConsumer_session_exists", &results, &row, args);
     dbd.close(results, &row);
     if (!success) {
-      debug("could not find authentication session \"" + asnonceid + "\" in db.");
+      MOID_DEBUG("could not find authentication session \"" + asnonceid + "\" in db.");
     }
     return success;
   };
@@ -260,7 +260,7 @@ namespace modauthopenid {
       return;
     }
 
-    debug("Queueing endpoint " + ep.claimed_id + " : " + ep.local_id + " @ " + ep.uri);
+    MOID_DEBUG("Queueing endpoint " + ep.claimed_id + " : " + ep.local_id + " @ " + ep.uri);
     // allow nonce to exist for up to one hour without being returned
     apr_int64_t expires_on = now + 3600;
     const void* args[] = {
@@ -272,13 +272,13 @@ namespace modauthopenid {
     };
     bool success = dbd.pbquery("MoidConsumer_queue_endpoint", args);
     if (!success) {
-      debug("problem queuing endpoint");
+      MOID_DEBUG("problem queuing endpoint");
     }
   }
 
   const openid_endpoint_t& MoidConsumer::get_endpoint() const
   {
-    debug("Fetching endpoint");
+    MOID_DEBUG("Fetching endpoint");
 
     apr_dbd_results_t* results;
     apr_dbd_row_t* row;
@@ -287,7 +287,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("MoidConsumer_get_endpoint", &results, &row, args);
     if (!success) {
-      debug("could not find an endpoint for authentication session \"" + asnonceid + "\" in db.");
+      MOID_DEBUG("could not find an endpoint for authentication session \"" + asnonceid + "\" in db.");
       throw opkele::exception(OPKELE_CP_ "No more endpoints queued");
     }
 
@@ -302,7 +302,7 @@ namespace modauthopenid {
 
   void MoidConsumer::next_endpoint()
   {
-    debug("Clearing all session information - we're only storing one endpoint, "
+    MOID_DEBUG("Clearing all session information - we're only storing one endpoint, "
           "can't get next one, cause we didn't store it.");
     endpoint_set = false;
     kill_session();
@@ -315,13 +315,13 @@ namespace modauthopenid {
     };
     bool success = dbd.pbquery("MoidConsumer_kill_session", args);
     if (!success) {
-      debug("problem killing session");
+      MOID_DEBUG("problem killing session");
     }
   }
 
   void MoidConsumer::set_normalized_id(const string& nid)
   {
-    debug("Set normalized id to: " + nid);
+    MOID_DEBUG("Set normalized id to: " + nid);
     normalized_id = nid;
 
     const void* args[] = {
@@ -330,14 +330,14 @@ namespace modauthopenid {
     };
     bool success = dbd.pbquery("MoidConsumer_set_normalized_id", args);
     if (!success) {
-      debug("problem setting normalized id");
+      MOID_DEBUG("problem setting normalized id");
     }
   }
 
   const string MoidConsumer::get_normalized_id() const
   {
     if (normalized_id != "") {
-      debug("getting normalized id - " + normalized_id);
+      MOID_DEBUG("getting normalized id - " + normalized_id);
       return normalized_id;
     }
 
@@ -349,7 +349,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("MoidConsumer_get_normalized_id", &results, &row, args);
     if (!success) {
-      debug("could not find a normalized_id for authentication session \"" + asnonceid + "\" in db.");
+      MOID_DEBUG("could not find a normalized_id for authentication session \"" + asnonceid + "\" in db.");
       throw opkele::exception(OPKELE_CP_ "cannot get normalized id");
     }
 
@@ -357,7 +357,7 @@ namespace modauthopenid {
 
     dbd.close(results, &row);
 
-    debug("getting normalized id - " + normalized_id);
+    MOID_DEBUG("getting normalized id - " + normalized_id);
     return normalized_id;
   };
 

@@ -50,9 +50,8 @@ namespace modauthopenid {
    * Should be using ap_log_error, but that would mean passing a server_rec* or request_rec* around.
    * I'm just assuming that if you're going to be debugging it shouldn't really matter, since
    * Apache redirects stderr to the error log anyway.
-   * @attention Only does anything if you build with -DDEBUG.
    */
-  void debug(string s);
+  void debug(string file, int line, string function, string s);
 
   /**
    * @return true iff pattern found in subject.
@@ -92,4 +91,3 @@ namespace modauthopenid {
    */
   int true_random();
 }
-

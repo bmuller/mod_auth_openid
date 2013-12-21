@@ -30,15 +30,18 @@ Created by bmuller <bmuller@butterfat.net>
 namespace modauthopenid {
   using namespace std;
 
-  void debug(string s) {
-#ifdef DEBUG
+  void debug(string file, int line, string function, string s) {
+    char line_buf[21]; // big enough for any int + NUL
+    sprintf(line_buf, "%d", line);
     string time_s = "";
     time_t rawtime = time(NULL);
     tm *tm_t = localtime(&rawtime);
     char rv[40];
     if(strftime(rv, sizeof(rv)-1, "%a %b %d %H:%M:%S %Y", tm_t)) 
       time_s = "[" + string(rv) + "] ";
-    s = time_s + "[" + string(PACKAGE_NAME) + "] " + s + "\n";
+    s = time_s + "[" + string(PACKAGE_NAME) + "] "
+      + file + ":" + line_buf + ":" + function + ": "
+      + s + "\n";
     // escape %'s
     string cleaned_s = "";
     vector<string> parts = explode(s, "%");
@@ -48,8 +51,7 @@ namespace modauthopenid {
     // stderr is redirected by apache to apache's error log
     fputs(cleaned_s.c_str(), stderr);
     fflush(stderr);
-#endif
-  };
+  }
 
   string error_to_string(error_result_t e, bool use_short_string) {
     string short_string, long_string;
@@ -100,7 +102,7 @@ namespace modauthopenid {
       r += v[v.size()-1];
     }
     return r;
-  };
+  }
 
   vector<string> explode(string s, string e) {
     vector<string> ret;
@@ -115,7 +117,7 @@ namespace modauthopenid {
     if(s!="")
       ret.push_back(s);
     return ret;
-  };
+  }
 
   pcre * make_regex(string pattern) {
     const char * error;
@@ -125,12 +127,12 @@ namespace modauthopenid {
 
   bool regex_match(string subject, pcre * re) {
     return (pcre_exec(re, NULL, subject.c_str(), subject.size(), 0, 0, NULL, 0) >= 0);
-  };
+  }
 
   void strip(string& s) {
     while(!s.empty() && s.substr(0,1) == " ") s.erase(0,1);
     while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
-  };
+  }
 
   // make a random alpha-numeric string size characters long
   void make_rstring(int size, string& s) {
@@ -171,7 +173,7 @@ namespace modauthopenid {
     }
     
     printf("There are %d rows.\n\n", nr);
-  };
+  }
   
   void consume_results(const ap_dbd_t* dbd, apr_dbd_results_t* results, apr_dbd_row_t** row) {
     while (apr_dbd_get_row(dbd->driver, dbd->pool, results, row, DBD_NEXT_ROW) != DBD_NO_MORE_ROWS) {
@@ -228,7 +230,7 @@ namespace modauthopenid {
       break;
     }
     return result;
-  };
+  }
 
   int true_random() {
 #if APR_HAS_RANDOM
@@ -239,6 +241,5 @@ namespace modauthopenid {
     apr_uint64_t time_now = apr_time_now();
     srand((unsigned int)(((time_now >> 32) ^ time_now) & 0xffffffff));
     return rand() & 0x0FFFF;
-  };
-
+  }
 }

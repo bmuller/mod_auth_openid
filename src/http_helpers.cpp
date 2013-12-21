@@ -77,10 +77,10 @@ namespace modauthopenid {
   int http_redirect(request_rec *r, string location) {
     // Because IE is retarded, we have to do a form post if the URL is too big (over 2048 characters)
     if(location.size() > 2000) {
-      debug("Redirecting via POST to: " + location);
+      MOID_DEBUG("Redirecting via POST to: " + location);
       return send_form_post(r, location);
     } else {
-      debug("Redirecting via HTTP_MOVED_TEMPORARILY to: " + location);
+      MOID_DEBUG("Redirecting via HTTP_MOVED_TEMPORARILY to: " + location);
       apr_table_set(r->headers_out, "Location", location.c_str());
       apr_table_setn(r->err_headers_out, "Cache-Control", "no-cache");
       return HTTP_MOVED_TEMPORARILY;
@@ -143,7 +143,7 @@ namespace modauthopenid {
         strip(key);
         string value = pair[1];
         strip(value);
-        debug("cookie sent by client: \""+key+"\"=\""+value+"\"");
+        MOID_DEBUG("cookie sent by client: \""+key+"\"=\""+value+"\"");
         if(key == cookie_name) {
           session_id = pair[1];
           return;
@@ -329,10 +329,10 @@ namespace modauthopenid {
   void get_request_params(request_rec *r, params_t& params) {
     string query;
     if(r->method_number == M_GET && r->args != NULL) {
-      debug("Request GET params: " + string(r->args));
+      MOID_DEBUG("Request GET params: " + string(r->args));
       params = parse_query_string(string(r->args));
     } else if(r->method_number == M_POST && get_post_data(r, query)) {
-      debug("Request POST params: " + query);
+      MOID_DEBUG("Request POST params: " + query);
       params = parse_query_string(query);
     }
   };

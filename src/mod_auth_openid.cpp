@@ -349,7 +349,7 @@ static bool is_trusted_provider(modauthopenid_config *s_cfg, std::string url, re
     if(re == NULL) { 
       APERR(r, "regex compilation failed for regex: %s", trusted_sites[i]);
     } else if(modauthopenid::regex_match(base_url, re)) {
-      modauthopenid::debug(base_url + " is a trusted identity provider");
+      MOID_DEBUG(base_url + " is a trusted identity provider");
       pcre_free(re);
       return true;
     } else {
@@ -386,7 +386,7 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg, const
   std::string session_id = "";
   modauthopenid::get_session_id(r, std::string(s_cfg->cookie_name), session_id);
   if(session_id != "" && s_cfg->use_cookie) {
-    modauthopenid::debug("found session_id in cookie: " + session_id);
+    MOID_DEBUG("found session_id in cookie: " + session_id);
     modauthopenid::session_t session;
     modauthopenid::SessionManager sm(dbd);
     sm.get_session(session_id, session);

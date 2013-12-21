@@ -92,6 +92,16 @@ Created by bmuller <bmuller@butterfat.net>
 #define DBD_NEXT_ROW         -1
 #define DBD_NO_MORE_ROWS     -1
 
+/**
+ * Debug logging with location info.
+ * __FUNCTION__ is nonstandard but supported by GCC and MSVC.
+ * @see http://gcc.gnu.org/onlinedocs/gcc/Function-Names.html
+ * @see http://msdn.microsoft.com/en-us/library/b0084kay.aspx
+ */
+#ifdef DEBUG
+#define MOID_DEBUG(msg) modauthopenid::debug((__FILE__), (__LINE__), (__FUNCTION__), (msg))
+#endif
+
 /* mod_auth_openid includes */
 #include "config.h"
 #include "types.h"

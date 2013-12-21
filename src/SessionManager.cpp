@@ -59,7 +59,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("SessionManager_get_session", &results, &row, args);
     if (!success) {
-      debug("could not find session id " + session_id + " in db: session probably just expired");
+      MOID_DEBUG("could not find session id " + session_id + " in db: session probably just expired");
       return false;
     }
 
@@ -72,7 +72,7 @@ namespace modauthopenid {
     dbd.getcol_int64 (row, 5, session.expires_on);
 
     dbd.close(results, &row);
-    
+
     return true;
   }
 
@@ -103,7 +103,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbquery("SessionManager_store_session", args);
     if (!success) {
-      debug("problem inserting session into db");
+      MOID_DEBUG("problem inserting session into db");
       return false;
     }
     return true;
@@ -115,7 +115,7 @@ namespace modauthopenid {
     };
     bool success = dbd.pbquery("SessionManager_delete_expired", args);
     if (!success) {
-      debug("problem deleting expired sessions from table");
+      MOID_DEBUG("problem deleting expired sessions from table");
     }
   }
 
