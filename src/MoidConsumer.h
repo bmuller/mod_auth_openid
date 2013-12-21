@@ -30,45 +30,78 @@ namespace modauthopenid {
   using namespace opkele;
   using namespace std;
 
-  // Class to handle tasks of consumer - authentication session is based on a nonce id that is thrown in with
-  // the params list
+  /**
+   * Class to handle tasks of consumer.
+   * Authentication session is based on a nonce id that is thrown in with the params list.
+   */
   class MoidConsumer : public prequeue_RP {
   public:
-    // _dbd is a DB connection usually provided by mod_dbd, _asnonceid is the association session nonce, and serverurl is 
-    // the return to value (url initially requested by user)
+    /**
+     * Constructor also creates any missing tables.
+     * @param _dbd A DBD connection usually provided by mod_dbd.
+     * @param _asnonceid The association session nonce.
+     * @param _serverurl The return-to value (URL initially requested by user).
+     */
     MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid, const string& _serverurl);
 
-    // store a new assocation
+    /**
+     * Store a new assocation.
+     * @param now Optional time parameter for tests. If omitted, current time will be used.
+     */
     assoc_t store_assoc(const string& server, const string& handle, const string& type,
                         const secret_t& secret, int expires_in);
     assoc_t store_assoc(const string& server, const string& handle, const string& type,
-                        const secret_t& secret, int expires_in, time_t now = 0);
+                        const secret_t& secret, int expires_in, time_t now);
 
-    // retrieve an association
+    /**
+     * Retrieve an association.
+     * @param now Optional time parameter for tests. If omitted, current time will be used.
+     */
     assoc_t retrieve_assoc(const string& server, const string& handle);
-    assoc_t retrieve_assoc(const string& server, const string& handle, time_t now = 0);
+    assoc_t retrieve_assoc(const string& server, const string& handle, time_t now);
 
-    // invalidate assocation - deletes from db
-    void invalidate_assoc(const string& server,const string& handle);
+    /**
+     * Invalidate assocation by deleting it from the DB.
+     */
+    void invalidate_assoc(const string& server, const string& handle);
 
-    // find any association for the given server OP
+    /**
+     * Find any association for the given server OP.
+     * @param now Optional time parameter for tests. If omitted, current time will be used.
+     */
     assoc_t find_assoc(const string& server);
+    assoc_t find_assoc(const string& server, time_t now);
 
-    // This is called with the openid.response_nonce - if isn't already in db, is stored for same amount of time
-    // as the association, at which point a replay attack is impossible since assocation key is deleted
-    void check_nonce(const string& OP,const string& nonce);
+    /**
+     * This is called to store the openid.response_nonce.
+     * If it isn't already in the DB, stores the nonce for the same amount of time as the association,
+     * after which point a replay attack is impossible since the assocation key is deleted.
+     * @throws opkele::id_res_bad_nonce if a previously used nonce is reused.
+     */
+    void check_nonce(const string& server, const string& nonce);
+    void check_nonce(const string& server, const string& nonce, time_t now);
 
-    // delete authentication session with the constructor param nonce if it exists
+    /**
+     * Delete authentication session with the constructor param nonce if it exists.
+     */
     void begin_queueing();
 
-    // store the given endpoint - there actually is no queue - we just keep track of the first one
-    // given - all subsequent calls are ignored
+    /**
+     * Store the given endpoint.
+     * There actually is no queue: we just keep track of the first one given,
+     * and all subsequent calls are ignored.
+     * @param now Optional time parameter for tests. If omitted, current time will be used.
+     */
     void queue_endpoint(const openid_endpoint_t& ep);
+    void queue_endpoint(const openid_endpoint_t& ep, time_t now);
 
     // get the endpoint set in queue_endpoint
     const openid_endpoint_t& get_endpoint() const;
 
-    // same as begin_queuing
+    /**
+     * Same as begin_queuing.
+     * @see begin_queuing
+     */
     void next_endpoint();
 
     // set the normalized id for this authentication session
@@ -89,34 +122,51 @@ namespace modauthopenid {
     // delete session with given session nonce id in constructor param list
     void kill_session();
 
-    // append names and SQL for prepared statements used by this class to the provided array
+    /**
+     * Append names and SQL for prepared statements used by this class to the provided array.
+     * @param statements APR array of labeled_statement_t.
+     */
     static void append_statements(apr_array_header_t *statements);
 
     /**
      * Delete all expired sessions.
      */
-    void delete_expired(time_t now = 0); // TODO: make param mandatory
+    void delete_expired(time_t now);
 
   private:
-    sqlite3 *db; // TODO: drop this when Dbd conversion is done
+    /**
+     * Database connection wrapper.
+     */
     Dbd dbd;
 
-    // test result from DBD query - print error to stderr if there is one
-    bool test_result(int result, const string& context); // TODO: drop this when Dbd conversion is done
+    /**
+     * The nonce-based authentication session.
+     */
+    string asnonceid;
 
-    // strings for the nonce based authentication session and the server's url (the originally 
-    // requested url)
-    string asnonceid, serverurl; 
+    /**
+     * The return-to value (URL initially requested by user).
+     */
+    string serverurl; 
 
-    // booleans for the database state and whether any endpoint has been set yet
-    bool is_closed, endpoint_set;
+    /**
+     * Has any endpoint has been set yet?
+     */
+    bool endpoint_set;
 
-    // The normalized id the user has attempted to use
+    /**
+     * The normalized id the user has attempted to use.
+     */
     mutable string normalized_id;
 
-    // the endpoint for the user's identity
+    /**
+     * The endpoint for the user's identity.
+     */
     mutable openid_endpoint_t endpoint;
+
+    /**
+     * Load association object from associations row, and close result set.
+     */
+    assoc_t load_assoc(apr_dbd_results_t* results, apr_dbd_row_t** row);
   };
 }
-
-

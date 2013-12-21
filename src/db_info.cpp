@@ -41,12 +41,13 @@ using namespace modauthopenid;
 /**
  * Print the contents of our session and OpenID consumer tables.
  */
-void print_databases(const ap_dbd_t* dbd) {
+void print_tables(const ap_dbd_t* dbd)
+{
   apr_int64_t now = time(NULL);
   printf("Current time: %ld\n\n", now);
 
   SessionManager s(dbd);
-  s.print_table();
+  s.print_tables();
 
   MoidConsumer c(dbd, "blah", "balh");
   c.print_tables();
@@ -88,8 +89,9 @@ void create_tables(const ap_dbd_t* dbd)
  * Try to prepare the SQL statements we use.
  * @attention: Run this before other tests. Adds successfully prepared statements to dbd->prepared hashtable.
  */
-bool test_prepare_statements(const ap_dbd_t* dbd) {
-  int num_statements = 19;
+bool test_prepare_statements(const ap_dbd_t* dbd)
+{
+  int num_statements = 18;
   int num_successes = 0;
 
   apr_array_header_t *statements = apr_array_make(dbd->pool, num_statements /* initial size */, sizeof(labeled_statement_t));
@@ -107,7 +109,7 @@ bool test_prepare_statements(const ap_dbd_t* dbd) {
     apr_hash_set(dbd->prepared, statement->label, APR_HASH_KEY_STRING, prepared_statement);
     num_successes++;
   }
-  
+
   printf("Successfully prepared statements:\n");
   for (apr_hash_index_t *hi = apr_hash_first(dbd->pool, dbd->prepared); hi; hi = apr_hash_next(hi)) {
     const char *key;
@@ -126,7 +128,8 @@ bool test_prepare_statements(const ap_dbd_t* dbd) {
 /**
  * Print an error message and quit if an APR call fails.
  */
-void exit_on_err(apr_status_t rc, const char * tag) {
+void exit_on_err(apr_status_t rc, const char * tag)
+{
   char err_buf[256];
   
   if (rc != APR_SUCCESS) {
@@ -140,12 +143,13 @@ void exit_on_err(apr_status_t rc, const char * tag) {
  * Test the SessionManager class.
  * @return True iff all tests pass.
  */
-bool test_sessionmanager(const ap_dbd_t* dbd) {
+bool test_sessionmanager(const ap_dbd_t* dbd)
+{
   bool success;
   printf("Initial state: no sessions\n");
   SessionManager s(dbd);
   s.delete_expired(LONG_MAX);
-  s.print_table();
+  s.print_tables();
 
   time_t now = 1386810000; // no religious or practical significance
 
@@ -164,7 +168,7 @@ bool test_sessionmanager(const ap_dbd_t* dbd) {
                             stored_session.path, stored_session.identity,
                             stored_session.username, lifespan,
                             now);
-  s.print_table();
+  s.print_tables();
   if (!success) {
     printf("Failed to store session\n");
     return false;
@@ -173,7 +177,7 @@ bool test_sessionmanager(const ap_dbd_t* dbd) {
   session_t loaded_session;
   printf("Loading the previously stored session\n");
   success = s.get_session(stored_session.session_id, loaded_session, now);
-  s.print_table();
+  s.print_tables();
   if (!success) {
     printf("Failed to load session\n");
     return false;
@@ -215,8 +219,8 @@ bool test_sessionmanager(const ap_dbd_t* dbd) {
   return true;
 }
 
-void run_tests(ap_dbd_t* dbd) {
-
+void run_tests(ap_dbd_t* dbd)
+{
   //print_databases(dbd);
 
   bool all_pass = true;
@@ -233,7 +237,8 @@ void run_tests(ap_dbd_t* dbd) {
   printf("\ntest_sessionmanager: %s.\n\n", pass ? "passed" : "FAILED");
 }
 
-int main(int argc, const char * const * argv) {
+int main(int argc, const char * const * argv)
+{
   apr_status_t rc; // return code for APR functions
 
   // start up APR and normalize args

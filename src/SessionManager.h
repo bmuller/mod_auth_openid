@@ -47,7 +47,8 @@ namespace modauthopenid {
      * @param now Optional time parameter for tests. If omitted, current time will be used.
      * @return true iff session was loaded successfully.
      */
-    bool get_session(const string& session_id, session_t& session, time_t now = 0);
+    bool get_session(const string& session_id, session_t& session);
+    bool get_session(const string& session_id, session_t& session, time_t now);
 
     /**
      * Store given session information in a new session row in the DB.
@@ -58,14 +59,16 @@ namespace modauthopenid {
      * @return true iff session was stored successfully.
      */
     bool store_session(const string& session_id, const string& hostname, const string& path,
+                       const string& identity, const string& username, int lifespan);
+    bool store_session(const string& session_id, const string& hostname, const string& path,
                        const string& identity, const string& username, int lifespan,
-                       time_t now = 0);
+                       time_t now);
 
     /**
      * Print session table to stdout.
      * This will only be called from command-line utilities, not the Apache module itself.
      */
-    void print_table();
+    void print_tables();
 
     /**
      * Append names and SQL for prepared statements used by this class to the provided array.
@@ -79,6 +82,9 @@ namespace modauthopenid {
     void delete_expired(time_t now);
 
   private:
+    /**
+     * Database connection wrapper.
+     */
     Dbd dbd;
   };
 }

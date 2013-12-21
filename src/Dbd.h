@@ -18,53 +18,53 @@ namespace modauthopenid {
      * Logs error message on failure.
      * @return true iff successful.
      */
-    bool query(const char* sql);
+    bool query(const char* sql) const;
 
     /**
      * Wrapper for apr_dbd_pbquery().
-     * Execute one previously statement, identified by label.
+     * Execute one previously non-select statement, identified by label.
      * Ignores result and row count.
      * Logs error message on failure.
      * @return true iff successful.
      */
-    bool pbquery(const char* label, const void** args);
+    bool pbquery(const char* label, const void** args) const;
 
     /**
      * Wrapper for apr_dbd_pvbselect().
-     * Execute one previously statement, identified by label.
+     * Execute one previously prepared select statement, identified by label.
      * Assumes select statement results in at most one row.
      * Always allocates results and row.
      * Logs error message on failure.
-     * @return true iff successful.
+     * @return true iff select is successful and result contains at least one row.
      */
     bool pbselect1(const char* label, apr_dbd_results_t** results, apr_dbd_row_t** row,
-                   const void** args);
+                   const void** args) const;
 
     /**
      * Get a string column from a result row.
      * Logs error message on failure.
      * @return true iff successful.
      */
-    bool getcol_string(apr_dbd_row_t* row, int col, string& data);
+    bool getcol_string(apr_dbd_row_t* row, int col, string& data) const;
 
     /**
      * Get an int64 column from a result row.
      * Logs error message on failure.
      * @return true iff successful.
      */
-    bool getcol_int64(apr_dbd_row_t* row, int col, apr_int64_t& data);
+    bool getcol_int64(apr_dbd_row_t* row, int col, apr_int64_t& data) const;
 
     /**
      * Consume the unused part of a result set so that DBD can close it.
      * @param row Row storage must be allocated already.
      */
-    void close(apr_dbd_results_t* results, apr_dbd_row_t** row);
+    void close(apr_dbd_results_t* results, apr_dbd_row_t** row) const;
 
     /**
      * Print the contents of a table to stdout.
      * If there's an error, prints an error message to stdout instead of the table contents.
      */
-    void print_table(const char* tablename);
+    void print_table(const char* tablename) const;
 
   private:
     /**
@@ -77,17 +77,17 @@ namespace modauthopenid {
      * @param tag Extra error info.
      * @return true iff rc is a success code.
      */
-    bool test_dbd(int rc, string& tag);
+    bool test_dbd(int rc, string& tag) const;
 
     /**
      * If rc is an APR error result code, write a debug log entry explaining it.
      * @return true iff rc is a success code.
      */
-    bool test_apr(apr_status_t rc, string& tag);
+    bool test_apr(apr_status_t rc, string& tag) const;
 
     /**
      * Fetch a previously prepared statement by label.
      */
-    apr_dbd_prepared_t* get_prepared(const char* label);
+    apr_dbd_prepared_t* get_prepared(const char* label) const;
   };
 }

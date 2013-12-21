@@ -39,8 +39,13 @@ namespace modauthopenid {
     dbd.query(ddl_sessionmanager);
   }
 
-  bool SessionManager::get_session(const string& session_id, session_t& session, time_t now) {
-    now = now ? now : time(NULL);
+  bool SessionManager::get_session(const string& session_id, session_t& session)
+  {
+    return get_session(session_id, session, time(NULL));
+  }
+
+  bool SessionManager::get_session(const string& session_id, session_t& session, time_t now)
+  {
     delete_expired(now);
 
     // mark session as invalid until we successfully load one
@@ -49,7 +54,9 @@ namespace modauthopenid {
     // try to find the session
     apr_dbd_results_t* results;
     apr_dbd_row_t* row;
-    const void* args[] = {session_id.c_str()};
+    const void* args[] = {
+      session_id.c_str(),
+    };
     bool success = dbd.pbselect1("SessionManager_get_session", &results, &row, args);
     if (!success) {
       debug("could not find session id " + session_id + " in db: session probably just expired");
@@ -65,7 +72,15 @@ namespace modauthopenid {
     dbd.getcol_int64 (row, 5, session.expires_on);
 
     dbd.close(results, &row);
+    
     return true;
+  }
+
+  bool SessionManager::store_session(const string& session_id, const string& hostname,
+                                     const string& path, const string& identity,
+                                     const string& username, int lifespan)
+  {
+    return store_session(session_id, hostname, path, identity, username, lifespan, time(NULL));
   }
 
   bool SessionManager::store_session(const string& session_id, const string& hostname,
@@ -73,7 +88,6 @@ namespace modauthopenid {
                                      const string& username, int lifespan,
                                      time_t now)
   {
-    now = now ? now : time(NULL);
     delete_expired(now);
 
     // lifespan will be 0 if not specified by user in config - so lasts as long as browser is open.  In this case, make it last for up to a day.
@@ -96,14 +110,16 @@ namespace modauthopenid {
   }
 
   void SessionManager::delete_expired(time_t now) {
-    const void* args[] = {&now};
+    const void* args[] = {
+      &now,
+    };
     bool success = dbd.pbquery("SessionManager_delete_expired", args);
     if (!success) {
       debug("problem deleting expired sessions from table");
     }
   }
 
-  void SessionManager::print_table() {
+  void SessionManager::print_tables() {
     dbd.print_table("sessionmanager");
   }
 

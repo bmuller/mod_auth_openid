@@ -3,12 +3,12 @@
 namespace modauthopenid {
   using namespace std;
 
-  Dbd::Dbd(const ap_dbd_t* dbd)
+  Dbd::Dbd(const ap_dbd_t* _dbd) : dbd(_dbd)
   {
-    this->dbd = dbd;
+    
   }
 
-  bool Dbd::query(const char* sql)
+  bool Dbd::query(const char* sql) const
   {
     int n_rows; // rows affected by query: not used here, but can't be NULL
     int rc = apr_dbd_query(dbd->driver, dbd->handle, &n_rows, sql);
@@ -16,7 +16,7 @@ namespace modauthopenid {
     return test_dbd(rc, tag);
   }
 
-  bool Dbd::pbquery(const char* label, const void** args)
+  bool Dbd::pbquery(const char* label, const void** args) const
   {
     apr_dbd_prepared_t *statement = get_prepared(label);
     if (statement == NULL) {
@@ -32,7 +32,7 @@ namespace modauthopenid {
   }
 
   bool Dbd::pbselect1(const char* label, apr_dbd_results_t** results, apr_dbd_row_t** row,
-                      const void** args)
+                      const void** args) const
   {
     apr_dbd_prepared_t *statement = get_prepared(label);
     if (statement == NULL) {
@@ -54,7 +54,7 @@ namespace modauthopenid {
     return test_dbd(rc, tag_no_rows);
   }
 
-  bool Dbd::getcol_string(apr_dbd_row_t* row, int col, string& data)
+  bool Dbd::getcol_string(apr_dbd_row_t* row, int col, string& data) const
   {
     const char* data_raw = apr_dbd_get_entry(dbd->driver, row, col);
     if (data_raw == NULL) {
@@ -65,21 +65,21 @@ namespace modauthopenid {
     return true;
   }
 
-  bool Dbd::getcol_int64(apr_dbd_row_t* row, int col, apr_int64_t& data)
+  bool Dbd::getcol_int64(apr_dbd_row_t* row, int col, apr_int64_t& data) const
   {
     int rc = apr_dbd_datum_get(dbd->driver, row, col, APR_DBD_TYPE_LONGLONG, (void*)&data);
     string tag("Couldn't fetch column as int64");
     return test_apr(rc, tag);
   }
 
-  void Dbd::close(apr_dbd_results_t* results, apr_dbd_row_t** row)
+  void Dbd::close(apr_dbd_results_t* results, apr_dbd_row_t** row) const
   {
     while (apr_dbd_get_row(dbd->driver, dbd->pool, results, row, DBD_NEXT_ROW) != DBD_NO_MORE_ROWS) {
       // do nothing
     }
   }
 
-  void Dbd::print_table(const char* tablename)
+  void Dbd::print_table(const char* tablename) const
   {
     printf("Printing table: %s.\n", tablename);
     string sql("SELECT * FROM " + string(tablename));
@@ -113,7 +113,7 @@ namespace modauthopenid {
     printf("There are %d rows.\n\n", n_rows);
   }
 
-  bool Dbd::test_dbd(int rc, string& tag)
+  bool Dbd::test_dbd(int rc, string& tag) const
   {
     if (rc == DBD_SUCCESS) {
       return true;
@@ -123,7 +123,7 @@ namespace modauthopenid {
     return false;
   }
 
-  bool Dbd::test_apr(apr_status_t rc, string& tag)
+  bool Dbd::test_apr(apr_status_t rc, string& tag) const
   {
     if (rc == APR_SUCCESS) {
       return true;
@@ -134,7 +134,7 @@ namespace modauthopenid {
     return false;
   }
 
-  apr_dbd_prepared_t* Dbd::get_prepared(const char* label)
+  apr_dbd_prepared_t* Dbd::get_prepared(const char* label) const
   {
     return (apr_dbd_prepared_t *)apr_hash_get(dbd->prepared, label, APR_HASH_KEY_STRING);
   }
