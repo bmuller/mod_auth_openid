@@ -82,11 +82,6 @@ AC_SUBST(APU_LDFLAGS)
 # end APR util config
 
 
-AX_LIB_SQLITE3([3.3.0])
-if test "$SQLITE3_VERSION" == ""; then
-  AC_MSG_ERROR([No sqlite 3 (http://www.sqlite.org) library found.])
-fi
-
 APACHE_CFLAGS="-I`${APXS} -q INCLUDEDIR` -I`${apr_config} --includedir`"
 AC_SUBST(APACHE_CFLAGS)
 
