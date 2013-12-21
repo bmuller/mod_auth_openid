@@ -50,7 +50,6 @@ Created by bmuller <bmuller@butterfat.net>
 /* other general lib includes */
 #include <curl/curl.h>
 #include <pcre.h>
-#include <sqlite3.h>
 
 #include <ctime>
 #include <cstdlib>
@@ -100,6 +99,8 @@ Created by bmuller <bmuller@butterfat.net>
  */
 #ifdef DEBUG
 #define MOID_DEBUG(msg) modauthopenid::debug((__FILE__), (__LINE__), (__FUNCTION__), (msg))
+#else
+#define MOID_DEBUG(msg)
 #endif
 
 /* mod_auth_openid includes */
