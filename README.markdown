@@ -1,9 +1,10 @@
 # Basic Installation
 
-First, you'll need a few prerequisites.
+First, you'll need the latest libopkele from http://kin.klever.net/libopkele (C++ implementation of important OpenID functions).
 
- * the latest libopkele from http://kin.klever.net/libopkele (C++ implementation of important OpenID functions)
- * libsqlite from http://www.sqlite.org (SQLite C libs)
+You'll also need [mod_dbd](http://httpd.apache.org/docs/current/mod/mod_dbd.html) installed and activated to provide an interface between mod_auth_openid and a SQL database that will be used for session storage. Most Apache installs will come with mod_dbd.
+
+If you plan to use MySQL, you may also need to install an additional DBD driver specific to MySQL. For example, Ubuntu packages theirs as (http://packages.ubuntu.com/precise/libaprutil1-dbd-mysql). Mac OS X does not provide one, but you can build it yourself with [a patch to Homebrew's apr-util formula](https://github.com/Homebrew/homebrew-dupes/pull/257).
 
 Next, run:
 
@@ -21,26 +22,30 @@ Next, run:
      su root
      make install
 
-Make sure that the file /tmp/mod_auth_openid.db is owned by the user running Apache.
-You can do this by (assuming www-data is the user running apache):
+
+# Usage
+In a server or vhost section in your Apache config, configure mod_dbd to provide a session backend:
+
+     # MySQL
+     DBDriver mysql
+     DBDParams "dbname=openid user=mod_auth_openid pass=abracadabra"
+
+     # SQLite
+     DBDriver sqlite3
+     DBDParams /tmp/mod_auth_openid.db
+
+If using SQLite, make sure that the DB file is owned by the user running Apache. Assuming www-data is the user running Apache and you want to store your session DB at /tmp/mod_auth_openid.db, you can do this by:
 
      su root
      touch /tmp/mod_auth_openid.db
      chown www-data /tmp/mod_auth_openid.db
 
-Or you can specify an alternate location that the user running apache has write 
-privieges on (see the docs for the AuthOpenIDDBLocation directive on the homepage).
-
-
-# Usage
 In either a Directory, Location, or File directive in httpd.conf, place the following directive:
 
      AuthType            OpenID
      Require             valid-user
 
-There are also additional, optional directives.  See the homepage for a list and docs.
+There are also additional, optional directives.  See [the project page](http://findingscience.com/mod_auth_openid) for a list of directives and additional docs.
 
 The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
 authentication.
-
-See [the project page](http://findingscience.com/mod_auth_openid) for more information.
