@@ -133,7 +133,8 @@ static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
   }
 
   // collect all SQL statements used by our classes
-  apr_array_header_t* statements = apr_array_make(pconf, 10 /* initial size */, sizeof(modauthopenid::labeled_statement_t));
+  int num_statements = 18; // array size hint
+  apr_array_header_t* statements = apr_array_make(pconf, num_statements, sizeof(modauthopenid::labeled_statement_t));
   modauthopenid::MoidConsumer  ::append_statements(statements);
   modauthopenid::SessionManager::append_statements(statements);
 
