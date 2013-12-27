@@ -42,14 +42,8 @@ namespace modauthopenid {
     s = time_s + "[" + string(PACKAGE_NAME) + "] "
       + file + ":" + line_buf + ":" + function + ": "
       + s + "\n";
-    // escape %'s
-    string cleaned_s = "";
-    vector<string> parts = explode(s, "%");
-    for(unsigned int i=0; i<parts.size()-1; i++)
-      cleaned_s += parts[i] + "%%";
-    cleaned_s += parts[parts.size()-1];
     // stderr is redirected by apache to apache's error log
-    fputs(cleaned_s.c_str(), stderr);
+    fputs(s.c_str(), stderr);
     fflush(stderr);
   }
 
@@ -134,7 +128,6 @@ namespace modauthopenid {
     while(!s.empty() && s.substr(s.size()-1, 1) == " ") s.erase(s.size()-1,1);
   }
 
-  // make a random alpha-numeric string size characters long
   void make_rstring(int size, string& s) {
     s = "";
     const char *cs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
