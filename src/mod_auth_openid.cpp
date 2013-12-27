@@ -41,7 +41,6 @@ AP_DECLARE_MODULE(authopenid_module);
 extern "C" module AP_MODULE_DECLARE_DATA authopenid_module;
 
 typedef struct {
-  const char *db_location; // DEBUG: remove with other SQLite-specific stuff, replaced by mod_dbd config
   char *trust_root;
   const char *cookie_name;
   char *login_page;
@@ -69,7 +68,6 @@ typedef const char *(*CMD_HAND_TYPE) ();
 static void *create_modauthopenid_config(apr_pool_t *p, char *s) {
   modauthopenid_config *newcfg;
   newcfg = (modauthopenid_config *) apr_pcalloc(p, sizeof(modauthopenid_config));
-  newcfg->db_location = "/tmp/mod_auth_openid.db";
   newcfg->use_cookie = true;
   newcfg->cookie_name = "open_id_session_id";
   newcfg->cookie_path = NULL; 
@@ -148,12 +146,6 @@ static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
     }
   }
   return OK;
-}
-
-static const char *set_modauthopenid_db_location(cmd_parms *parms, void *mconfig, const char *arg) {
-  modauthopenid_config *s_cfg = (modauthopenid_config *) mconfig;
-  s_cfg->db_location = (char *) arg;
-  return NULL;
 }
 
 static const char *set_modauthopenid_cookie_path(cmd_parms *parms, void *mconfig, const char *arg) { 
@@ -251,8 +243,6 @@ static const char *set_modauthopenid_single_idp(cmd_parms *parms, void *mconfig,
 static const command_rec mod_authopenid_cmds[] = {
   AP_INIT_TAKE1("AuthOpenIDCookieLifespan", (CMD_HAND_TYPE) set_modauthopenid_cookie_lifespan, NULL, OR_AUTHCFG,
                 "AuthOpenIDCookieLifespan <number seconds>"),
-  AP_INIT_TAKE1("AuthOpenIDDBLocation", (CMD_HAND_TYPE) set_modauthopenid_db_location, NULL, OR_AUTHCFG,
-                "AuthOpenIDDBLocation <string>"),
   AP_INIT_TAKE1("AuthOpenIDLoginPage", (CMD_HAND_TYPE) set_modauthopenid_login_page, NULL, OR_AUTHCFG,
                 "AuthOpenIDLoginPage <url string>"),
   AP_INIT_TAKE1("AuthOpenIDTrustRoot", (CMD_HAND_TYPE) set_modauthopenid_trust_root, NULL, OR_AUTHCFG,
