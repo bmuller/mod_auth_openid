@@ -76,7 +76,7 @@ namespace modauthopenid {
       &expires_on,
       type.c_str(),
     };
-    bool success = dbd.pbquery("", args);
+    bool success = dbd.pbquery("MoidConsumer_store_assoc", args);
     if (!success) {
       MOID_DEBUG("problem storing association in associations table");
     }
@@ -404,7 +404,7 @@ namespace modauthopenid {
     statement->code  = "DELETE FROM authentication_sessions WHERE %lld > expires_on";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
-    statement->label = "MoidConsumer_delete_expired_authentication_sessions";
+    statement->label = "MoidConsumer_delete_expired_response_nonces";
     statement->code  = "DELETE FROM response_nonces WHERE %lld > expires_on";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
