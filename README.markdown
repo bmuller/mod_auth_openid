@@ -24,6 +24,7 @@ Next, run:
 
 
 # Usage
+
 In a server or vhost section in your Apache config, configure mod_dbd to provide a session backend:
 
      # MySQL
@@ -49,3 +50,34 @@ There are also additional, optional directives.  See [the project page](http://f
 
 The user's identity URL will be available in the REMOTE_USER cgi environment variable after 
 authentication.
+
+# API documentation
+
+A Doxyfile is provided. To create HTML documentation, install [Doxygen](http://www.doxygen.org/) and run it with
+
+     doxygen
+
+Output will be in [doc/html/](doc/html/).
+
+# Tests
+
+The db_info utility that's built along with the Apache module contains a limited test suite. You can run it by providing the same SQL DB driver name and driver params that you'd provide to mod_dbd (see above). It will wipe out the contents of the database, so don't run it against production DBs.
+
+     # MySQL
+     src/db_info mysql "dbname=openid user=mod_auth_openid pass=abracadabra"
+
+     # SQLite
+     src/db_info sqlite3 /tmp/mod_auth_openid.db
+
+# Code coverage
+
+To see what code the tests actually cover, you'll need to rebuild with compiler flags for coverage instrumentation, and install [lcov](http://ltp.sourceforge.net/coverage/lcov.php) to generate HTML reports.
+
+     ./configure --enable-coverage
+     make
+     src/db_info <DBDriver> <DBDParams> # (see above)
+     src/db_info mysql "dbname=openid user=mod_auth_openid pass=abracadabra"
+     lcov --capture --directory src --output-file coverage.info
+     genhtml coverage.info --output-directory coverage
+
+Coverage reports will be in [coverage/](coverage/).

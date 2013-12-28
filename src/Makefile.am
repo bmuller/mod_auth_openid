@@ -24,6 +24,10 @@ if DEBUG
 AM_CXXFLAGS += -DDEBUG
 endif
 
+if COVERAGE
+AM_CXXFLAGS += -ftest-coverage -fprofile-arcs
+endif
+
 install-exec-local:
 	${APXS} -i -a -n 'authopenid' mod_auth_openid.la
 

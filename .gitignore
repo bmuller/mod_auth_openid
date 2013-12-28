@@ -33,4 +33,9 @@ install-sh
 *.lo
 *.o
 *.la
+*.gcov
+*.gcno
+*.gcda
 doc/*
+coverage/*
+coverage.info

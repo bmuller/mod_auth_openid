@@ -109,6 +109,15 @@ AC_ARG_ENABLE([nitpicking],
 AM_CONDITIONAL(NITPICK, test x$nitpick = xtrue)
 
 
+# Enable code coverage instrumentation
+coverage=false
+AC_ARG_ENABLE([coverage],
+ AC_HELP_STRING([--enable-coverage],[instrument files for gcov code coverage tool]),
+ [ test "$enableval" = "no" || coverage=true ]
+)
+AM_CONDITIONAL(COVERAGE, test x$coverage = xtrue)
+
+
 AC_CONFIG_FILES([
  Makefile
  src/Makefile
