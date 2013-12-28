@@ -75,8 +75,7 @@ To see what code the tests actually cover, you'll need to rebuild with compiler 
 
      ./configure --enable-coverage
      make
-     src/db_info <DBDriver> <DBDParams> # (see above)
-     src/db_info mysql "dbname=openid user=mod_auth_openid pass=abracadabra"
+     src/db_info <DBDriver> <DBDParams>
      lcov --capture --directory src --output-file coverage.info
      genhtml coverage.info --output-directory coverage
 
