@@ -48,9 +48,9 @@ namespace modauthopenid {
      * Store a new assocation.
      * @param now Optional time parameter for tests. If omitted, current time will be used.
      */
-    assoc_t store_assoc(const string& server, const string& handle, const string& type,
+    assoc_t store_assoc(const string& server, const string& handle, const string& assoc_type,
                         const secret_t& secret, int expires_in);
-    assoc_t store_assoc(const string& server, const string& handle, const string& type,
+    assoc_t store_assoc(const string& server, const string& handle, const string& assoc_type,
                         const secret_t& secret, int expires_in, time_t now);
 
     /**

@@ -44,7 +44,7 @@ namespace modauthopenid {
 
     const char* ddl_assocations = 
       "CREATE TABLE IF NOT EXISTS associations "
-      "(server VARCHAR(255), handle VARCHAR(100), encryption_type VARCHAR(50), "
+      "(server VARCHAR(255), handle VARCHAR(100), assoc_type VARCHAR(50), "
       "secret VARCHAR(30), expires_on INT)";
     dbd.query(ddl_assocations);
 
@@ -54,14 +54,16 @@ namespace modauthopenid {
     dbd.query(ddl_response_nonces);
   }
 
-  assoc_t MoidConsumer::store_assoc(const string& server, const string& handle, const string& type,
-                                    const secret_t& secret, int expires_in)
+  assoc_t MoidConsumer::store_assoc(const string& server, const string& handle,
+                                    const string& assoc_type, const secret_t& secret,
+                                    int expires_in)
   {
-    return store_assoc(server, handle, type, secret, expires_in, time(NULL));
+    return store_assoc(server, handle, assoc_type, secret, expires_in, time(NULL));
   }
 
-  assoc_t MoidConsumer::store_assoc(const string& server, const string& handle, const string& type,
-                                    const secret_t& secret, int expires_in, time_t now)
+  assoc_t MoidConsumer::store_assoc(const string& server, const string& handle,
+                                    const string& assoc_type, const secret_t& secret,
+                                    int expires_in, time_t now)
   {
     MOID_DEBUG("Storing association for \"" + server + "\" and handle \"" + handle + "\" in db");
 
@@ -69,23 +71,26 @@ namespace modauthopenid {
 
     apr_int64_t expires_on = now + expires_in;
 
+    string secret_base64;
+    secret.to_base64(secret_base64);
+
     const void* args[] = {
-      server.c_str(), 
-      handle.c_str(), 
-      util::encode_base64(&(secret.front()), secret.size()).c_str(),
+      server.c_str(),
+      handle.c_str(),
+      secret_base64.c_str(),
       &expires_on,
-      type.c_str(),
+      assoc_type.c_str(),
     };
     bool success = dbd.pbquery("MoidConsumer_store_assoc", args);
     if (!success) {
       MOID_DEBUG("problem storing association in associations table");
     }
-    return assoc_t(new association(server, handle, type, secret, expires_on, false));
+    return assoc_t(new association(server, handle, assoc_type, secret, expires_on, false));
   }
 
   assoc_t MoidConsumer::load_assoc(apr_dbd_results_t* results, apr_dbd_row_t** row)
   {
-    string server, handle, secret_base64, encryption_type;
+    string server, handle, secret_base64, assoc_type;
     apr_int64_t expires_on;
     secret_t secret;
 
@@ -93,13 +98,13 @@ namespace modauthopenid {
     dbd.getcol_string(*row, 1, handle);
     dbd.getcol_string(*row, 2, secret_base64);
     dbd.getcol_int64 (*row, 3, expires_on);
-    dbd.getcol_string(*row, 4, encryption_type);
+    dbd.getcol_string(*row, 4, assoc_type);
 
     dbd.close(results, row);
 
-    util::decode_base64(secret_base64, secret);
+    secret.from_base64(secret_base64);
 
-    return assoc_t(new association(server, handle, encryption_type, secret, expires_on, false));
+    return assoc_t(new association(server, handle, assoc_type, secret, expires_on, false));
   }
 
   assoc_t MoidConsumer::retrieve_assoc(const string& server, const string& handle)
@@ -378,12 +383,12 @@ namespace modauthopenid {
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "MoidConsumer_store_assoc";
     statement->code  = "INSERT INTO associations "
-                       "(server, handle, secret, expires_on, encryption_type) "
+                       "(server, handle, secret, expires_on, assoc_type) "
                        "VALUES (%s, %s, %s, %lld, %s)";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "MoidConsumer_retrieve_assoc";
-    statement->code  = "SELECT server, handle, secret, expires_on, encryption_type "
+    statement->code  = "SELECT server, handle, secret, expires_on, assoc_type "
                        "FROM associations WHERE server = %s AND handle = %s LIMIT 1";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
@@ -392,7 +397,7 @@ namespace modauthopenid {
 
     statement = (labeled_statement_t *)apr_array_push(statements);
     statement->label = "MoidConsumer_find_assoc";
-    statement->code  = "SELECT server, handle, secret, expires_on, encryption_type "
+    statement->code  = "SELECT server, handle, secret, expires_on, assoc_type "
                        "FROM associations WHERE server = %s LIMIT 1";
 
     statement = (labeled_statement_t *)apr_array_push(statements);
