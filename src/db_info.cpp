@@ -146,8 +146,9 @@ void exit_on_err(apr_status_t rc, const char * tag)
 bool test_sessionmanager(const ap_dbd_t* dbd)
 {
   bool success;
-  printf("Initial state: no sessions\n");
   SessionManager s(dbd);
+
+  printf("Initial state: no sessions\n");
   s.delete_expired(LONG_MAX);
   s.print_tables();
 
@@ -187,21 +188,27 @@ bool test_sessionmanager(const ap_dbd_t* dbd)
   // verify that stored session and loaded session are identical
   if (stored_session.session_id != loaded_session.session_id) {
     printf("Field not equal between stored and loaded session: session_id\n");
+    compare_failed = true;
   }
   if (stored_session.hostname   != loaded_session.hostname) {
     printf("Field not equal between stored and loaded session: hostname\n");
+    compare_failed = true;
   }
   if (stored_session.path       != loaded_session.path) {
     printf("Field not equal between stored and loaded session: path\n");
+    compare_failed = true;
   }
   if (stored_session.identity   != loaded_session.identity) {
     printf("Field not equal between stored and loaded session: identity\n");
+    compare_failed = true;
   }
   if (stored_session.username   != loaded_session.username) {
     printf("Field not equal between stored and loaded session: username\n");
+    compare_failed = true;
   }
   if (stored_session.expires_on != loaded_session.expires_on) {
     printf("Field not equal between stored and loaded session: expires_on\n");
+    compare_failed = true;
   }
   if (compare_failed) {
     printf("Stored and loaded sessions are not equal\n");
@@ -219,13 +226,101 @@ bool test_sessionmanager(const ap_dbd_t* dbd)
   return true;
 }
 
+void print_assoc(opkele::assoc_t assoc)
+{
+  string secret_base64;
+  assoc->secret().to_base64(secret_base64);
+
+  printf("server = %s\n"
+         "handle = %s\n"
+         "assoc_type = %s\n"
+         "secret (base64) = %s\n"
+         "expires_in = %d\n"
+         "stateless = %d\n",
+         assoc->server().c_str(),
+         assoc->handle().c_str(),
+         assoc->assoc_type().c_str(),
+         secret_base64.c_str(),
+         assoc->expires_in(),
+         assoc->stateless());
+}
+
+bool test_moidconsumer_assoc(const ap_dbd_t* dbd)
+{
+  MoidConsumer c(dbd, "foo", "bar");
+
+  printf("Initial state: no associations\n");
+  c.delete_expired(LONG_MAX);
+  c.print_tables();
+
+  time_t now = 1386810000; // no religious or practical significance
+  int lifespan = 50;
+
+  // store a fake association
+
+  string stored_server("https://example.org/accounts");
+  string stored_handle("a.handle");
+  string stored_assoc_type("HMAC-SHA256");
+  opkele::secret_t stored_secret;
+  stored_secret.from_base64("QUFBQUFBQUE=");
+  int stored_expires_in = lifespan;
+
+  // TODO: opkele::prequeue_RP interface doesn't have a way to check if storage succeeded
+  printf("Storing a fake association\n");
+  opkele::assoc_t stored_assoc = c.store_assoc(
+    stored_server,
+    stored_handle,
+    stored_assoc_type,
+    stored_secret,
+    stored_expires_in,
+    now);
+  print_assoc(stored_assoc);
+
+  // load the fake association and compare to the stored version
+  printf("Loading the fake association by server + handle\n");
+  opkele::assoc_t loaded_assoc = c.retrieve_assoc(stored_server, stored_handle, now);
+  print_assoc(loaded_assoc);
+
+  bool compare_failed = false;
+  // verify that stored session and loaded association are identical
+  if (stored_assoc->server()          != loaded_assoc->server()) {
+    printf("Field not equal between stored and loaded association: server\n");
+    compare_failed = true;
+  }
+  if (stored_assoc->handle()          != loaded_assoc->handle()) {
+    printf("Field not equal between stored and loaded association: handle\n");
+    compare_failed = true;
+  }
+  if (stored_assoc->assoc_type()      != loaded_assoc->assoc_type()) {
+    printf("Field not equal between stored and loaded association: assoc_type\n");
+    compare_failed = true;
+  }
+  if (stored_assoc->secret()          != loaded_assoc->secret()) {
+    printf("Field not equal between stored and loaded association: secret\n");
+    compare_failed = true;
+  }
+  if (stored_assoc->expires_in()      != loaded_assoc->expires_in()) {
+    printf("Field not equal between stored and loaded association: expires_in\n");
+    compare_failed = true;
+  }
+  if (compare_failed) {
+    printf("Stored and loaded associations are not equal\n");
+    return false;
+  }
+  printf("Stored and loaded associations are equal\n");
+
+  return true;
+}
+
+/**
+ * TODO: split tests off into a separate executable.
+ */
 void run_tests(ap_dbd_t* dbd)
 {
-  //print_databases(dbd);
-
   bool all_pass = true;
   bool pass;
 
+  // Do not disable this. It prepares statements used by other tests.
   printf("test_prepare_statements: starting...\n\n");
   pass = test_prepare_statements(dbd);
   all_pass &= pass;
@@ -235,6 +330,11 @@ void run_tests(ap_dbd_t* dbd)
   pass = test_sessionmanager(dbd);
   all_pass &= pass;
   printf("\ntest_sessionmanager: %s.\n\n", pass ? "passed" : "FAILED");
+
+  printf("test_moidconsumer_assoc: starting...\n\n");
+  pass = test_moidconsumer_assoc(dbd);
+  all_pass &= pass;
+  printf("\ntest_moidconsumer_assoc: %s.\n\n", pass ? "passed" : "FAILED");
 }
 
 int main(int argc, const char * const * argv)
