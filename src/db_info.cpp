@@ -262,7 +262,7 @@ bool test_moidconsumer_assoc(const ap_dbd_t* dbd)
   string stored_handle("a.handle");
   string stored_assoc_type("HMAC-SHA256");
   opkele::secret_t stored_secret;
-  stored_secret.from_base64("QUFBQUFBQUE=");
+  stored_secret.from_base64("QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB"); // 'A' repeated 30 times
   int stored_expires_in = lifespan;
 
   // TODO: opkele::prequeue_RP interface doesn't have a way to check if storage succeeded
