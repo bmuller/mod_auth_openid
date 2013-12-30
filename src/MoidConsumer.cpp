@@ -38,19 +38,19 @@ namespace modauthopenid {
   {
     const char* ddl_authentication_sessions = 
       "CREATE TABLE IF NOT EXISTS authentication_sessions "
-      "(nonce VARCHAR(255), uri VARCHAR(255), claimed_id VARCHAR(255), local_id VARCHAR(255), "
-      "normalized_id VARCHAR(255), expires_on BIGINT)";
+      "(nonce "BIG_VARCHAR", uri "BIG_VARCHAR", claimed_id "BIG_VARCHAR", local_id "BIG_VARCHAR", "
+      "normalized_id "BIG_VARCHAR", expires_on BIGINT)";
     dbd.query(ddl_authentication_sessions);
 
     const char* ddl_assocations = 
       "CREATE TABLE IF NOT EXISTS associations "
-      "(server VARCHAR(255), handle VARCHAR(255), assoc_type VARCHAR(255), "
-      "secret VARCHAR(255), expires_on BIGINT)";
+      "(server "BIG_VARCHAR", handle "BIG_VARCHAR", assoc_type "BIG_VARCHAR", "
+      "secret "BIG_VARCHAR", expires_on BIGINT)";
     dbd.query(ddl_assocations);
 
     const char* ddl_response_nonces = 
       "CREATE TABLE IF NOT EXISTS response_nonces "
-      "(server VARCHAR(255), response_nonce VARCHAR(255), expires_on BIGINT)";
+      "(server "BIG_VARCHAR", response_nonce "BIG_VARCHAR", expires_on BIGINT)";
     dbd.query(ddl_response_nonces);
   }
 

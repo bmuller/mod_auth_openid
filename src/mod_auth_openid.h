@@ -92,6 +92,11 @@ Created by bmuller <bmuller@butterfat.net>
 #define DBD_NO_MORE_ROWS     -1
 
 /**
+ * A VARCHAR big enough for most URLs.
+ */
+#define BIG_VARCHAR "VARCHAR(4000)"
+
+/**
  * Debug logging with location info.
  * __FUNCTION__ is nonstandard but supported by GCC and MSVC.
  * @see http://gcc.gnu.org/onlinedocs/gcc/Function-Names.html

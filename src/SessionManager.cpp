@@ -34,8 +34,8 @@ namespace modauthopenid {
   {
     const char* ddl_sessionmanager =
       "CREATE TABLE IF NOT EXISTS sessionmanager "
-      "(session_id VARCHAR(255), hostname VARCHAR(255), path VARCHAR(255), "
-      "identity VARCHAR(255), username VARCHAR(255), expires_on BIGINT)";
+      "(session_id "BIG_VARCHAR", hostname "BIG_VARCHAR", path "BIG_VARCHAR", "
+      "identity "BIG_VARCHAR", username "BIG_VARCHAR", expires_on BIGINT)";
     dbd.query(ddl_sessionmanager);
   }
 
