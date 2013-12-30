@@ -620,6 +620,7 @@ static int mod_authopenid_method_handler(request_rec *r) {
     return DECLINED;
   }
   const ap_dbd_t *dbd = moid_ap_dbd_acquire(r);
+  modauthopenid::Dbd(dbd).enable_strict_mode();
 
   // if user has a valid session, they are authorized (OK)
   if(has_valid_session(r, s_cfg, dbd))

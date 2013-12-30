@@ -66,6 +66,13 @@ namespace modauthopenid {
      */
     void print_table(const char* tablename) const;
 
+    /**
+     * Enable strict mode on the underlying connection for DBs that have it.
+     * If not enabled, MySQL will silently truncate strings that are too long.
+     * @return true iff successful, or if the DB is known not to have a strict mode.
+     */
+    bool enable_strict_mode() const;
+
   private:
     /**
      * Actual DBD connection.

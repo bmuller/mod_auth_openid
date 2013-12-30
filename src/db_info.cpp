@@ -278,7 +278,13 @@ bool test_moidconsumer_assoc(const ap_dbd_t* dbd)
 
   // load the fake association and compare to the stored version
   printf("Loading the fake association by server + handle\n");
-  opkele::assoc_t loaded_assoc = c.retrieve_assoc(stored_server, stored_handle, now);
+  opkele::assoc_t loaded_assoc;
+  try {
+    loaded_assoc = c.retrieve_assoc(stored_server, stored_handle, now);
+  } catch (opkele::failed_lookup& e) {
+    printf("Exception when loading fake association: %s\n", e.what());
+    return false;
+  }
   print_assoc(loaded_assoc);
 
   bool compare_failed = false;
@@ -382,6 +388,7 @@ int main(int argc, const char * const * argv)
     printf("apr_dbd_open_ex error: %s\n", connect_err);
   }
   exit_on_err(rc, "apr_dbd_open_ex");
+  Dbd(&dbd).enable_strict_mode();
 
   drop_tables(&dbd);
   create_tables(&dbd);

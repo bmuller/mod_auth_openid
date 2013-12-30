@@ -138,4 +138,23 @@ namespace modauthopenid {
   {
     return (apr_dbd_prepared_t *)apr_hash_get(dbd->prepared, label, APR_HASH_KEY_STRING);
   }
+
+  bool Dbd::enable_strict_mode() const
+  {
+    string driver_name(apr_dbd_name(dbd->driver));
+    if (driver_name == "mysql") {
+      // set a session-level system variable that enables type constraints in INSERT and UPDATE
+      // see: http://dev.mysql.com/doc/refman/5.0/en/server-sql-mode.html#sqlmode_strict_all_tables
+      return query("SET sql_mode='STRICT_ALL_TABLES'");
+    } else if (driver_name == "oracle"
+            || driver_name == "pgsql"
+            || driver_name == "sqlite2"
+            || driver_name == "sqlite3") {
+      // these DBs are known not to have or need strict mode
+      return true;
+    } else {
+      MOID_DEBUG("Don't know how to enable strict mode for " + driver_name + " DBD driver");
+      return false;
+    }
+  }
 }
