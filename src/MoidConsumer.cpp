@@ -212,9 +212,9 @@ namespace modauthopenid {
       nonce.c_str(),
     };
     success = dbd.pbselect1("MoidConsumer_check_nonce_find", &results, &row, find_args);
-    dbd.close(results, &row);
     if (success) {
       // result set contains at least one row
+      dbd.close(results, &row);
       MOID_DEBUG("found preexisting nonce - could be a replay attack");
       throw opkele::id_res_bad_nonce(OPKELE_CP_ "old nonce used again - possible replay attack");
     }
@@ -241,11 +241,12 @@ namespace modauthopenid {
       asnonceid.c_str(),
     };
     success = dbd.pbselect1("MoidConsumer_session_exists", &results, &row, args);
-    dbd.close(results, &row);
     if (!success) {
       MOID_DEBUG("could not find authentication session \"" + asnonceid + "\" in db.");
+      return false;
     }
-    return success;
+    dbd.close(results, &row);
+    return true;
   };
 
   void MoidConsumer::begin_queueing()
@@ -292,7 +293,8 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("MoidConsumer_get_endpoint", &results, &row, args);
     if (!success) {
-      MOID_DEBUG("could not find an endpoint for authentication session \"" + asnonceid + "\" in db.");
+      MOID_DEBUG("could not find an endpoint for authentication session \""
+                 + asnonceid + "\" in db.");
       throw opkele::exception(OPKELE_CP_ "No more endpoints queued");
     }
 
@@ -308,7 +310,7 @@ namespace modauthopenid {
   void MoidConsumer::next_endpoint()
   {
     MOID_DEBUG("Clearing all session information - we're only storing one endpoint, "
-          "can't get next one, cause we didn't store it.");
+               "can't get next one, cause we didn't store it.");
     endpoint_set = false;
     kill_session();
   }
@@ -354,7 +356,8 @@ namespace modauthopenid {
     };
     bool success = dbd.pbselect1("MoidConsumer_get_normalized_id", &results, &row, args);
     if (!success) {
-      MOID_DEBUG("could not find a normalized_id for authentication session \"" + asnonceid + "\" in db.");
+      MOID_DEBUG("could not find a normalized_id for authentication session \""
+                 + asnonceid + "\" in db.");
       throw opkele::exception(OPKELE_CP_ "cannot get normalized id");
     }
 

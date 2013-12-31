@@ -57,6 +57,8 @@ namespace modauthopenid {
     /**
      * Consume the unused part of a result set so that DBD can close it.
      * @param row Row storage must be allocated already.
+     * @warning Don't call this on a result set that's already at its end.
+     *          This results in a double free crash.
      */
     void close(apr_dbd_results_t* results, apr_dbd_row_t** row) const;
 
