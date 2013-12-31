@@ -13,7 +13,7 @@ db_info_SOURCES = db_info.cpp
 db_info_LDFLAGS = -lmodauthopenid
 db_info_DEPENDENCIES = libmodauthopenid.la
 
-test_runner_SOURCES = test_runner.cpp
+test_runner_SOURCES = test_runner.cpp TestPreparedStatements.cpp
 test_runner_LDFLAGS = -lmodauthopenid -lcppunit
 test_runner_DEPENDENCIES = libmodauthopenid.la
 

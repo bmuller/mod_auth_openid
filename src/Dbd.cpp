@@ -5,7 +5,7 @@ namespace modauthopenid {
 
   Dbd::Dbd(const ap_dbd_t* _dbd) : dbd(_dbd)
   {
-    
+    // do nothing
   }
 
   bool Dbd::query(const char* sql) const

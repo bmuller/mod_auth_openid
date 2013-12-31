@@ -82,7 +82,7 @@ void drop_tables(const ap_dbd_t* _dbd)
 void create_tables(const ap_dbd_t* dbd)
 {
   SessionManager s(dbd);
-  MoidConsumer c(dbd, "blah", "balh");
+  MoidConsumer c(dbd, "blah", "blah");
 }
 
 /**

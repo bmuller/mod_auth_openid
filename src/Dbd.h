@@ -75,6 +75,11 @@ namespace modauthopenid {
      */
     bool enable_strict_mode() const;
 
+    /**
+     * Fetch a previously prepared statement by label.
+     */
+    apr_dbd_prepared_t* get_prepared(const char* label) const;
+
   private:
     /**
      * Actual DBD connection.
@@ -93,10 +98,5 @@ namespace modauthopenid {
      * @return true iff rc is a success code.
      */
     bool test_apr(apr_status_t rc, string& tag) const;
-
-    /**
-     * Fetch a previously prepared statement by label.
-     */
-    apr_dbd_prepared_t* get_prepared(const char* label) const;
   };
 }
