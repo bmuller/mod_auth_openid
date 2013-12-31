@@ -1,5 +1,5 @@
 noinst_LTLIBRARIES = libmodauthopenid.la
-noinst_PROGRAMS = db_info
+noinst_PROGRAMS = db_info test_runner
 noinst_DATA = mod_auth_openid.la
 
 INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${PCRE_CFLAGS} ${CURL_CFLAGS}
@@ -12,6 +12,10 @@ libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cp
 db_info_SOURCES = db_info.cpp
 db_info_LDFLAGS = -lmodauthopenid
 db_info_DEPENDENCIES = libmodauthopenid.la
+
+test_runner_SOURCES = test_runner.cpp
+test_runner_LDFLAGS = -lmodauthopenid -lcppunit
+test_runner_DEPENDENCIES = libmodauthopenid.la
 
 AM_CXXFLAGS = -Wall
 

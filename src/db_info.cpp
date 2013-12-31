@@ -388,6 +388,8 @@ int main(int argc, const char * const * argv)
     printf("apr_dbd_open_ex error: %s\n", connect_err);
   }
   exit_on_err(rc, "apr_dbd_open_ex");
+
+  // enable strict mode for the connection
   Dbd(&dbd).enable_strict_mode();
 
   drop_tables(&dbd);

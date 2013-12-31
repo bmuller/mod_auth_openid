@@ -39,3 +39,4 @@ install-sh
 doc/*
 coverage/*
 coverage.info
+test_runner
