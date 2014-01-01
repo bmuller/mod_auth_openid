@@ -35,10 +35,23 @@ namespace modauthopenid {
   class SessionManager {
   public:
     /**
-     * Constructor also creates any missing tables.
-     * @param _dbd A DBD connection usually provided by mod_dbd.
+     * @param _dbd A DBD connection wrapper.
      */
-    SessionManager(const ap_dbd_t* _dbd);
+    SessionManager(Dbd& _dbd);
+
+    /**
+     * Create all tables used by this class.
+     * @attention Will only try to create tables that don't already exist,
+                  and thus cannot update schemas if they change.
+     * @return True iff successful.
+     */
+    bool create_tables();
+
+    /**
+     * Drop any tables used by this class.
+     * @return True iff successful.
+     */
+    bool drop_tables();
 
     /**
      * Get session with id session_id and set values in session.
@@ -85,6 +98,6 @@ namespace modauthopenid {
     /**
      * Database connection wrapper.
      */
-    Dbd dbd;
+    Dbd& dbd;
   };
 }

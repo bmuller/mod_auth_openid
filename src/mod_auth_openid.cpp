@@ -114,8 +114,21 @@ static APR_OPTIONAL_FN_TYPE(ap_dbd_prepare) *moid_ap_dbd_prepare = NULL;
 static APR_OPTIONAL_FN_TYPE(ap_dbd_acquire) *moid_ap_dbd_acquire = NULL;
 
 /**
+ * Get a manually managed connection from the DBD pool.
+ * Provided by mod_dbd.
+ */
+static APR_OPTIONAL_FN_TYPE(ap_dbd_open)    *moid_ap_dbd_open = NULL;
+
+/**
+ * Close a manually managed DBD connection.
+ * Provided by mod_dbd.
+ */
+static APR_OPTIONAL_FN_TYPE(ap_dbd_close)   *moid_ap_dbd_close = NULL;
+
+/**
  * Post-config hook:
  *     * Load optional functions
+ *     * Create missing tables
  *     * Prepare SQL statements
  */
 static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
@@ -131,21 +144,64 @@ static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
   if (moid_ap_dbd_acquire == NULL) {
     moid_ap_dbd_acquire = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_acquire);
   }
+  if (moid_ap_dbd_open == NULL) {
+    moid_ap_dbd_open    = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_open);
+  }
+  if (moid_ap_dbd_close == NULL) {
+    moid_ap_dbd_close   = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_close);
+  }
+
+  // check optional functions we need right now
+  if (moid_ap_dbd_prepare == NULL) {
+    ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+      "Post-config tasks cannot be completed. "
+      "Couldn't get optional function ap_dbd_prepare(). "
+      "Make sure mod_dbd is loaded.");
+    return HTTP_INTERNAL_SERVER_ERROR;
+  }
+  if (moid_ap_dbd_open == NULL) {
+    ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+      "Post-config tasks cannot be completed. "
+      "Couldn't get optional function ap_dbd_open(). "
+      "Make sure mod_dbd is loaded.");
+    return HTTP_INTERNAL_SERVER_ERROR;
+  }
+  if (moid_ap_dbd_close == NULL) {
+    ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
+      "Post-config tasks cannot be completed. "
+      "Couldn't get optional function ap_dbd_close(). "
+      "Make sure mod_dbd is loaded.");
+    return HTTP_INTERNAL_SERVER_ERROR;
+  }
 
   // collect all SQL statements used by our classes
   int num_statements = 18; // array size hint
-  apr_array_header_t* statements = apr_array_make(pconf, num_statements, sizeof(modauthopenid::labeled_statement_t));
+  apr_array_header_t* statements = apr_array_make(
+    pconf, num_statements, sizeof(modauthopenid::labeled_statement_t));
   modauthopenid::MoidConsumer  ::append_statements(statements);
   modauthopenid::SessionManager::append_statements(statements);
 
-  // for each server config:
-  for (server_rec* sp = s; sp; sp = sp->next) {
+  // for each server config (the level at which mod_dbd is configured):
+  for (server_rec* current_server = s; current_server;
+       current_server = current_server->next) {
+
+    // create missing tables
+    ap_dbd_t* c_dbd = ap_dbd_open(ptemp, current_server);
+    modauthopenid::Dbd dbd(c_dbd);
+    modauthopenid::SessionManager sm(dbd);
+    sm.create_tables();
+    modauthopenid::MoidConsumer c(dbd, /* other params not needed */ "", "");
+    c.create_tables();
+    ap_dbd_close(current_server, c_dbd);
+
+    // prepare statements
     for (int i = 0; i < statements->nelts; i++) {
-      modauthopenid::labeled_statement_t* statement = &APR_ARRAY_IDX(statements, i, modauthopenid::labeled_statement_t);
-      // prepare the statement
-      moid_ap_dbd_prepare(sp, statement->code, statement->label);
+      modauthopenid::labeled_statement_t* statement = &APR_ARRAY_IDX(
+        statements, i, modauthopenid::labeled_statement_t);
+      moid_ap_dbd_prepare(current_server, statement->code, statement->label);
     }
   }
+
   return OK;
 }
 
@@ -372,7 +428,7 @@ static bool is_distrusted_provider(modauthopenid_config *s_cfg, std::string url,
   return false;
 };
 
-static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd) {
+static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::Dbd& dbd) {
   // test for valid session
   std::string session_id = "";
   modauthopenid::get_session_id(r, std::string(s_cfg->cookie_name), session_id);
@@ -403,7 +459,7 @@ static bool has_valid_session(request_rec *r, modauthopenid_config *s_cfg, const
   return false;
 };
 
-static int start_authentication_session(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd,
+static int start_authentication_session(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::Dbd& dbd,
                                         opkele::params_t& params, std::string& return_to, std::string& trust_root) {
   // remove all openid GET query params (openid.*) - we don't want that maintained through
   // the redirection process.  We do, however, want to keep all other GET params.
@@ -466,7 +522,7 @@ static int start_authentication_session(request_rec *r, modauthopenid_config *s_
   return modauthopenid::http_redirect(r, re_direct);
 };
 
-static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd, opkele::params_t& params, std::string identity, std::string username) {
+static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::Dbd& dbd, opkele::params_t& params, std::string identity, std::string username) {
   // now set auth cookie, if we're doing session based auth
   std::string session_id, hostname, path, cookie_value, redirect_location, args;
   if(s_cfg->cookie_path != NULL) 
@@ -496,7 +552,7 @@ static int set_session_cookie(request_rec *r, modauthopenid_config *s_cfg, const
   return modauthopenid::http_redirect(r, redirect_location);
 };
 
-static int validate_authentication_session(request_rec *r, modauthopenid_config *s_cfg, const ap_dbd_t *dbd, opkele::params_t& params, std::string& return_to) {
+static int validate_authentication_session(request_rec *r, modauthopenid_config *s_cfg, modauthopenid::Dbd& dbd, opkele::params_t& params, std::string& return_to) {
   // make sure nonce is present
   if(!params.has_param("modauthopenid.nonce")) 
     return show_input(r, s_cfg, modauthopenid::invalid_nonce);
@@ -616,11 +672,11 @@ static int mod_authopenid_method_handler(request_rec *r) {
 
   // get a DBD connection
   if (moid_ap_dbd_acquire == NULL) {
-    APERR(r, "Couldn't get optional function ap_dbd_acquire(). Make sure mod_dbd is loaded.%s", "");
-    return DECLINED;
+    APERR(r, "Couldn't get optional function ap_dbd_acquire(). "
+             "Make sure mod_dbd is loaded.%s", "");
+    return HTTP_INTERNAL_SERVER_ERROR;
   }
-  const ap_dbd_t *dbd = moid_ap_dbd_acquire(r);
-  modauthopenid::Dbd(dbd).enable_strict_mode();
+  modauthopenid::Dbd dbd(moid_ap_dbd_acquire(r));
 
   // if user has a valid session, they are authorized (OK)
   if(has_valid_session(r, s_cfg, dbd))

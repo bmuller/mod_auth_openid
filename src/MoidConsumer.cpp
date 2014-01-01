@@ -31,27 +31,44 @@ namespace modauthopenid {
   using namespace std;
   using namespace opkele;
  
-  MoidConsumer::MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid,
+  MoidConsumer::MoidConsumer(Dbd& _dbd, const string& _asnonceid,
                              const string& _serverurl) :
                              dbd(_dbd), asnonceid(_asnonceid), serverurl(_serverurl),
-                             endpoint_set(false), normalized_id("")
+                             endpoint_set(false), normalized_id("") {}
+
+  bool MoidConsumer::create_tables()
   {
+    bool success = true;
+
     const char* ddl_authentication_sessions = 
       "CREATE TABLE IF NOT EXISTS authentication_sessions "
       "(nonce "BIG_VARCHAR", uri "BIG_VARCHAR", claimed_id "BIG_VARCHAR", local_id "BIG_VARCHAR", "
       "normalized_id "BIG_VARCHAR", expires_on BIGINT)";
-    dbd.query(ddl_authentication_sessions);
+    success &= dbd.query(ddl_authentication_sessions);
 
     const char* ddl_assocations = 
       "CREATE TABLE IF NOT EXISTS associations "
       "(server "BIG_VARCHAR", handle "BIG_VARCHAR", assoc_type "BIG_VARCHAR", "
       "secret "BIG_VARCHAR", expires_on BIGINT)";
-    dbd.query(ddl_assocations);
+    success &= dbd.query(ddl_assocations);
 
     const char* ddl_response_nonces = 
       "CREATE TABLE IF NOT EXISTS response_nonces "
       "(server "BIG_VARCHAR", response_nonce "BIG_VARCHAR", expires_on BIGINT)";
-    dbd.query(ddl_response_nonces);
+    success &= dbd.query(ddl_response_nonces);
+
+    return success;
+  }
+
+  bool MoidConsumer::drop_tables()
+  {
+    bool success = true;
+
+    success &= dbd.query("DROP TABLE IF EXISTS authentication_sessions");
+    success &= dbd.query("DROP TABLE IF EXISTS associations");
+    success &= dbd.query("DROP TABLE IF EXISTS response_nonces");
+
+    return success;
   }
 
   assoc_t MoidConsumer::store_assoc(const string& server, const string& handle,

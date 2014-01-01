@@ -37,12 +37,25 @@ namespace modauthopenid {
   class MoidConsumer : public prequeue_RP {
   public:
     /**
-     * Constructor also creates any missing tables.
-     * @param _dbd A DBD connection usually provided by mod_dbd.
+     * @param _dbd A DBD connection wrapper.
      * @param _asnonceid The association session nonce.
      * @param _serverurl The return-to value (URL initially requested by user).
      */
-    MoidConsumer(const ap_dbd_t* _dbd, const string& _asnonceid, const string& _serverurl);
+    MoidConsumer(Dbd& _dbd, const string& _asnonceid, const string& _serverurl);
+
+    /**
+     * Create all tables used by this class.
+     * @attention Will only try to create tables that don't already exist,
+                  and thus cannot update schemas if they change.
+     * @return True iff successful.
+     */
+    bool create_tables();
+
+    /**
+     * Drop any tables used by this class.
+     * @return True iff successful.
+     */
+    bool drop_tables();
 
     /**
      * Store a new assocation.
@@ -104,22 +117,36 @@ namespace modauthopenid {
      */
     void next_endpoint();
 
-    // set the normalized id for this authentication session
+    /**
+     * Set the normalized id for this authentication session.
+     */
     void set_normalized_id(const string& nid);
 
-    // get id set in set_normalized_id
+    /**
+     * Get the normalized id for this authentication session.
+     */
     const string get_normalized_id() const;
 
-    // get the url that was given as a constructor parameter
+    /**
+     * Get the url that was given as a constructor parameter.
+     */
     const string get_this_url() const;
     
-    // check to see if a session exists with the nonce session id given in the constructor
+    /**
+     * @return Whether a session exists with the nonce session id
+     *         given in the constructor.
+     */
     bool session_exists();
 
-    // print all tables to stdout
+    /**
+     * Print all tables used by this class to stdout.
+     * This will only be called from command-line utilities, not the Apache module itself.
+     */
     void print_tables();
 
-    // delete session with given session nonce id in constructor param list
+    /**
+     * Delete session with  nonce id given in constructor param list.
+     */
     void kill_session();
 
     /**
@@ -137,7 +164,7 @@ namespace modauthopenid {
     /**
      * Database connection wrapper.
      */
-    Dbd dbd;
+    Dbd& dbd;
 
     /**
      * The nonce-based authentication session.

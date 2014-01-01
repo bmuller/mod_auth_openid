@@ -9,13 +9,8 @@ protected:
 public:
   void setUp()
   {
-    pool = g_dbd->pool;
-    dbd = new Dbd(g_dbd);
-  }
-
-  void tearDown()
-  {
-    delete dbd;
+    pool = g_pool;
+    dbd = g_dbd;
   }
 
   /**

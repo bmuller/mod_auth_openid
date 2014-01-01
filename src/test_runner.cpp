@@ -11,9 +11,14 @@
 #include "test.h"
 
 /**
+ * APR memory pool shared across all tests.
+ */
+apr_pool_t* g_pool;
+
+/**
  * DBD connection shared across all tests.
  */
-const ap_dbd_t* g_dbd;
+Dbd* g_dbd;
 
 /**
  * Print an error message and quit if an APR call fails.
@@ -29,36 +34,14 @@ void exit_on_apr_err(apr_status_t rc, const char* tag)
 }
 
 /**
- * Drop existing SQL tables belonging to this module.
- */
-void drop_tables(const ap_dbd_t* dbd)
-{
-  Dbd fancy_dbd(dbd);
-  fancy_dbd.query("DROP TABLE IF EXISTS sessionmanager");
-  fancy_dbd.query("DROP TABLE IF EXISTS authentication_sessions");
-  fancy_dbd.query("DROP TABLE IF EXISTS associations");
-  fancy_dbd.query("DROP TABLE IF EXISTS response_nonces");
-}
-
-/**
- * Create SQL tables used by this module.
- */
-void create_tables(const ap_dbd_t* dbd)
-{
-  // constructors create tables as side effect
-  SessionManager s(dbd);
-  MoidConsumer   c(dbd, "blah", "blah");
-}
-
-/**
  * Try to prepare the SQL statements used by this module.
- * @attention Adds successfully prepared statements to dbd->prepared hashtable.
+ * @attention Adds successfully prepared statements to c_dbd->prepared hashtable.
  */
-void prepare_statements(const ap_dbd_t* dbd)
+void prepare_statements(const ap_dbd_t* c_dbd)
 {
   // collect statements
   apr_array_header_t * statements = apr_array_make(
-    dbd->pool,
+    c_dbd->pool,
     18 /* size hint: expected number of statements */,
     sizeof(labeled_statement_t));
   MoidConsumer  ::append_statements(statements);
@@ -68,19 +51,19 @@ void prepare_statements(const ap_dbd_t* dbd)
   for (int i = 0; i < statements->nelts; i++) {
     apr_dbd_prepared_t *prepared_statement = NULL;
     labeled_statement_t *statement = &APR_ARRAY_IDX(statements, i, labeled_statement_t);
-    int rc = apr_dbd_prepare(dbd->driver, dbd->pool, dbd->handle,
+    int rc = apr_dbd_prepare(c_dbd->driver, c_dbd->pool, c_dbd->handle,
                              statement->code, statement->label,
                              &prepared_statement);
     if (rc != DBD_SUCCESS) continue;
-    apr_hash_set(dbd->prepared, statement->label, APR_HASH_KEY_STRING, prepared_statement);
+    apr_hash_set(c_dbd->prepared, statement->label, APR_HASH_KEY_STRING, prepared_statement);
   }
 }
 
 /**
- * Initialize APR.
+ * Initialize APR and create a memory pool.
  * @attention Side effects modify argc/argv.
  */
-void init_apr(int* argc, const char* const** argv)
+apr_pool_t* init_apr(int* argc, const char* const** argv)
 {
   apr_status_t rc; // return code for APR functions
 
@@ -90,19 +73,21 @@ void init_apr(int* argc, const char* const** argv)
 
   // register APR final cleanup function
   atexit(apr_terminate);
-}
-
-/**
- * Create a DBD connection and associated memory pool.
- */
-ap_dbd_t* init_dbd(const char* dbd_drivername, const char* dbd_params)
-{
-  apr_status_t rc; // return code for APR functions
 
   // create a memory pool (will be cleaned up by apr_terminate)
   apr_pool_t* pool;
   rc = apr_pool_create(&pool, NULL);
   exit_on_apr_err(rc, "apr_pool_create");
+
+  return pool;
+}
+
+/**
+ * Create a DBD connection from a pool and DB connection params.
+ */
+ap_dbd_t* init_dbd(apr_pool_t* pool, const char* dbd_drivername, const char* dbd_params)
+{
+  apr_status_t rc; // return code for APR functions
 
   // convenience struct containing memory pool, DB driver,
   // DB connection, prepared statements
@@ -129,9 +114,6 @@ ap_dbd_t* init_dbd(const char* dbd_drivername, const char* dbd_params)
   }
   exit_on_apr_err(rc, "apr_dbd_open_ex");
 
-  // enable strict mode for the connection
-  Dbd(dbd).enable_strict_mode();
-
   return dbd;
 }
 
@@ -149,7 +131,7 @@ void cleanup_dbd(const ap_dbd_t* dbd)
 
 int main(int argc, const char* const* argv)
 {
-  init_apr(&argc, &argv);
+  apr_pool_t* pool = init_apr(&argc, &argv);
 
   // print usage message and quit if invoked incorrectly
   if (argc != 3) {
@@ -160,17 +142,26 @@ int main(int argc, const char* const* argv)
   const char *dbd_drivername = argv[1];
   const char *dbd_params     = argv[2];
 
-  ap_dbd_t* dbd = init_dbd(dbd_drivername, dbd_params);
+  // APR DBD connection
+  ap_dbd_t* c_dbd = init_dbd(pool, dbd_drivername, dbd_params);
+  // C++ connection wrapper
+  Dbd dbd(c_dbd);
 
-  // set up DB tables
-  drop_tables(dbd);
-  create_tables(dbd);
+  // set up DB tables for our classes
+  SessionManager s(dbd);
+  s.drop_tables();
+  s.create_tables();
+  MoidConsumer c(dbd, /* other params not needed */ "", "");
+  c.drop_tables();
+  c.create_tables();
 
   // prepare statements for the connection
-  prepare_statements(dbd);
+  prepare_statements(c_dbd);
 
-  // put DBD connection somewhere tests can find it
-  g_dbd = dbd;
+  // put memory pool and DBD connection where tests can find them,
+  // since we don't control how test classes are constructed
+  g_pool = pool;
+  g_dbd = &dbd;
 
   // run tests
   TextUi::TestRunner runner;
@@ -178,7 +169,7 @@ int main(int argc, const char* const* argv)
   runner.addTest(registry.makeTest());
   bool tests_passed = runner.run();
 
-  cleanup_dbd(dbd);
+  cleanup_dbd(c_dbd);
 
   return tests_passed ? EXIT_SUCCESS : EXIT_FAILURE;
 }

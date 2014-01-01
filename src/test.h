@@ -7,6 +7,11 @@ using namespace modauthopenid;
 using namespace CppUnit;
 
 /**
+ * APR memory pool shared across all tests.
+ */
+extern apr_pool_t* g_pool;
+
+/**
  * DBD connection shared across all tests.
  */
-extern const ap_dbd_t* g_dbd;
+extern Dbd* g_dbd;

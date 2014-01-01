@@ -41,10 +41,12 @@ using namespace modauthopenid;
 /**
  * Print the contents of our session and OpenID consumer tables.
  */
-void print_tables(const ap_dbd_t* dbd)
+void print_tables(const ap_dbd_t* c_dbd)
 {
   apr_int64_t now = time(NULL);
   printf("Current time: %ld\n\n", now);
+  
+  Dbd dbd(c_dbd);
 
   SessionManager s(dbd);
   s.print_tables();
@@ -64,66 +66,6 @@ void print_dbd_err(const ap_dbd_t* dbd, int rc, const char * tag)
   }
 }
 
-/**
- * TODO: move this to storage classes
- */
-void drop_tables(const ap_dbd_t* _dbd)
-{
-  Dbd dbd(_dbd);
-  dbd.query("DROP TABLE IF EXISTS sessionmanager");
-  dbd.query("DROP TABLE IF EXISTS authentication_sessions");
-  dbd.query("DROP TABLE IF EXISTS associations");
-  dbd.query("DROP TABLE IF EXISTS response_nonces");
-}
-
-/**
- * TODO: make this an external utility's problem
- */
-void create_tables(const ap_dbd_t* dbd)
-{
-  SessionManager s(dbd);
-  MoidConsumer c(dbd, "blah", "blah");
-}
-
-/**
- * Try to prepare the SQL statements we use.
- * @attention: Run this before other tests. Adds successfully prepared statements to dbd->prepared hashtable.
- */
-bool test_prepare_statements(const ap_dbd_t* dbd)
-{
-  int num_statements = 18;
-  int num_successes = 0;
-
-  apr_array_header_t *statements = apr_array_make(dbd->pool, num_statements /* initial size */, sizeof(labeled_statement_t));
-  MoidConsumer  ::append_statements(statements);
-  SessionManager::append_statements(statements);
-
-  for (int i = 0; i < statements->nelts; i++) {
-    apr_dbd_prepared_t *prepared_statement = NULL;
-    labeled_statement_t *statement = &APR_ARRAY_IDX(statements, i, labeled_statement_t);
-    int rc = apr_dbd_prepare(dbd->driver, dbd->pool, dbd->handle,
-                             statement->code, statement->label,
-                             &prepared_statement);
-    print_dbd_err(dbd, rc, statement->label);
-    if (rc != DBD_SUCCESS) continue;
-    apr_hash_set(dbd->prepared, statement->label, APR_HASH_KEY_STRING, prepared_statement);
-    num_successes++;
-  }
-
-  printf("Successfully prepared statements:\n");
-  for (apr_hash_index_t *hi = apr_hash_first(dbd->pool, dbd->prepared); hi; hi = apr_hash_next(hi)) {
-    const char *key;
-    apr_hash_this(hi, (const void **)&key, NULL, NULL);
-    printf("\t%s\n", key);
-  }
-
-  if (num_successes != num_statements) {
-    printf("Failed to prepare %d statements:\n", num_statements - num_successes);
-    return false;
-  }
-
-  return true;
-}
 
 /**
  * Print an error message and quit if an APR call fails.
@@ -143,9 +85,10 @@ void exit_on_err(apr_status_t rc, const char * tag)
  * Test the SessionManager class.
  * @return True iff all tests pass.
  */
-bool test_sessionmanager(const ap_dbd_t* dbd)
+bool test_sessionmanager(const ap_dbd_t* c_dbd)
 {
   bool success;
+  Dbd dbd(c_dbd);
   SessionManager s(dbd);
 
   printf("Initial state: no sessions\n");
@@ -245,8 +188,9 @@ void print_assoc(opkele::assoc_t assoc)
          assoc->stateless());
 }
 
-bool test_moidconsumer_assoc(const ap_dbd_t* dbd)
+bool test_moidconsumer_assoc(const ap_dbd_t* c_dbd)
 {
+  Dbd dbd(c_dbd);
   MoidConsumer c(dbd, "foo", "bar");
 
   printf("Initial state: no associations\n");
@@ -326,12 +270,6 @@ void run_tests(ap_dbd_t* dbd)
   bool all_pass = true;
   bool pass;
 
-  // Do not disable this. It prepares statements used by other tests.
-  printf("test_prepare_statements: starting...\n\n");
-  pass = test_prepare_statements(dbd);
-  all_pass &= pass;
-  printf("\ntest_prepare_statements: %s.\n\n", pass ? "passed" : "FAILED");
-
   printf("test_sessionmanager: starting...\n\n");
   pass = test_sessionmanager(dbd);
   all_pass &= pass;
@@ -392,8 +330,6 @@ int main(int argc, const char * const * argv)
   // enable strict mode for the connection
   Dbd(&dbd).enable_strict_mode();
 
-  drop_tables(&dbd);
-  create_tables(&dbd);
   run_tests(&dbd);
 
   // close the SQL connection
