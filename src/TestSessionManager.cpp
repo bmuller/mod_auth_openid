@@ -18,7 +18,8 @@ public:
    */
   void testSessionManager()
   {
-    SessionManager s(dbd);
+    bool success;
+    SessionManager s(*dbd);
 
     s.clear_tables();
 
@@ -44,6 +45,7 @@ public:
       success);
 
     // try to load it
+    session_t loaded_session;
     success = s.get_session(stored_session.session_id, loaded_session, now);
     CPPUNIT_ASSERT_MESSAGE(
       "Couldn't load session",
