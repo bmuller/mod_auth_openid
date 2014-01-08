@@ -1,5 +1,5 @@
 noinst_LTLIBRARIES = libmodauthopenid.la
-noinst_PROGRAMS = db_info test_runner
+noinst_PROGRAMS = modauthopenid_tables test_runner
 noinst_DATA = mod_auth_openid.la
 
 INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${PCRE_CFLAGS} ${CURL_CFLAGS}
@@ -9,11 +9,11 @@ libmodauthopenid_la_SOURCES = mod_auth_openid.cpp MoidConsumer.cpp moid_utils.cp
 	SessionManager.cpp config.h http_helpers.h mod_auth_openid.h MoidConsumer.h moid_utils.h \
 	SessionManager.h types.h Dbd.h Dbd.cpp
 
-db_info_SOURCES = db_info.cpp
-db_info_LDFLAGS = -lmodauthopenid
-db_info_DEPENDENCIES = libmodauthopenid.la
+modauthopenid_tables_SOURCES = modauthopenid_tables.cpp cli_common.cpp
+modauthopenid_tables_LDFLAGS = -lmodauthopenid
+modauthopenid_tables_DEPENDENCIES = libmodauthopenid.la
 
-test_runner_SOURCES = test_runner.cpp TestPreparedStatements.cpp
+test_runner_SOURCES = test_runner.cpp cli_common.cpp TestPreparedStatements.cpp
 test_runner_LDFLAGS = -lmodauthopenid -lcppunit
 test_runner_DEPENDENCIES = libmodauthopenid.la
 
