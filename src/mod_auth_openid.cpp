@@ -114,22 +114,9 @@ static APR_OPTIONAL_FN_TYPE(ap_dbd_prepare) *moid_ap_dbd_prepare = NULL;
 static APR_OPTIONAL_FN_TYPE(ap_dbd_acquire) *moid_ap_dbd_acquire = NULL;
 
 /**
- * Get a manually managed connection from the DBD pool.
- * Provided by mod_dbd.
- */
-static APR_OPTIONAL_FN_TYPE(ap_dbd_open)    *moid_ap_dbd_open = NULL;
-
-/**
- * Close a manually managed DBD connection.
- * Provided by mod_dbd.
- */
-static APR_OPTIONAL_FN_TYPE(ap_dbd_close)   *moid_ap_dbd_close = NULL;
-
-/**
  * Post-config hook:
  *     * Load optional functions
- *     * Create missing tables
- *     * Prepare SQL statements
+ *     * Collect SQL statements for preparation
  */
 static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
                                       apr_pool_t *ptemp, server_rec *s)
@@ -144,32 +131,12 @@ static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
   if (moid_ap_dbd_acquire == NULL) {
     moid_ap_dbd_acquire = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_acquire);
   }
-  if (moid_ap_dbd_open == NULL) {
-    moid_ap_dbd_open    = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_open);
-  }
-  if (moid_ap_dbd_close == NULL) {
-    moid_ap_dbd_close   = APR_RETRIEVE_OPTIONAL_FN(ap_dbd_close);
-  }
 
   // check optional functions we need right now
   if (moid_ap_dbd_prepare == NULL) {
     ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
       "Post-config tasks cannot be completed. "
       "Couldn't get optional function ap_dbd_prepare(). "
-      "Make sure mod_dbd is loaded.");
-    return HTTP_INTERNAL_SERVER_ERROR;
-  }
-  if (moid_ap_dbd_open == NULL) {
-    ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
-      "Post-config tasks cannot be completed. "
-      "Couldn't get optional function ap_dbd_open(). "
-      "Make sure mod_dbd is loaded.");
-    return HTTP_INTERNAL_SERVER_ERROR;
-  }
-  if (moid_ap_dbd_close == NULL) {
-    ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,
-      "Post-config tasks cannot be completed. "
-      "Couldn't get optional function ap_dbd_close(). "
       "Make sure mod_dbd is loaded.");
     return HTTP_INTERNAL_SERVER_ERROR;
   }
@@ -184,17 +151,7 @@ static int mod_authopenid_post_config(apr_pool_t *pconf, apr_pool_t *plog,
   // for each server config (the level at which mod_dbd is configured):
   for (server_rec* current_server = s; current_server;
        current_server = current_server->next) {
-
-    // create missing tables
-    ap_dbd_t* c_dbd = ap_dbd_open(ptemp, current_server);
-    modauthopenid::Dbd dbd(c_dbd);
-    modauthopenid::SessionManager sm(dbd);
-    sm.create_tables();
-    modauthopenid::MoidConsumer c(dbd, /* other params not needed */ "", "");
-    c.create_tables();
-    ap_dbd_close(current_server, c_dbd);
-
-    // prepare statements
+    // add statements to mod_dbd's hashtable for later preparation
     for (int i = 0; i < statements->nelts; i++) {
       modauthopenid::labeled_statement_t* statement = &APR_ARRAY_IDX(
         statements, i, modauthopenid::labeled_statement_t);
