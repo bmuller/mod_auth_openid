@@ -25,6 +25,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
+#pragma once
+
+#include <opkele/types.h>
+#include <opkele/association.h>
+#include <opkele/prequeue_rp.h>
+
+#include "Dbd.h"
+
 namespace modauthopenid {
   using namespace opkele;
   using namespace std;
@@ -153,8 +161,9 @@ namespace modauthopenid {
     /**
      * Print all tables used by this class to stdout.
      * This will only be called from command-line utilities, not the Apache module itself.
+     * @return True iff successful.
      */
-    void print_tables();
+    bool print_tables();
 
     /**
      * Delete session with  nonce id given in constructor param list.

@@ -25,6 +25,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
+#pragma once
 
 namespace modauthopenid {
   using namespace opkele;

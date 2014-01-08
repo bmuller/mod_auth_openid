@@ -79,7 +79,7 @@ namespace modauthopenid {
     }
   }
 
-  void Dbd::print_table(const char* tablename) const
+  bool Dbd::print_table(const char* tablename) const
   {
     printf("Printing table: %s.\n", tablename);
     string sql("SELECT * FROM " + string(tablename));
@@ -88,7 +88,7 @@ namespace modauthopenid {
     if (rc != DBD_SUCCESS) {
       printf("Couldn't fetch contents. DBD error %d: %s\n\n",
              rc, apr_dbd_error(dbd->driver, dbd->handle, rc));
-      return;
+      return false;
     }
 
     int n_cols = apr_dbd_num_cols(dbd->driver, results);
@@ -111,6 +111,7 @@ namespace modauthopenid {
     }
 
     printf("There are %d rows.\n\n", n_rows);
+    return true;
   }
 
   bool Dbd::test_dbd(int rc, string& tag) const

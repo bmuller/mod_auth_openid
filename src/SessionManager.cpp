@@ -131,8 +131,8 @@ namespace modauthopenid {
     }
   }
 
-  void SessionManager::print_tables() {
-    dbd.print_table("sessionmanager");
+  bool SessionManager::print_tables() {
+    return dbd.print_table("sessionmanager");
   }
 
   void SessionManager::append_statements(apr_array_header_t* statements)

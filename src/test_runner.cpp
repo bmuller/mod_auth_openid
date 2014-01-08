@@ -1,6 +1,9 @@
 #include <cppunit/extensions/TestFactoryRegistry.h>
 #include <cppunit/ui/text/TestRunner.h>
 
+#include "Dbd.h"
+#include "MoidConsumer.h"
+#include "SessionManager.h"
 #include "cli_common.h"
 
 using namespace modauthopenid;

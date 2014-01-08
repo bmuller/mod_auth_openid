@@ -1,3 +1,8 @@
+#pragma once
+
+#include "apr_dbd.h"
+#include "mod_dbd.h"
+
 namespace modauthopenid {
   using namespace std;
 
@@ -65,8 +70,9 @@ namespace modauthopenid {
     /**
      * Print the contents of a table to stdout.
      * If there's an error, prints an error message to stdout instead of the table contents.
+     * @return true iff successful.
      */
-    void print_table(const char* tablename) const;
+    bool print_table(const char* tablename) const;
 
     /**
      * Enable strict mode on the underlying connection for DBs that have it.

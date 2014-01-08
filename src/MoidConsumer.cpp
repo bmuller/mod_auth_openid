@@ -405,10 +405,14 @@ namespace modauthopenid {
     return serverurl;
   };
 
-  void MoidConsumer::print_tables() {
-    dbd.print_table("authentication_sessions");
-    dbd.print_table("response_nonces");
-    dbd.print_table("associations");
+  bool MoidConsumer::print_tables() {
+    bool success = true;
+
+    success &= dbd.print_table("authentication_sessions");
+    success &= dbd.print_table("response_nonces");
+    success &= dbd.print_table("associations");
+
+    return success;
   }
 
   void MoidConsumer::append_statements(apr_array_header_t *statements)

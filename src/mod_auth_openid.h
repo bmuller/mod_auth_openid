@@ -85,17 +85,6 @@ Created by bmuller <bmuller@butterfat.net>
 #define AX_NAMESPACE "http://openid.net/srv/ax/1.0"
 #define DEFAULT_AX_NAMESPACE_ALIAS "ax"
 
-/* DBD constants */
-#define DBD_SUCCESS           0
-#define DBD_LINEAR_ACCESS     0
-#define DBD_NEXT_ROW         -1
-#define DBD_NO_MORE_ROWS     -1
-
-/**
- * A VARCHAR big enough for most URLs.
- */
-#define BIG_VARCHAR "VARCHAR(4000)"
-
 /**
  * Debug logging with location info.
  * __FUNCTION__ is nonstandard but supported by GCC and MSVC.
@@ -111,6 +100,7 @@ Created by bmuller <bmuller@butterfat.net>
 /* mod_auth_openid includes */
 #include "config.h"
 #include "types.h"
+#include "db.h"
 #include "http_helpers.h"
 #include "moid_utils.h"
 #include "Dbd.h"

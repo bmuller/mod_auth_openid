@@ -1,5 +1,6 @@
 #include "apr_errno.h"
 #include "apr_pools.h"
+#include "apr_dbd.h"
 #include "mod_dbd.h"
 
 /**

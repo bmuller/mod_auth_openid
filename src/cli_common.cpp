@@ -6,10 +6,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "apr_dbd.h"
 #include "apr_hash.h"
 
 #include "MoidConsumer.h"
 #include "SessionManager.h"
+#include "db.h"
 #include "cli_common.h"
 
 using namespace modauthopenid;
