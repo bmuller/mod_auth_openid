@@ -25,7 +25,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 Created by bmuller <bmuller@butterfat.net>
 */
 
-
 namespace modauthopenid {
   using namespace opkele;
   using namespace std;
@@ -44,6 +43,13 @@ namespace modauthopenid {
     MoidConsumer(Dbd& _dbd, const string& _asnonceid, const string& _serverurl);
 
     /**
+     * @param _dbd A DBD connection wrapper.
+     * Use this constructor for table maintenance not associated
+     * with an actual OpenID interaction.
+     */
+    MoidConsumer(Dbd& _dbd);
+
+    /**
      * Create all tables used by this class.
      * @attention Will only try to create tables that don't already exist,
                   and thus cannot update schemas if they change.
@@ -56,6 +62,12 @@ namespace modauthopenid {
      * @return True iff successful.
      */
     bool drop_tables();
+
+    /**
+     * Delete all rows from tables used by this class.
+     * @return True iff successful.
+     */
+    bool clear_tables();
 
     /**
      * Store a new assocation.

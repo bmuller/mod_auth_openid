@@ -54,6 +54,12 @@ namespace modauthopenid {
     bool drop_tables();
 
     /**
+     * Delete all rows from tables used by this class.
+     * @return True iff successful.
+     */
+    bool clear_tables();
+
+    /**
      * Get session with id session_id and set values in session.
      * If session doesn't exist in DB, session.identity will be set to an empty string.
      * Also deletes expired sessions.

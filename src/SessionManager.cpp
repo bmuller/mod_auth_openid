@@ -46,6 +46,11 @@ namespace modauthopenid {
     return dbd.query("DROP TABLE IF EXISTS sessionmanager");
   }
 
+  bool SessionManager::clear_tables()
+  {
+    return dbd.query("DELETE FROM sessionmanager");
+  }
+
   bool SessionManager::get_session(const string& session_id, session_t& session)
   {
     return get_session(session_id, session, time(NULL));

@@ -35,6 +35,10 @@ namespace modauthopenid {
                              const string& _serverurl) :
                              dbd(_dbd), asnonceid(_asnonceid), serverurl(_serverurl),
                              endpoint_set(false), normalized_id("") {}
+ 
+  MoidConsumer::MoidConsumer(Dbd& _dbd) :
+                             dbd(_dbd), asnonceid(""), serverurl(""),
+                             endpoint_set(false), normalized_id("") {}
 
   bool MoidConsumer::create_tables()
   {
@@ -67,6 +71,17 @@ namespace modauthopenid {
     success &= dbd.query("DROP TABLE IF EXISTS authentication_sessions");
     success &= dbd.query("DROP TABLE IF EXISTS associations");
     success &= dbd.query("DROP TABLE IF EXISTS response_nonces");
+
+    return success;
+  }
+
+  bool MoidConsumer::clear_tables()
+  {
+    bool success = true;
+
+    success &= dbd.query("DELETE FROM authentication_sessions");
+    success &= dbd.query("DELETE FROM associations");
+    success &= dbd.query("DELETE FROM response_nonces");
 
     return success;
   }
