@@ -14,7 +14,7 @@ modauthopenid_tables_LDFLAGS = -lmodauthopenid
 modauthopenid_tables_DEPENDENCIES = libmodauthopenid.la
 
 test_runner_SOURCES = test_runner.cpp cli_common.cpp \
-    TestPreparedStatements.cpp TestSessionManager.cpp
+    TestPreparedStatements.cpp TestSessionManager.cpp TestMoidConsumer.cpp
 test_runner_LDFLAGS = -lmodauthopenid -lcppunit
 test_runner_DEPENDENCIES = libmodauthopenid.la
 
