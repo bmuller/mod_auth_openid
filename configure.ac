@@ -101,7 +101,7 @@ AC_SUBST(CURL_CFLAGS)
 AC_SUBST(CURL_LIBS)
 
 # Check for CppUnit
-AM_PATH_CPPUNIT([], [], [ AC_MSG_ERROR([No CppUnit library found.  You can get it at http://curl.haxx.se]) ]) 
+AM_PATH_CPPUNIT([], [], [ AC_MSG_WARN([No CppUnit library found: tests will not be buildable. You can get it at http://cppunit.sourceforge.net/]) ]) 
 AC_SUBST(CPPUNIT_CFLAGS)
 AC_SUBST(CPPUNIT_LIBS)
 
