@@ -1,5 +1,5 @@
 noinst_LTLIBRARIES = libmodauthopenid.la
-noinst_PROGRAMS = modauthopenid_tables test_runner
+noinst_PROGRAMS = modauthopenid_tables
 noinst_DATA = mod_auth_openid.la
 
 INCLUDES = ${APACHE_CFLAGS} ${OPKELE_CFLAGS} ${PCRE_CFLAGS} ${CURL_CFLAGS}
@@ -14,7 +14,7 @@ modauthopenid_tables_LDFLAGS = -lmodauthopenid
 modauthopenid_tables_DEPENDENCIES = libmodauthopenid.la
 
 if TEST_RUNNER
-test_runner_PROGRAMS = test_runner
+noinst_PROGRAMS += test_runner
 test_runner_SOURCES = test_runner.cpp cli_common.cpp \
     TestPreparedStatements.cpp TestSessionManager.cpp TestMoidConsumer.cpp
 test_runner_INCLUDES = ${CPPUNIT_CFLAGS}
