@@ -66,12 +66,12 @@ Output will be in [doc/html/](doc/html/).
 
 # Tests
 
-The `test_runner` utility that's built along with the Apache module contains a [CppUnit](http://cppunit.sourceforge.net/)-based test suite. You can run it by providing the same SQL DB driver name and driver params that you'd provide to `mod_dbd` or `modauthopenid_tables` (see above). It will wipe out the contents of the database, so *don't run it against production DBs*.
+The `test_runner` utility that's built along with the Apache module contains a [CppUnit](http://cppunit.sourceforge.net/)-based test suite. You can build and run it by running `make check`. It will wipe out the contents of the database, so **don't run it against production DBs**. Sample arguments to the test runner are in the `test_*.sh` files that are called by `make check`; you can edit them to match your DB configuration.
 
-     # MySQL
+     # MySQL: src/test_mysql.sh
      src/test_runner mysql "dbname=openid user=mod_auth_openid pass=abracadabra"
 
-     # SQLite
+     # SQLite: src/test_sqlite.sh
      src/test_runner sqlite3 /tmp/mod_auth_openid.db
 
 # Code coverage

@@ -114,15 +114,6 @@ AC_ARG_ENABLE([nitpicking],
 AM_CONDITIONAL(NITPICK, test x$nitpick = xtrue)
 
 
-# Enable building the test runner
-test_runner=false
-AC_ARG_ENABLE([test-runner],
- AC_HELP_STRING([--enable-test-runner],[build the test runner (requires CppUnit)]),
- [ test "$enableval" = "no" || test_runner=true ]
-)
-AM_CONDITIONAL(TEST_RUNNER, test x$test_runner = xtrue)
-
-
 # Enable code coverage instrumentation
 coverage=false
 AC_ARG_ENABLE([coverage],
