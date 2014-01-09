@@ -57,10 +57,15 @@ public:
       "Field not equal between stored and loaded association: assoc_type",
       stored_assoc->assoc_type(),
       loaded_assoc->assoc_type());
+    // things in this kind of assert have to be printable
+    string stored_assoc_secret_base64;
+    stored_assoc->secret().to_base64(stored_assoc_secret_base64);
+    string loaded_assoc_secret_base64;
+    loaded_assoc->secret().to_base64(loaded_assoc_secret_base64);
     CPPUNIT_ASSERT_EQUAL_MESSAGE(
       "Field not equal between stored and loaded association: secret",
-      stored_assoc->secret(),
-      loaded_assoc->secret());
+      stored_assoc_secret_base64,
+      loaded_assoc_secret_base64);
     CPPUNIT_ASSERT_EQUAL_MESSAGE(
       "Field not equal between stored and loaded association: expires_in",
       stored_assoc->expires_in(),
