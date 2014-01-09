@@ -1,4 +1,4 @@
-AC_INIT([mod_auth_openid], [0.8], [bamuller@gmail.com])
+AC_INIT([mod_auth_openid], [0.9], [bamuller@gmail.com])
 AC_DEFINE([PACKAGE_URL],["http://findingscience.com/mod_auth_openid"],[project url])
 AM_CONFIG_HEADER(src/config.h)
 AM_INIT_AUTOMAKE()
