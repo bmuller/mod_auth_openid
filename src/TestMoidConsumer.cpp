@@ -19,6 +19,7 @@ public:
   void testAssociations()
   {
     MoidConsumer c(*dbd);
+    c.clear_tables();
 
     // store a fake association
     time_t now = 1386810000; // no religious or practical significance
