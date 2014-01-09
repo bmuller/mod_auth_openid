@@ -100,6 +100,11 @@ AC_CHECK_CURL([7], [], [ AC_MSG_ERROR([No curl library found.  You can get it at
 AC_SUBST(CURL_CFLAGS)
 AC_SUBST(CURL_LIBS)
 
+# Check for CppUnit
+AM_PATH_CPPUNIT([], [], [ AC_MSG_ERROR([No CppUnit library found.  You can get it at http://curl.haxx.se]) ]) 
+AC_SUBST(CPPUNIT_CFLAGS)
+AC_SUBST(CPPUNIT_LIBS)
+
 # Idea taken from libopekele
 nitpick=false
 AC_ARG_ENABLE([nitpicking],
@@ -107,6 +112,15 @@ AC_ARG_ENABLE([nitpicking],
  [ test "$enableval" = "no" || nitpick=true ]
 )
 AM_CONDITIONAL(NITPICK, test x$nitpick = xtrue)
+
+
+# Enable building the test runner
+test_runner=false
+AC_ARG_ENABLE([test-runner],
+ AC_HELP_STRING([--enable-test-runner],[build the test runner (requires CppUnit)]),
+ [ test "$enableval" = "no" || test_runner=true ]
+)
+AM_CONDITIONAL(TEST_RUNNER, test x$test_runner = xtrue)
 
 
 # Enable code coverage instrumentation

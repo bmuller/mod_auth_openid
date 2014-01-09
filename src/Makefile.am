@@ -13,10 +13,14 @@ modauthopenid_tables_SOURCES = modauthopenid_tables.cpp cli_common.cpp
 modauthopenid_tables_LDFLAGS = -lmodauthopenid
 modauthopenid_tables_DEPENDENCIES = libmodauthopenid.la
 
+if TEST_RUNNER
+test_runner_PROGRAMS = test_runner
 test_runner_SOURCES = test_runner.cpp cli_common.cpp \
     TestPreparedStatements.cpp TestSessionManager.cpp TestMoidConsumer.cpp
-test_runner_LDFLAGS = -lmodauthopenid -lcppunit
+test_runner_INCLUDES = ${CPPUNIT_CFLAGS}
+test_runner_LDFLAGS = -lmodauthopenid ${CPPUNIT_LIBS}
 test_runner_DEPENDENCIES = libmodauthopenid.la
+endif
 
 AM_CXXFLAGS = -Wall
 
