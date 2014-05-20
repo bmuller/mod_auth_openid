@@ -14,6 +14,7 @@ You can, now, specify an external program for authorization.  That is, after a u
 
 # Installation 
 *These docs assume that you have [Apache 2] installed and running already.  Linux is the only officially supported operating system.  YMMV on OSX/Irix/Solaris/etc.*
+
 ## Prerequisites 
  * libopkele (>= 2.0): a C++ implementation of important OpenID functions - [http://kin.klever.net/libopkele/](http://kin.klever.net/libopkele/)
  * libsqlite: SQLite C libs - [http://www.sqlite.org](http://www.sqlite.org)

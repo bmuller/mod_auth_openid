@@ -9,6 +9,7 @@ You should have mod_auth_openid installed at this point and working for some loc
 
 # Example 
 Let's say you want to protect the location "/supersecret" (that is, *http://example.com/supersecret*) on your web server, and you want to use your own custom page for users to enter their identity.
+
 ## Step 1: Determine where your page will live 
 The page that you create **must** exist *outside* of your protected location/directory.  Other than that one rule, it can live anywhere, even on a different server.  Use whatever tools/framework/language you want to generate the page.  For the purposes of our example, let's say the page will live at "/login.html".
 
@@ -35,8 +36,10 @@ It really doesn't matter what's on your page, either, other than a form.  This f
 </body></html>
 {% endhighlight %}
 Also, there is a GET parameter **modauthopenid.referrer** that will be sent to the custom login page that contains the original location the user requested.
+
 ## Step 4: Handle errors on your login page 
 In the case that a user cancels the identification process or that there is an authentication error, the user will be redirected back to the login page location with a special GET parameter named **modauthopenid.error** (as well as any other parameters you may have added in the first place).  This parameter will have one of six possible values:
+
  * **no_idp_found**:  This is returned when the there was no identity provider URL found on the identity page given by the user, or if the page could not be downloaded.  The user probably just mistyped her identity URL.
  * **invalid_id**: This is returned when the identity given is not syntactically valid (for either a URI or XRI).
  * **idp_not_trusted**: This is returned when the identity provider of the user is not trusted.  This will only occur if you have at least one of **AuthOpenIDTrusted** or **AuthOpenIDDistrusted** set.
