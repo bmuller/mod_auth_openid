@@ -12,11 +12,6 @@ title: mod_auth_openid - The Apache OpenID Module
 
 You can, now, specify an external program for authorization.  That is, after a user has authenticated themselves their identity can be passed to an external program that then returns a value that either authorize them or not to see the resource being protected.  See [AuthUserProgram](authuserprogram.html) for more information.
 
-# Example 
-Most people want to see an example first: 
- * [http://butterfat.net/mod_auth_openid/othersecret](http://butterfat.net/mod_auth_openid/othersecret) (uses default login page)
- * [http://butterfat.net/mod_auth_openid/secret](http://butterfat.net/mod_auth_openid/secret) (uses [custom login page][custompage])
-
 # Installation 
 *These docs assume that you have [Apache 2] installed and running already.  Linux is the only officially supported operating system.  YMMV on OSX/Irix/Solaris/etc.*
 ## Prerequisites 
