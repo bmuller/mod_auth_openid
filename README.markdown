@@ -1,3 +1,5 @@
+[![Gittip](http://img.shields.io/gittip/bmuller.svg)](https://www.gittip.com/bmuller/)
+
 # Basic Installation
 
 First, you'll need a few prerequisites.
