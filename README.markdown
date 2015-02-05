@@ -1,4 +1,4 @@
-[![Gittip](http://img.shields.io/gittip/bmuller.svg)](https://www.gittip.com/bmuller/)
+# **This project is no longer actively maintained.  If you'd like to take it over, email the author.**
 
 # Basic Installation
 
